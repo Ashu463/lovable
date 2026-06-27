@@ -1,0 +1,23 @@
+{
+  "name": "@repo/agents",
+  "module": "index.ts",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "baml-generate": "baml-cli generate"
+  },
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@boundaryml/baml": "^0.223.0",
+    "dotenv": "^17.4.2",
+    "openai": "^6.45.0"
+  }
+}
