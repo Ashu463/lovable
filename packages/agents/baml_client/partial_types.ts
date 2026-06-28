@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Resume } from "./types"
+import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderResponse,  DebuggerResponse,  Done,  Error,  Errors,  FetchInfo,  FileEdit,  FinalResponse,  ItemRes,  Option,  Question,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TesterResponse,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -36,10 +36,105 @@ export interface StreamState<T> {
 }
 
 export namespace partial_types {
+    export interface AgentResponse {
+    }
+    export interface ApifyRes {
+      status?: string | null
+      itemcount?: number | null
+      scrapeRes: ItemRes[]
+    }
+    export interface BraveRes {
+      type?: string | null
+      result: BraveResult[]
+    }
+    export interface BraveResult {
+      title?: string | null
+      url?: string | null
+      description?: string | null
+      pageAge?: string | null
+    }
+    export interface CoderContext {
+      type?: "writeFile" | "commandResult" | "infoResult" | "research" | null
+      content?: string | null
+    }
+    export interface CoderResponse {
+      status?: string | null
+      editedFile: FileEdit[]
+    }
+    export interface DebuggerResponse {
+      status?: string | null
+      editedFile: FileEdit[]
+      errors: Record<string, string>
+    }
+    export interface Done {
+      action?: "done" | null
+      filesEdited: FileEdit[]
+    }
+    export interface Error {
+      fileName?: string | null
+      error?: string | null
+    }
+    export interface Errors {
+    }
+    export interface FetchInfo {
+      action?: "fetchInformation" | null
+      query?: string | null
+      library?: string | null
+    }
+    export interface FileEdit {
+      fileName?: string | null
+      summary?: string | null
+    }
+    export interface FinalResponse {
+      status?: "success" | "failed" | null
+      previewUrl?: string | null
+      deployUrl?: string | null
+    }
+    export interface ItemRes {
+      title?: string | null
+      description?: string | null
+      url?: string | null
+    }
+    export interface Option {
+      text?: string | null
+    }
+    export interface Question {
+      question?: string | null
+      option: Option[]
+    }
+    export interface Research {
+      action?: "research" | null
+      query?: string | null
+    }
+    export interface ResearcherResponse {
+      query?: string | null
+      result?: BraveRes | ApifyRes | null
+    }
     export interface Resume {
       name?: string | null
       email?: string | null
       experience: string[]
       skills: string[]
+    }
+    export interface RunCommand {
+      action?: "runCommand" | null
+      command?: string | null
+    }
+    export interface SubAgent {
+      name?: string | null
+      skills: types.Skill[]
+    }
+    export interface Task {
+      id?: string | null
+      objective?: string | null
+      agent?: string | null
+      depends_upon: string[]
+    }
+    export interface TesterResponse {
+    }
+    export interface WriteFile {
+      action?: "writeFile" | null
+      path?: string | null
+      content?: string | null
     }
 }

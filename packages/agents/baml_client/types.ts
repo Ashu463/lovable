@@ -47,10 +47,164 @@ export function all_succeeded<CheckName extends string>(checks: Record<CheckName
 export function get_checks<CheckName extends string>(checks: Record<CheckName, Check>): Check[] {
     return Object.values(checks)
 }
+export enum Skill {
+  WebSearch = "WebSearch",
+  Read_blog = "Read_blog",
+  Read_docs = "Read_docs",
+  Read_file = "Read_file",
+  Write_file = "Write_file",
+  Edit_file = "Edit_file",
+  Bash = "Bash",
+  Pytest = "Pytest",
+  Jest = "Jest",
+  Read_codebase = "Read_codebase",
+}
+
+export interface AgentResponse {
+  
+}
+
+export interface ApifyRes {
+  status: string
+  itemcount: number
+  scrapeRes: ItemRes[]
+  
+}
+
+export interface BraveRes {
+  type: string
+  result: BraveResult[]
+  
+}
+
+export interface BraveResult {
+  title: string
+  url: string
+  description: string
+  pageAge: string
+  
+}
+
+export interface CoderContext {
+  type: "writeFile" | "commandResult" | "infoResult" | "research"
+  content: string
+  
+}
+
+export interface CoderResponse {
+  status: string
+  editedFile: FileEdit[]
+  
+}
+
+export interface DebuggerResponse {
+  status: string
+  editedFile: FileEdit[]
+  errors: Record<string, string>
+  
+}
+
+export interface Done {
+  action: "done"
+  filesEdited: FileEdit[]
+  
+}
+
+export interface Error {
+  fileName: string
+  error: string
+  
+}
+
+export interface Errors {
+  
+}
+
+export interface FetchInfo {
+  action: "fetchInformation"
+  query: string
+  library: string
+  
+}
+
+export interface FileEdit {
+  fileName: string
+  summary: string
+  
+}
+
+export interface FinalResponse {
+  status: "success" | "failed"
+  previewUrl?: string | null
+  deployUrl?: string | null
+  
+}
+
+export interface ItemRes {
+  title: string
+  description: string
+  url: string
+  
+}
+
+export interface Option {
+  text: string
+  
+}
+
+export interface Question {
+  question: string
+  option: Option[]
+  
+}
+
+export interface Research {
+  action: "research"
+  query: string
+  
+}
+
+export interface ResearcherResponse {
+  query: string
+  result: BraveRes | ApifyRes
+  
+}
+
 export interface Resume {
   name: string
   email: string
   experience: string[]
   skills: string[]
+  
+}
+
+export interface RunCommand {
+  action: "runCommand"
+  command: string
+  
+}
+
+export interface SubAgent {
+  name: string
+  skills: Skill[]
+  
+}
+
+export interface Task {
+  id: string
+  objective: string
+  agent: string
+  depends_upon: string[]
+  
+}
+
+export interface TesterResponse {
+  
+}
+
+export interface WriteFile {
+  action: "writeFile"
+  path: string
+  content: string
   
 }

@@ -27,25 +27,169 @@ export { FieldType, EnumBuilder, ClassBuilder }
 export default class TypeBuilder {
     private tb: _TypeBuilder;
     
+    AgentResponse: ClassViewer<'AgentResponse'>;
+    
+    ApifyRes: ClassViewer<'ApifyRes', "status" | "itemcount" | "scrapeRes">;
+    
+    BraveRes: ClassViewer<'BraveRes', "type" | "result">;
+    
+    BraveResult: ClassViewer<'BraveResult', "title" | "url" | "description" | "pageAge">;
+    
+    CoderContext: ClassViewer<'CoderContext', "type" | "content">;
+    
+    CoderResponse: ClassViewer<'CoderResponse', "status" | "editedFile">;
+    
+    DebuggerResponse: ClassViewer<'DebuggerResponse', "status" | "editedFile" | "errors">;
+    
+    Done: ClassViewer<'Done', "action" | "filesEdited">;
+    
+    Error: ClassViewer<'Error', "fileName" | "error">;
+    
+    Errors: ClassViewer<'Errors'>;
+    
+    FetchInfo: ClassViewer<'FetchInfo', "action" | "query" | "library">;
+    
+    FileEdit: ClassViewer<'FileEdit', "fileName" | "summary">;
+    
+    FinalResponse: ClassViewer<'FinalResponse', "status" | "previewUrl" | "deployUrl">;
+    
+    ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
+    
+    Option: ClassViewer<'Option', "text">;
+    
+    Question: ClassViewer<'Question', "question" | "option">;
+    
+    Research: ClassViewer<'Research', "action" | "query">;
+    
+    ResearcherResponse: ClassViewer<'ResearcherResponse', "query" | "result">;
+    
     Resume: ClassViewer<'Resume', "name" | "email" | "experience" | "skills">;
     
+    RunCommand: ClassViewer<'RunCommand', "action" | "command">;
+    
+    SubAgent: ClassViewer<'SubAgent', "name" | "skills">;
+    
+    Task: ClassViewer<'Task', "id" | "objective" | "agent" | "depends_upon">;
+    
+    TesterResponse: ClassViewer<'TesterResponse'>;
+    
+    WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
+    
+    
+    Skill: EnumViewer<'Skill', "WebSearch" | "Read_blog" | "Read_docs" | "Read_file" | "Write_file" | "Edit_file" | "Bash" | "Pytest" | "Jest" | "Read_codebase">;
     
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Resume",
+            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","CoderResponse","DebuggerResponse","Done","Error","Errors","FetchInfo","FileEdit","FinalResponse","ItemRes","Option","Question","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TesterResponse","WriteFile",
           ]),
           enums: new Set([
-            
+            "Skill",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
+        
+        this.AgentResponse = this.tb.classViewer("AgentResponse", [
+          
+        ]);
+        
+        this.ApifyRes = this.tb.classViewer("ApifyRes", [
+          "status","itemcount","scrapeRes",
+        ]);
+        
+        this.BraveRes = this.tb.classViewer("BraveRes", [
+          "type","result",
+        ]);
+        
+        this.BraveResult = this.tb.classViewer("BraveResult", [
+          "title","url","description","pageAge",
+        ]);
+        
+        this.CoderContext = this.tb.classViewer("CoderContext", [
+          "type","content",
+        ]);
+        
+        this.CoderResponse = this.tb.classViewer("CoderResponse", [
+          "status","editedFile",
+        ]);
+        
+        this.DebuggerResponse = this.tb.classViewer("DebuggerResponse", [
+          "status","editedFile","errors",
+        ]);
+        
+        this.Done = this.tb.classViewer("Done", [
+          "action","filesEdited",
+        ]);
+        
+        this.Error = this.tb.classViewer("Error", [
+          "fileName","error",
+        ]);
+        
+        this.Errors = this.tb.classViewer("Errors", [
+          
+        ]);
+        
+        this.FetchInfo = this.tb.classViewer("FetchInfo", [
+          "action","query","library",
+        ]);
+        
+        this.FileEdit = this.tb.classViewer("FileEdit", [
+          "fileName","summary",
+        ]);
+        
+        this.FinalResponse = this.tb.classViewer("FinalResponse", [
+          "status","previewUrl","deployUrl",
+        ]);
+        
+        this.ItemRes = this.tb.classViewer("ItemRes", [
+          "title","description","url",
+        ]);
+        
+        this.Option = this.tb.classViewer("Option", [
+          "text",
+        ]);
+        
+        this.Question = this.tb.classViewer("Question", [
+          "question","option",
+        ]);
+        
+        this.Research = this.tb.classViewer("Research", [
+          "action","query",
+        ]);
+        
+        this.ResearcherResponse = this.tb.classViewer("ResearcherResponse", [
+          "query","result",
+        ]);
         
         this.Resume = this.tb.classViewer("Resume", [
           "name","email","experience","skills",
         ]);
         
+        this.RunCommand = this.tb.classViewer("RunCommand", [
+          "action","command",
+        ]);
+        
+        this.SubAgent = this.tb.classViewer("SubAgent", [
+          "name","skills",
+        ]);
+        
+        this.Task = this.tb.classViewer("Task", [
+          "id","objective","agent","depends_upon",
+        ]);
+        
+        this.TesterResponse = this.tb.classViewer("TesterResponse", [
+          
+        ]);
+        
+        this.WriteFile = this.tb.classViewer("WriteFile", [
+          "action","path","content",
+        ]);
+        
+        
+        this.Skill = this.tb.enumViewer("Skill", [
+          "WebSearch","Read_blog","Read_docs","Read_file","Write_file","Edit_file","Bash","Pytest","Jest","Read_codebase",
+        ]);
         
     }
 

@@ -1,4 +1,4 @@
-import type { AgentRequest, Todo } from "../types";
+import type { AgentRequest, Todo } from "../types/types";
 import OpenAI from "openai";
 import { COMPLEXITY_SYSTEM_PROMPT } from "./config";
 

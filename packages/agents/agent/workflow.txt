@@ -1,0 +1,5 @@
+
+CoderAgent: it recieves the query, and there could be two cases, 
+1. if this the fresh new chat, then it will have figma's boiler plate code and nothing needed in context memory yet. 
+2. else there should be something retrieved in the context no matter this session is restarted after some time or it is running. 
+So I've to maintain and send the context. 

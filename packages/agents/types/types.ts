@@ -22,7 +22,7 @@ export interface Task{
     description: string
     
 }
-export enum AgentStatus {
+export enum SubAgentStatus {
     Idle,
     Running,
     Waiting,

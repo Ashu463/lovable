@@ -1,10 +1,11 @@
 import dotenv from 'dotenv'
 dotenv.config()
-import type { AgentRequest, LLMResponse, Todo } from "../types";
+import type { AgentRequest, LLMResponse, Todo } from "../types/types";
 import { events } from "./events";
 
 import { fetchContext } from './memory';
 import { streamLLM } from './llm';
+import { Agent } from './agent';
 
 
 export async function AgentCall(prompt: string, report: (status: string) => void){
@@ -42,6 +43,9 @@ export async function AgentCall(prompt: string, report: (status: string) => void
     const taskComplexity: Promise<Todo[]> = await checkComplexityAndBuildTodo(payload.prompt)
     let spawnSubagent = false;
     if(taskComplexity!.length > 0) spawnSubagent = true;
+
+    let agent: Agent = new Agent("asdf", "asdf")
+    agent.execute(prompt)
 
     if((await taskComplexity!).length > 0){
         // use sub agents way

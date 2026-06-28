@@ -1,5 +1,5 @@
 export * from './agent/events'
-export * from './types'
+export * from './types/types'
 export * from './agent'
 console.log("Hello via Bun!");
 
