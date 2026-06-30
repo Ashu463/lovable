@@ -1,12 +1,5 @@
-import type { CoderContext } from "../../baml_client";
+import { callMCP } from './registry'
 
-export class FigmaMCP{
-    
-    constructor(){}
-
-    async writeFile(path: string, content: string)
-    // : Promise<CoderContext>
-    {
-
-    }
+export async function getDesignContext(fileUrl: string): Promise<string> {
+  return callMCP("figma", "get_figma_data", { figmaUrl: fileUrl })
 }

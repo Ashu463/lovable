@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderResponse,  DebuggerResponse,  Done,  Error,  Errors,  FetchInfo,  FileEdit,  FinalResponse,  ItemRes,  Option,  Question,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TesterResponse,  WriteFile } from "./types"
+import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggerResponse,  DeleteFile,  Done,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TesterResponse,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -54,17 +54,17 @@ export namespace partial_types {
       pageAge?: string | null
     }
     export interface CoderContext {
-      type?: "writeFile" | "commandResult" | "infoResult" | "research" | null
+      type?: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research" | null
       content?: string | null
-    }
-    export interface CoderResponse {
-      status?: string | null
-      editedFile: FileEdit[]
     }
     export interface DebuggerResponse {
       status?: string | null
       editedFile: FileEdit[]
       errors: Record<string, string>
+    }
+    export interface DeleteFile {
+      action?: "delete" | null
+      path?: string | null
     }
     export interface Done {
       action?: "done" | null
@@ -76,8 +76,8 @@ export namespace partial_types {
     }
     export interface Errors {
     }
-    export interface FetchInfo {
-      action?: "fetchInformation" | null
+    export interface FetchDocs {
+      action?: "fetchDocs" | null
       query?: string | null
       library?: string | null
     }
@@ -95,12 +95,18 @@ export namespace partial_types {
       description?: string | null
       url?: string | null
     }
+    export interface Message {
+    }
     export interface Option {
       text?: string | null
     }
     export interface Question {
       question?: string | null
       option: Option[]
+    }
+    export interface ReadFile {
+      action?: "read" | null
+      path?: string | null
     }
     export interface Research {
       action?: "research" | null

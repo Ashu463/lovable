@@ -1,0 +1,68 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  userId     String @id @default(uuid())
+  previewUrl String
+  s3Id       String
+
+  sandbox    Sandbox?
+  todos      Todo[]
+  chats      Conversation[]
+}
+
+model Sandbox {
+  sandboxId String @id @default(uuid())
+
+  userId String @unique
+  user   User @relation(fields: [userId], references: [userId])
+
+  status SBStatus
+}
+enum SBStatus{
+  live
+  down
+}
+model Todo{
+  id String @id @default(uuid())
+  todo String
+  status Status
+  assignedAgent Agent
+  dependency String[]
+  userId String
+  user User @relation(fields: [userId], references: [userId])
+}
+enum Status{
+  inQueue
+  processing
+  completed
+}
+model Conversation{
+  id String @unique
+  role Role
+  conversation String
+  userId String
+  user User @relation(fields: [userId], references: [userId])
+}
+enum Role{
+  User
+  LLM
+}
+enum Agent{
+  Coder
+  Debugger
+  Researcher
+  UiExpert
+  Tester
+}

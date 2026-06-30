@@ -22,7 +22,7 @@ import type { BamlRuntime, FunctionResult, BamlCtxManager, Image, Audio, Pdf, Vi
 import { toBamlError, BamlAbortError, ClientRegistry, type HTTPRequest } from "@boundaryml/baml"
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, CoderResponse, DebuggerResponse, Done, Error, Errors, FetchInfo, FileEdit, FinalResponse, ItemRes, Option, Question, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { HttpRequest, HttpStreamRequest } from "./sync_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -198,9 +198,9 @@ export class BamlSyncClient {
   }
   
   CoderAgent(
-      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research {
+  ): types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -241,7 +241,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research
+      return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done
     } catch (error: any) {
       throw toBamlError(error);
     }

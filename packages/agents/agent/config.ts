@@ -1,3 +1,6 @@
+import { PrismaClient } from "@prisma/client/extension";
+
+export const prisma = new PrismaClient()
 
 export const MAIN_SYSTEM_PROMPT = ``
 export const COMPLEXITY_SYSTEM_PROMPT = ``

@@ -1,14 +1,15 @@
+import { PrismaClient } from "../generated/prisma/client"
 import type { AgentResponse, Message } from "../types/agentTypes"
 import { SubAgentStatus, type AgentRole, type Task, type Todo, type Tool } from "../types/types"
+import { E2BSandbox } from "./services/sandbox"
 import { skills } from "./skills"
+import { CoderAgent } from "./subagents/coder"
 import { Researcher } from "./subagents/researcher"
-
-
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
 export class Agent{
     constructor(
         public name: string,
-        public description: string,
+        public prompt: string,
         public todos?: Todo[]
     ){
     }
@@ -21,8 +22,10 @@ export class Agent{
             - do somehow parallel execution made in that queue [{A}, {B, X}, {D, E}, {C}]
             then in that case B and X should be executed parallely and so on
             */
+           let sandbox: E2BSandbox = new E2BSandbox()
+           // parse the sandbox to the agent or subagent.
             let s: SubAgent = new SubAgent()
-            s.spawnSubAgent() 
+            s.spawnSubAgent()
         }
         else{
             let m: MainAgent = new MainAgent("title", "desc", prompt, context, skills)
@@ -41,6 +44,7 @@ class MainAgent extends Agent{
         public prompt: string, 
         public context: Message[],
         public skills: Skill[],
+        public sandboxId: string
     ){
         super(name, description)
     }
@@ -78,20 +82,34 @@ export class SubAgent extends Agent{
         description: string,
         public role: AgentRole,
         public instructions: string,
-        public memory: Message[],
-        public skills: Skill[], // TODOs: fix kr bhai isko
+        public context: Message[],
+        // public skills: Skill[], // TODOs: fix kr bhai isko,
+        public sandbox: object,
         public task: Task,
-        public status: SubAgentStatus = SubAgentStatus.Idle
+        public status: SubAgentStatus = SubAgentStatus.Idle,
+        private prisma: PrismaClient
     ){
         super(name, description)
     }
-    spawnSubAgent(){
-        if(this.name === "researcher"){
-            let subAgent: Researcher = new Researcher()
-
+    async spawnSubAgent(userId: string, agentType: string){
+        const user = await this.prisma.user.findUnique({where: {userId}, include:{sandbox: true}})
+        let sbId: string = "";
+        if(user?.sandbox?.status === 'live'){
+            sbId = user.sandbox.sandboxId
         }
+        else{
+            // create a new sandbox first and update the user as well.
+        }
+        // sandbox is up, now operate accordingly
+        if(agentType === "researcher"){
+            let subAgent: Researcher = new Researcher()
+        }
+        else if(agentType === 'coder'){
+            let subAgent: CoderAgent = new CoderAgent(this.prompt, this.context, sbId)
+        }
+
     }
-    runLoop(subagent: ){
+    runLoop(){
         /*Steps: 
         
         - Now for single execution of each task

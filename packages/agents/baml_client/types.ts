@@ -86,14 +86,8 @@ export interface BraveResult {
 }
 
 export interface CoderContext {
-  type: "writeFile" | "commandResult" | "infoResult" | "research"
+  type: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research"
   content: string
-  
-}
-
-export interface CoderResponse {
-  status: string
-  editedFile: FileEdit[]
   
 }
 
@@ -101,6 +95,12 @@ export interface DebuggerResponse {
   status: string
   editedFile: FileEdit[]
   errors: Record<string, string>
+  
+}
+
+export interface DeleteFile {
+  action: "delete"
+  path: string
   
 }
 
@@ -120,8 +120,8 @@ export interface Errors {
   
 }
 
-export interface FetchInfo {
-  action: "fetchInformation"
+export interface FetchDocs {
+  action: "fetchDocs"
   query: string
   library: string
   
@@ -147,6 +147,10 @@ export interface ItemRes {
   
 }
 
+export interface Message {
+  
+}
+
 export interface Option {
   text: string
   
@@ -155,6 +159,12 @@ export interface Option {
 export interface Question {
   question: string
   option: Option[]
+  
+}
+
+export interface ReadFile {
+  action: "read"
+  path: string
   
 }
 

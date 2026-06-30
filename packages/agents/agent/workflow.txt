@@ -3,3 +3,17 @@ CoderAgent: it recieves the query, and there could be two cases,
 1. if this the fresh new chat, then it will have figma's boiler plate code and nothing needed in context memory yet. 
 2. else there should be something retrieved in the context no matter this session is restarted after some time or it is running. 
 So I've to maintain and send the context. 
+
+
+quick follow ups on your doubts:
+- I'm thinking to use vercel mcp in order to get the preview URL, I'll probably share the build code and parse it to the vercel mcp, or probably set it up later. And yeah this will be triggered whenever npm run dev shows the right status over sandbox. 
+- I'll probably run the react init command inside the sandbox. or probably create a new repo over github with react template and let the sandbox use that code as boilerPlate. 
+- We should probably talk about the fileStorage architecture, I mean how it will store everything, should it store in format of git worktree? And now when should we trigger, probably we should compare diff of whatever present in sandbox and file storage system every 5 mins, if yes then push those changes and second time is, when sandbox TTL is just about to end(probably 5 mins before it dies). 
+I guess you completely misunderstood the architecture I presented. I'm not running the application
+inside the sandbox, while I'm exposing it to vercel MCP which I'll probably figure it out. 
+General gaps follow ups: 
+- You're right, I will probably use lock-during-write method to avoids conflicts. 
+- I'll show the loading status, won't do anything fancy for this time, user must have to wait till it spuns up
+- yeah obv, I'll be storing these kind of details into postgres or some other db.
+Can't we do it like this, that we have file name, if that file is present in file storage then save the replace that old file with new complete file else create a new file with that suggested change. 
+I've shared a lot of information, and now we can discuss everything about file storage in detail it's flow, structure and all

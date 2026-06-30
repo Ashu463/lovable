@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, CoderResponse, DebuggerResponse, Done, Error, Errors, FetchInfo, FileEdit, FinalResponse, ItemRes, Option, Question, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -79,7 +79,7 @@ export class LlmResponseParser {
   CoderAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research {
+  ): types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -93,7 +93,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research
+      ) as types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done
     } catch (error) {
       throw toBamlError(error);
     }
@@ -338,7 +338,7 @@ export class LlmStreamParser {
   CoderAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.WriteFile | partial_types.RunCommand | partial_types.FetchInfo | partial_types.Done | partial_types.Research {
+  ): partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -352,7 +352,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.WriteFile | partial_types.RunCommand | partial_types.FetchInfo | partial_types.Done | partial_types.Research
+      ) as partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done
     } catch (error) {
       throw toBamlError(error);
     }

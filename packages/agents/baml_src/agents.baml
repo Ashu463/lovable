@@ -35,11 +35,6 @@ class ItemRes{
     description string
     url string
 }
-
-class CoderResponse{
-    status string
-    editedFile FileEdit[]
-}
 class FileEdit{
     fileName string
     summary  string

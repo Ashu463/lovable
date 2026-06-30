@@ -37,9 +37,9 @@ export default class TypeBuilder {
     
     CoderContext: ClassViewer<'CoderContext', "type" | "content">;
     
-    CoderResponse: ClassViewer<'CoderResponse', "status" | "editedFile">;
-    
     DebuggerResponse: ClassViewer<'DebuggerResponse', "status" | "editedFile" | "errors">;
+    
+    DeleteFile: ClassViewer<'DeleteFile', "action" | "path">;
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
     
@@ -47,7 +47,7 @@ export default class TypeBuilder {
     
     Errors: ClassViewer<'Errors'>;
     
-    FetchInfo: ClassViewer<'FetchInfo', "action" | "query" | "library">;
+    FetchDocs: ClassViewer<'FetchDocs', "action" | "query" | "library">;
     
     FileEdit: ClassViewer<'FileEdit', "fileName" | "summary">;
     
@@ -55,9 +55,13 @@ export default class TypeBuilder {
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
     
+    Message: ClassViewer<'Message'>;
+    
     Option: ClassViewer<'Option', "text">;
     
     Question: ClassViewer<'Question', "question" | "option">;
+    
+    ReadFile: ClassViewer<'ReadFile', "action" | "path">;
     
     Research: ClassViewer<'Research', "action" | "query">;
     
@@ -82,7 +86,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","CoderResponse","DebuggerResponse","Done","Error","Errors","FetchInfo","FileEdit","FinalResponse","ItemRes","Option","Question","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TesterResponse","WriteFile",
+            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggerResponse","DeleteFile","Done","Error","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TesterResponse","WriteFile",
           ]),
           enums: new Set([
             "Skill",
@@ -110,12 +114,12 @@ export default class TypeBuilder {
           "type","content",
         ]);
         
-        this.CoderResponse = this.tb.classViewer("CoderResponse", [
-          "status","editedFile",
-        ]);
-        
         this.DebuggerResponse = this.tb.classViewer("DebuggerResponse", [
           "status","editedFile","errors",
+        ]);
+        
+        this.DeleteFile = this.tb.classViewer("DeleteFile", [
+          "action","path",
         ]);
         
         this.Done = this.tb.classViewer("Done", [
@@ -130,7 +134,7 @@ export default class TypeBuilder {
           
         ]);
         
-        this.FetchInfo = this.tb.classViewer("FetchInfo", [
+        this.FetchDocs = this.tb.classViewer("FetchDocs", [
           "action","query","library",
         ]);
         
@@ -146,12 +150,20 @@ export default class TypeBuilder {
           "title","description","url",
         ]);
         
+        this.Message = this.tb.classViewer("Message", [
+          
+        ]);
+        
         this.Option = this.tb.classViewer("Option", [
           "text",
         ]);
         
         this.Question = this.tb.classViewer("Question", [
           "question","option",
+        ]);
+        
+        this.ReadFile = this.tb.classViewer("ReadFile", [
+          "action","path",
         ]);
         
         this.Research = this.tb.classViewer("Research", [

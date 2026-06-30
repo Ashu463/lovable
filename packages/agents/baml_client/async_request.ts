@@ -23,7 +23,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video, FunctionLog
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, CoderResponse, DebuggerResponse, Done, Error, Errors, FetchInfo, FileEdit, FinalResponse, ItemRes, Option, Question, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -109,7 +109,7 @@ env?: Record<string, string | undefined>
       }
       
   async CoderAgent(
-  prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+  prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -478,7 +478,7 @@ env?: Record<string, string | undefined>
           }
           
       async CoderAgent(
-      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {

@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, CoderResponse, DebuggerResponse, Done, Error, Errors, FetchInfo, FileEdit, FinalResponse, ItemRes, Option, Question, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TesterResponse, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -210,9 +210,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async CoderAgent(
-        prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+        prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research> {
+        ): Promise<types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -259,7 +259,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research
+            return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done
             } catch (error) {
             throw toBamlError(error);
             }
@@ -876,9 +876,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             CoderAgent(
-            prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+            prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.WriteFile | partial_types.RunCommand | partial_types.FetchInfo | partial_types.Done | partial_types.Research, types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research>
+            ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done, types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -937,10 +937,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.WriteFile | partial_types.RunCommand | partial_types.FetchInfo | partial_types.Done | partial_types.Research, types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research>(
+                return new BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done, types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done>(
                   __raw__,
-                  (a): partial_types.WriteFile | partial_types.RunCommand | partial_types.FetchInfo | partial_types.Done | partial_types.Research => a,
-                  (a): types.WriteFile | types.RunCommand | types.FetchInfo | types.Done | types.Research => a,
+                  (a): partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done => a,
+                  (a): types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
