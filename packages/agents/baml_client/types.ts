@@ -208,7 +208,22 @@ export interface Task {
   
 }
 
+export interface TaskComplexity {
+  complexity: boolean
+  POA: Todo[] | string
+  
+}
+
 export interface TesterResponse {
+  
+}
+
+export interface Todo {
+  id: number
+  task: string
+  agent: string
+  status: "pending" | "completed"
+  dependency: number[]
   
 }
 

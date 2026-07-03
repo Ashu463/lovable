@@ -1,27 +1,38 @@
 import { PrismaClient } from "../generated/prisma/client"
 import type { AgentResponse, Message } from "../types/agentTypes"
-import { SubAgentStatus, type AgentRole, type Task, type Todo, type Tool } from "../types/types"
+import { SubAgentStatus, type AgentRole, type Task } from "../types/types"
 import { E2BSandbox } from "./services/sandbox"
 import { skills } from "./skills"
 import { CoderAgent } from "./subagents/coder"
 import { Researcher } from "./subagents/researcher"
+import { b } from "../baml_client"
+import {type TaskComplexity, type Todo} from '../baml_client/types'
+import { TODO_SYSTEM_PROMPT } from "./config"
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
-export class Agent{
+export class OrchestratorAgent{
     constructor(
         public name: string,
-        public prompt: string,
-        public todos?: Todo[]
-    ){
+        public userPrompt: string
+    ){}
+
+    async GetTodos(userPrompt: string): Promise<TaskComplexity>{
+        return await b.GetTodos(userPrompt, TODO_SYSTEM_PROMPT)
     }
-    execute(prompt: string, context: Message[]): Promise<AgentResponse>{
+    async execute(prompt: string, context: Message[]): Promise<AgentResponse>{
+
+        const taskComplexity: TaskComplexity = await this.GetTodos(this.userPrompt)
         
-        if(this.todos!.length > 0){
+        if(taskComplexity.complexity){
             /* Sub agent would be spawned based upon the skills you have, 
                 and the divided task. 
             - get tasks list, do topo sort on it and arrange it. 
             - do somehow parallel execution made in that queue [{A}, {B, X}, {D, E}, {C}]
             then in that case B and X should be executed parallely and so on
             */
+           const todos: Todo[] = taskComplexity.POA
+
+           const sequentialTodos = 
+
            let sandbox: E2BSandbox = new E2BSandbox()
            // parse the sandbox to the agent or subagent.
             let s: SubAgent = new SubAgent()

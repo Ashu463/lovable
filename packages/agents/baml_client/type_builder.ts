@@ -75,7 +75,11 @@ export default class TypeBuilder {
     
     Task: ClassViewer<'Task', "id" | "objective" | "agent" | "depends_upon">;
     
+    TaskComplexity: ClassViewer<'TaskComplexity', "complexity" | "POA">;
+    
     TesterResponse: ClassViewer<'TesterResponse'>;
+    
+    Todo: ClassViewer<'Todo', "id" | "task" | "agent" | "status" | "dependency">;
     
     WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
     
@@ -86,7 +90,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggerResponse","DeleteFile","Done","Error","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TesterResponse","WriteFile",
+            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggerResponse","DeleteFile","Done","Error","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TaskComplexity","TesterResponse","Todo","WriteFile",
           ]),
           enums: new Set([
             "Skill",
@@ -190,8 +194,16 @@ export default class TypeBuilder {
           "id","objective","agent","depends_upon",
         ]);
         
+        this.TaskComplexity = this.tb.classViewer("TaskComplexity", [
+          "complexity","POA",
+        ]);
+        
         this.TesterResponse = this.tb.classViewer("TesterResponse", [
           
+        ]);
+        
+        this.Todo = this.tb.classViewer("Todo", [
+          "id","task","agent","status","dependency",
         ]);
         
         this.WriteFile = this.tb.classViewer("WriteFile", [

@@ -1,6 +1,7 @@
 import { Sandbox } from 'e2b'
 import type { DeleteFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
-
+import { R2 } from './file-storage/fileStorage';
+import path from 'path'
 /*
 Steps/flow I thought for sandboxes
 Case - 1: Starting a new project from very scratch. 
@@ -39,25 +40,18 @@ Steps:
 - npm run dev is healthy then, run the npm build and 
 - send it to the vercel mcp server. 
 */
-interface pyalod{
-    action: "read" | "write" | "run" | "delete"
-
-}
 export class E2BSandbox{
 
-    constructor(public sandboxId: string, ){
-        const sandbox = await this.Connect(sandboxId)
-    }
+    constructor(
+        public userId: string, 
+        public projectId: string,
+        public sandboxId?: string
+    ){}
 
-    async CreateSandbox(): Promise<string>{
-        const sandbox = await Sandbox.create();
-        const result = await sandbox.commands.run('echo "Hello from E2B Sandbox!"')
-        console.log(result.stdout)  
-        return sandbox.sandboxId
-    }
+    r2 = new R2()
     async Connect(id: string){
         const sandbox = await Sandbox.connect(id)
-        await sandbox.setTimeout(60*60*1000)
+        // await sandbox.setTimeout(60*60*1000)
         return sandbox
     }
     // implement to increase the TTL of sandbox by one hour whenever any of these 
@@ -67,49 +61,128 @@ export class E2BSandbox{
         const sandbox = await this.Connect(id)
         // const homeDir = 
         if(payload.action === 'read'){
-            const result = sandbox.files.read("")
+            try{
+                const result = sandbox.files.read(payload.path)
+                return result
+            }
+            catch(e){
+                throw new Error("Error occured while reading from sandbox file")
+            }
         }
         else if(payload.action === 'writeFile'){
-
+            try{
+                const writeRes = await sandbox.files.write(payload.path, payload.content)
+                
+                return writeRes
+            }
+            catch(e){
+                throw new Error("Error occurred while executing write sandbox file")
+            }
         }
         else if(payload.action === 'delete'){
-
+            try{
+                const deleteRes = await sandbox.files.remove(payload.path)
+                
+                return deleteRes
+            }
+            catch(e){
+                throw new Error("Error occurred while executing deleting sandbox file")
+            }
         }
         else if(payload.action === 'runCommand'){
-
+            try{
+                const cmdRes = await sandbox.commands.run(payload.command)
+                
+                return cmdRes
+            }
+            catch(e){
+                throw new Error("Error occurred while executing write sandbox cmd")
+            }
         }
     }
-    async ReadFile(path: string){
 
+     /* Steps: 
+        - if any s3id exists corresponding to this user id and this session id
+            then load the code from the s3's that directory itself.
+        - else run npm create-vite@latest and return the current tree of the code. 
+        */
+    async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<string> {
+        let sandbox
+        let isFresh = false
+        // r2 -> sandbox.
+        if (sandboxId) {
+            try {
+                sandbox = await Sandbox.connect(sandboxId)
+                await sandbox.setTimeout(60 * 60 * 1000)
+            } catch (e) {
+                sandbox = null  // dead, fall through to create
+            }
+        }
+        
+        if (!sandbox) {
+            sandbox = await Sandbox.create()
+            isFresh = true
+        }
+
+        const files = await this.r2.listFiles(this.r2.filesPrefix(userId, projectId))
+        
+
+        if (files.length > 0) {
+            // restore path — pull each file, write into sandbox
+            for (const key of files) {
+                const content = await this.r2.getFile(key)
+                const relativePath = key.replace(this.r2.filesPrefix(userId, projectId), '')
+                await sandbox.files.write(relativePath, content)
+            }
+        } else {
+            // fresh project path
+            await sandbox.commands.run('npm create vite@latest . -- --template react-ts --yes')
+            await sandbox.commands.run('npm install')
+            await this.SyncR2(sandbox, userId, projectId)
+        }
+
+        const tree = await sandbox.commands.run(`tree`)
+        return sandbox.sandboxId
     }
-    async RunCommand(id: string, cmd: string) {
-        const sandbox = await this.Connect(id)
-        const output = sandbox.commands.run(cmd)
-        return output        
+    async SyncR2(sandbox: Sandbox, userId: string, projectId: string){
+        /*Steps: sandbox -> r2
+        - create the new path for all such files. 
+        - putfile with that key for each of the file.
+        copy whole directory of sandbox /home/usr  to the R2.
+        */
+        const cwd = await sandbox.commands.run("pwd")
+
+        const prefix = this.r2.filesPrefix(userId, projectId)
+        const result = await sandbox.commands.run(`
+            find ${cwd} -f \
+            -not -path '*/node_modules/*' \
+            -not -path '*/dist/*' \ 
+            -not -path '*/build/*' \
+            -not -path '.env' 
+        `)
+       // I've to trust the LLM that he'll send me the right folder directory while writing any file
+
+        const absolutePaths = result.stdout.split('\n')
+            .map(p => p.trim())
+            .filter(Boolean)
+        
+        for(let i = 0 ; i < absolutePaths.length; i += 10){
+            const batch = absolutePaths.slice(i, i + 10)
+            await Promise.all(batch.map(async (absPath) =>{
+                const relPath = absPath.replace(`${cwd}`, "")
+                const content = await sandbox.files.read(absPath)
+                await this.r2.putFile(prefix + relPath, content)
+            }))
+        }
     }
-    async StartSandbox(id: string){
-        // do the preload of the code from S3.
-
-    }
-    async WriteFile(id: string, path: string, content: string){
-        // check whether the code exists or up to date or not. 
-        const sandbox = await this.Connect(id)
-        await sandbox.files.write(path, content)
-
-
-
-    }
-    async SyncS3(id: string, filePath: string, content: string){
-        // 
-    }
-    async GetFileContent(id: string, fileName: string){
-
-    }
-    async DeleteFile(id: string, fileName: string){
-
-    }
-    async GetProjectTree(id: string){
-
+    async SandboxHealth(sandbox: Sandbox){
+        try{
+            await sandbox.connect()
+            return true;
+        }
+        catch(e){
+            return false;
+        }
     }
 }
 

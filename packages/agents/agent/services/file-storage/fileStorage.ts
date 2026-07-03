@@ -8,6 +8,7 @@ import {
 import { s3Client, BUCKET_NAME } from "./s3Client";
 
 export class R2{
+    constructor(){}
     // key here is the path of the file in which you have to make the edits.
     async putFile(key: string, content: string) {
       await s3Client.send(new PutObjectCommand({
@@ -48,18 +49,10 @@ export class R2{
       );
       return (res.Contents ?? []).map((obj) => obj.Key!);
     }
+    filesPrefix(userId: string, projectId: string){
+        return `users/${userId}/projects/${projectId}/files/`
+    }
 
 }
 
 
-
-// const filesPrefix = (userId: string, projectId: string) =>
-//   `users/${userId}/projects/${projectId}/files/`;
-
-// const manifestKey = (userId: string, projectId: string) =>
-//   `users/${userId}/projects/${projectId}/manifest.json`;
-
-// // usage example:
-// await putFile(`users/u1/projects/p1/files/src/App.tsx`, fileContent);
-// await putFile(manifestKey("u1", "p1"), JSON.stringify(manifest));
-// const allKeys = await listFiles(filesPrefix("u1", "p1"));

@@ -120,4 +120,24 @@ function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterRespon
         {{ctx.output_format}}
     "#
 }
+class Todo{
+    id int
+    task string
+    agent string
+    status "pending" | "completed"
+    dependency int[]
+}
+class TaskComplexity{
+    complexity bool
+    POA Todo[] | string
+}
+function GetTodos(userPrompt: string, systemPrompt: string) -> TaskComplexity{
 
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}}
+
+        {{ctx.output_format}}
+    "#
+}

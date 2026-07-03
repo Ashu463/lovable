@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggerResponse,  DeleteFile,  Done,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TesterResponse,  WriteFile } from "./types"
+import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggerResponse,  DeleteFile,  Done,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -136,7 +136,18 @@ export namespace partial_types {
       agent?: string | null
       depends_upon: string[]
     }
+    export interface TaskComplexity {
+      complexity?: boolean | null
+      POA?: Todo[] | string | null
+    }
     export interface TesterResponse {
+    }
+    export interface Todo {
+      id?: number | null
+      task?: string | null
+      agent?: string | null
+      status?: "pending" | "completed" | null
+      dependency: number[]
     }
     export interface WriteFile {
       action?: "writeFile" | null
