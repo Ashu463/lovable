@@ -2,13 +2,11 @@ import type { DeleteFile, Done, FetchDocs, Message, ReadFile, Research, RunComma
 import { E2BSandbox } from "../services/sandbox";
 
 type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
-interface ToolResult{
 
-}
-export abstract class BaseAgent{
+export abstract class BaseAgent<Tinput, TLLMResponse, TResult>{
     context: Message[] = []
     protected sandbox: E2BSandbox
-    constructor(public userId: string, public projectId: string, public sandboxId?: string){
+    constructor(public userId: string, public projectId: string, public sandboxId: string){
         this.sandbox = new E2BSandbox(this.userId, this.projectId, this.sandboxId)
 
     }
@@ -24,6 +22,6 @@ export abstract class BaseAgent{
         }
     }
 
-    abstract callLLM(): Promise<ToolRes>
-    abstract executeFunction(reseponse: ToolRes): Promise<ToolResult> 
+    abstract callLLM(content: Tinput): Promise<TLLMResponse>
+    abstract executeFunction(content: TLLMResponse): Promise<TResult | null>
 }

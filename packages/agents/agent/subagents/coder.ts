@@ -22,11 +22,15 @@ import Sandbox from "e2b";
 - Now Coder run inside sandbox and that will have some code present in it.
 
 */
-export class CoderAgent extends BaseAgent{
+interface CoderReq{
+
+}
+type CoderRes = LLMRresponse | ToolCallRes
+export class CoderAgent extends BaseAgent<CoderReq, CoderRes>{
     constructor(
         userId: string, 
         projectId: string,
-        public prompt: string, 
+        // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
         public boilerPlate: string,
         public s3Id?: string,
         sandboxId?: string
@@ -35,22 +39,22 @@ export class CoderAgent extends BaseAgent{
     
     override async callLLM(): Promise<WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done> {
         if(this.context.length == 0){ // assuming you won't push to context initially
-            return await b.CoderAgent(this.prompt, CODER_PROMPT, this.boilerPlate, this.context)
+            return await b.CoderAgent(CODER_PROMPT, this.boilerPlate, this.context)
         }
         else{
-            return await b.CoderAgent(this.prompt, CODER_PROMPT, "", this.context)
+            return await b.CoderAgent(CODER_PROMPT, "", this.context)
         }
     }
     override async executeFunction(response: WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done): Promise<ToolResult> {
         try{
             if(response.action === 'read' || response.action === 'writeFile' || response.action === 'delete' || response.action === 'runCommand'){
-                    const sandboxRes: CoderContext = await this.sandbox.Execute(this.sandboxId, response)
+                const sandboxRes: CoderContext = await this.sandbox.Execute(this.sandboxId, response)
             }
             else if(response.action === 'fetchDocs'){
                 const fetchInfo: string = await fetchDocs(response.library, response.query)
             }
             else if(response.action === 'research'){
-                const research = await researchAgent.Search(response.query, "webSearch")
+                const research = await Researcher.Search(response.query, "webSearch")
             }
             else if(response.action === 'done'){
                 // const syncToS3 = await sandbox.SyncS3()

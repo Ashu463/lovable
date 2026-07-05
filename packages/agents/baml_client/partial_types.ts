@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggerResponse,  DeleteFile,  Done,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  WriteFile } from "./types"
+import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggingDone,  DeleteFile,  Done,  EditFile,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -57,8 +57,8 @@ export namespace partial_types {
       type?: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research" | null
       content?: string | null
     }
-    export interface DebuggerResponse {
-      status?: string | null
+    export interface DebuggingDone {
+      action?: "done" | null
       editedFile: FileEdit[]
       errors: Record<string, string>
     }
@@ -70,11 +70,17 @@ export namespace partial_types {
       action?: "done" | null
       filesEdited: FileEdit[]
     }
+    export interface EditFile {
+      action?: "edit" | null
+      fileName?: string | null
+      content?: string | null
+    }
     export interface Error {
       fileName?: string | null
       error?: string | null
     }
     export interface Errors {
+      actions?: "errors" | null
     }
     export interface FetchDocs {
       action?: "fetchDocs" | null
@@ -148,6 +154,11 @@ export namespace partial_types {
       agent?: string | null
       status?: "pending" | "completed" | null
       dependency: number[]
+    }
+    export interface ToolResult {
+      action?: "toolResult" | null
+      success?: boolean | null
+      content?: string | null
     }
     export interface WriteFile {
       action?: "writeFile" | null

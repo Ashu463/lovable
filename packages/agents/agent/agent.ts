@@ -117,6 +117,7 @@ export class SubAgent extends Agent{
         }
         else if(agentType === 'coder'){
             let subAgent: CoderAgent = new CoderAgent(this.prompt, this.context, sbId)
+            subAgent.runLoop()
         }
 
     }

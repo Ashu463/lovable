@@ -35,22 +35,12 @@ class ItemRes{
     description string
     url string
 }
-class FileEdit{
-    fileName string
-    summary  string
-}
-class DebuggerResponse{
-    status string
-    editedFile FileEdit[]
-    errors map<string, string> // map<error, fixes>
-}
+
+
 class TesterResponse{
 
 }
-class Error{
-    fileName string
-    error string
-}
+
 function StreamOneAgent(userPrompt: string,  systemPrompt: string) -> AgentResponse{
 
     client OpenAIGeneric
@@ -97,16 +87,6 @@ function BugFinder(errors: string, systemPrompt: string) -> Error[]{
         {{ctx.output_format}}
     "#
 }
-function DebuggerAgent(userPrompt: string, systemPrompt: string, errors: Error[]) -> DebuggerResponse{
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{userPrompt}}
-        {{errors}}
-
-        {{ctx.output_format}}
-    "#
-}
 
 function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterResponse{
     // just compare the concised version of whatever is built till now and the actual user prompt
@@ -140,4 +120,41 @@ function GetTodos(userPrompt: string, systemPrompt: string) -> TaskComplexity{
 
         {{ctx.output_format}}
     "#
+}
+
+// ---New Edit 5/July/26, this would be acting as utils for baml types
+class Research{
+    action "research"
+    query string
+}
+class FileEdit{
+    fileName string
+    summary  string
+}
+class WriteFile{ // write file or edit file is treated to be same
+    action "writeFile"
+    path string
+    content string
+}
+class ReadFile{
+    action "read"
+    path string
+}
+class DeleteFile{
+    action "delete"
+    path string
+}
+class RunCommand{
+    action "runCommand"
+    command string
+}
+class EditFile{
+    action "edit"
+    fileName string
+    content string
+}
+class ToolResult{
+    action "toolResult"
+    success bool
+    content string?
 }

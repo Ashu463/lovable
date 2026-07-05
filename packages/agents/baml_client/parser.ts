@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggingDone, DeleteFile, Done, EditFile, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -102,7 +102,7 @@ export class LlmResponseParser {
   DebuggerAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.DebuggerResponse {
+  ): types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -116,30 +116,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.DebuggerResponse
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractErrors(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.ResearcherResponse {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "ExtractErrors",
-        llmResponse,
-        false,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as types.ResearcherResponse
+      ) as types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone
     } catch (error) {
       throw toBamlError(error);
     }
@@ -384,7 +361,7 @@ export class LlmStreamParser {
   DebuggerAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.DebuggerResponse {
+  ): partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -398,30 +375,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.DebuggerResponse
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractErrors(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.ResearcherResponse {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "ExtractErrors",
-        llmResponse,
-        true,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as partial_types.ResearcherResponse
+      ) as partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone
     } catch (error) {
       throw toBamlError(error);
     }

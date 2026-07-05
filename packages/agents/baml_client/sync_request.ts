@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggingDone, DeleteFile, Done, EditFile, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -105,7 +105,7 @@ export class HttpRequest {
   }
   
   CoderAgent(
-      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -124,7 +124,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "CoderAgent",
         {
-          "prompt": prompt,"systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -138,7 +138,7 @@ export class HttpRequest {
   }
   
   DebuggerAgent(
-      userPrompt: string,systemPrompt: string,errors: types.Error[],
+      systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -157,40 +157,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "DebuggerAgent",
         {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt,"errors": errors
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        false,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractErrors(
-      query: string,systemPrompt: string,searchWay: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "ExtractErrors",
-        {
-          "query": query,"systemPrompt": systemPrompt,"searchWay": searchWay
+          "systemPrompt": systemPrompt,"errors": errors,"toolResult": toolResult?? null
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -507,7 +474,7 @@ export class HttpStreamRequest {
   }
   
   CoderAgent(
-      prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -526,7 +493,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "CoderAgent",
         {
-          "prompt": prompt,"systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -540,7 +507,7 @@ export class HttpStreamRequest {
   }
   
   DebuggerAgent(
-      userPrompt: string,systemPrompt: string,errors: types.Error[],
+      systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -559,40 +526,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "DebuggerAgent",
         {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt,"errors": errors
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        true,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractErrors(
-      query: string,systemPrompt: string,searchWay: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "ExtractErrors",
-        {
-          "query": query,"systemPrompt": systemPrompt,"searchWay": searchWay
+          "systemPrompt": systemPrompt,"errors": errors,"toolResult": toolResult?? null
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

@@ -6,44 +6,87 @@ export class DAG{
         public todos: Todo[]
     ){}
 
-    answer: Array<number> = []
-    visited: Array<number> = []
-    todosGraph: Array<Array<number>> = []
+    // answer: Array<number> = []
+    answer: number[] = []
+    visited: Map<number, 0 | 1 | 2> = new Map()
+    todosGraph: Map<number, number[]> = new Map()
+    levels: Map<number, number> = new Map()
 
-    dfs(task: number): void{
-        this.visited[task] = 1;
-        const neighbours = this.todosGraph[task] ?? []
-        for(const neighbour of neighbours){
-            if(!this.visited[neighbour]){
+    dfs(taskId: number): void{
+        this.visited.set(taskId, 1) // in-progress
+
+        const neighbours = this.todosGraph.get(taskId) ?? []
+        for (const neighbour of neighbours) {
+            const state = this.visited.get(neighbour) ?? 0
+            if (state === 1) {
+                throw new Error(`Cycle detected: task ${taskId} -> ${neighbour}`)
+            }
+            if (state === 0) {
                 this.dfs(neighbour)
             }
         }
-        this.answer.push(task);
-        
+
+        this.visited.set(taskId, 2) // done
+        this.answer.push(taskId)
+            
     }
     // I'm heavily assuming that ids of task will be from 1 to n.
-    async TopologicalSort(): Promise<number[]>{
-        this.answer = [] 
-        this.todosGraph = this.makeGraph(this.todos);
+    TopologicalSort(): number[]{
+        this.answer = []
+        this.todosGraph = this.makeGraph(this.todos)
+        this.visited = new Map()
 
-        let n: number = this.todosGraph.length
-        this.visited = Array(n).fill(0)
-
-        for(var i = 0 ; i < n; i++){
-            if(this.visited[i] === 0){
-                this.dfs(i)
+        for (const todo of this.todos) {
+            if ((this.visited.get(todo.id) ?? 0) === 0) {
+                this.dfs(todo.id)
             }
         }
-        return this.answer.reverse()
+
+        return this.answer
     }
 
-    makeGraph(todos: Todo[]){
-        let n = todos.length
-        const todosGraph: Array<Array<number>> = []
-
-        for(const todo of todos){
-            todosGraph[todo.id] = todo.dependency
+    makeGraph(todos: Todo[]): Map<number, number[]> {
+        const graph = new Map<number, number[]>()
+        for (const todo of todos) {
+            graph.set(todo.id, todo.dependency)
         }
-        return todosGraph
+        return graph
     }
+    topoSortParallel(): number[][] { // written by claude not me.
+        // Build a lookup: taskId -> its dependency list
+        const dependsOn = new Map<number, number[]>()
+        for (const todo of this.todos) {
+        dependsOn.set(todo.id, todo.dependency)
+        }
+
+        const done = new Set<number>()
+        const result: number[][] = []
+
+        // Keep peeling off "ready" batches until every task is done
+        while (done.size < this.todos.length) {
+        const readyBatch: number[] = []
+
+        for (const todo of this.todos) {
+            if (done.has(todo.id)) continue
+
+            const deps = dependsOn.get(todo.id) ?? []
+            const allDepsDone = deps.every(depId => done.has(depId))
+
+            if (allDepsDone) {
+            readyBatch.push(todo.id)
+            }
+        }
+
+        if (readyBatch.length === 0) {
+            // Nothing became ready this round, but tasks remain -> cycle
+            throw new Error("Cycle detected — remaining tasks can never become ready")
+        }
+
+        readyBatch.forEach(id => done.add(id))
+        result.push(readyBatch)
+        }
+
+        return result
+    }
+
 }

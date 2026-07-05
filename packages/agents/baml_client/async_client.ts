@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggerResponse, DeleteFile, Done, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, WriteFile} from "./types"
+import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggingDone, DeleteFile, Done, EditFile, Error, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -210,7 +210,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async CoderAgent(
-        prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+        systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done> {
           try {
@@ -224,7 +224,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.CoderAgent(
-          prompt,systemPrompt,figmaBoilerPlate,context,
+          systemPrompt,figmaBoilerPlate,context,
           __baml_options__
           );
 
@@ -248,7 +248,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "CoderAgent",
             {
-            "prompt": prompt,"systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+            "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -266,9 +266,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async DebuggerAgent(
-        userPrompt: string,systemPrompt: string,errors: types.Error[],
+        systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.DebuggerResponse> {
+        ): Promise<types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -280,7 +280,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.DebuggerAgent(
-          userPrompt,systemPrompt,errors,
+          systemPrompt,errors,toolResult,
           __baml_options__
           );
 
@@ -304,7 +304,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "DebuggerAgent",
             {
-            "userPrompt": userPrompt,"systemPrompt": systemPrompt,"errors": errors
+            "systemPrompt": systemPrompt,"errors": errors,"toolResult": toolResult?? null
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -315,63 +315,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.DebuggerResponse
-            } catch (error) {
-            throw toBamlError(error);
-            }
-            }
-            
-        async ExtractErrors(
-        query: string,systemPrompt: string,searchWay: string,
-        __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.ResearcherResponse> {
-          try {
-          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-          const __signal__ = __options__.signal;
-
-          if (__signal__?.aborted) {
-          throw new BamlAbortError('Operation was aborted', __signal__.reason);
-          }
-
-          // Check if onTick is provided - route through streaming if so
-          if (__options__.onTick) {
-          const __stream__ = this.stream.ExtractErrors(
-          query,systemPrompt,searchWay,
-          __baml_options__
-          );
-
-          return await __stream__.getFinalResponse();
-          }
-
-          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-          [__options__.collector]) : [];
-          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-          const __env__: Record<string, string> = Object.fromEntries(
-            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-            );
-
-            // Resolve client option to clientRegistry (client takes precedence)
-            let __clientRegistry__ = __options__.clientRegistry;
-            if (__options__.client) {
-              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-              __clientRegistry__.setPrimary(__options__.client);
-            }
-
-            const __raw__ = await this.runtime.callFunction(
-            "ExtractErrors",
-            {
-            "query": query,"systemPrompt": systemPrompt,"searchWay": searchWay
-            },
-            this.ctxManager.cloneContext(),
-            __options__.tb?.__tb(),
-            __clientRegistry__,
-            __collector__,
-            __options__.tags || {},
-            __env__,
-            __signal__,
-            __options__.watchers,
-            )
-            return __raw__.parsed(false) as types.ResearcherResponse
+            return __raw__.parsed(false) as types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone
             } catch (error) {
             throw toBamlError(error);
             }
@@ -932,7 +876,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             CoderAgent(
-            prompt: string,systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+            systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.FetchDocs | partial_types.Research | partial_types.Done, types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done>
               {
@@ -981,7 +925,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "CoderAgent",
                 {
-                "prompt": prompt,"systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate ?? null,"context": context
+                "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate ?? null,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -1006,9 +950,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             DebuggerAgent(
-            userPrompt: string,systemPrompt: string,errors: types.Error[],
+            systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.DebuggerResponse, types.DebuggerResponse>
+            ): BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone, types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1055,7 +999,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "DebuggerAgent",
                 {
-                "userPrompt": userPrompt,"systemPrompt": systemPrompt,"errors": errors
+                "systemPrompt": systemPrompt,"errors": errors,"toolResult": toolResult ?? null
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -1067,84 +1011,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.DebuggerResponse, types.DebuggerResponse>(
+                return new BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone, types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone>(
                   __raw__,
-                  (a): partial_types.DebuggerResponse => a,
-                  (a): types.DebuggerResponse => a,
-                  this.ctxManager.cloneContext(),
-                  __options__.signal,
-                  )
-                  } catch (error) {
-                  throw toBamlError(error);
-                  }
-                  }
-                  
-            ExtractErrors(
-            query: string,systemPrompt: string,searchWay: string,
-            __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.ResearcherResponse, types.ResearcherResponse>
-              {
-              try {
-              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-              const __signal__ = __options__.signal;
-
-              if (__signal__?.aborted) {
-              throw new BamlAbortError('Operation was aborted', __signal__.reason);
-              }
-
-              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-              [__options__.collector]) : [];
-
-              let __onTickWrapper__: (() => void) | undefined;
-
-              // Create collector and wrap onTick if provided
-              if (__options__.onTick) {
-              const __tickCollector__ = new Collector("on-tick-collector");
-              __collector__ = [...__collector__, __tickCollector__];
-
-              __onTickWrapper__ = () => {
-              const __log__ = __tickCollector__.last;
-              if (__log__) {
-              try {
-              __options__.onTick!("Unknown", __log__);
-              } catch (error) {
-              console.error("Error in onTick callback for ExtractErrors", error);
-              }
-              }
-              };
-              }
-
-              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-              const __env__: Record<string, string> = Object.fromEntries(
-                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-                );
-
-                // Resolve client option to clientRegistry (client takes precedence)
-                let __clientRegistry__ = __options__.clientRegistry;
-                if (__options__.client) {
-                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-                  __clientRegistry__.setPrimary(__options__.client);
-                }
-
-                const __raw__ = this.runtime.streamFunction(
-                "ExtractErrors",
-                {
-                "query": query,"systemPrompt": systemPrompt,"searchWay": searchWay
-                },
-                undefined,
-                this.ctxManager.cloneContext(),
-                __options__.tb?.__tb(),
-                __clientRegistry__,
-                __collector__,
-                __options__.tags || {},
-                __env__,
-                __signal__,
-                __onTickWrapper__,
-                )
-                return new BamlStream<partial_types.ResearcherResponse, types.ResearcherResponse>(
-                  __raw__,
-                  (a): partial_types.ResearcherResponse => a,
-                  (a): types.ResearcherResponse => a,
+                  (a): partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone => a,
+                  (a): types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

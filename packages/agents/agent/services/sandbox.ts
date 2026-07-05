@@ -40,6 +40,13 @@ Steps:
 - npm run dev is healthy then, run the npm build and 
 - send it to the vercel mcp server. 
 */
+
+// -------------NEW FLOW-------------------
+/*
+- user prompts something 
+- sandbox spawned with new session id
+- then agent flow takes over
+*/
 export class E2BSandbox{
 
     constructor(

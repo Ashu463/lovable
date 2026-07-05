@@ -91,8 +91,8 @@ export interface CoderContext {
   
 }
 
-export interface DebuggerResponse {
-  status: string
+export interface DebuggingDone {
+  action: "done"
   editedFile: FileEdit[]
   errors: Record<string, string>
   
@@ -110,6 +110,13 @@ export interface Done {
   
 }
 
+export interface EditFile {
+  action: "edit"
+  fileName: string
+  content: string
+  
+}
+
 export interface Error {
   fileName: string
   error: string
@@ -117,6 +124,7 @@ export interface Error {
 }
 
 export interface Errors {
+  actions: "errors"
   
 }
 
@@ -224,6 +232,13 @@ export interface Todo {
   agent: string
   status: "pending" | "completed"
   dependency: number[]
+  
+}
+
+export interface ToolResult {
+  action: "toolResult"
+  success: boolean
+  content?: string | null
   
 }
 
