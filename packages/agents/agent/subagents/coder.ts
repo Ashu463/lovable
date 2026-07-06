@@ -1,5 +1,5 @@
 import { CODER_PROMPT } from "../config";
-import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type ReadFile, type Research, type RunCommand, type WriteFile} from '../../baml_client'
+import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type ReadFile, type Research, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../services/sandbox";
 import type { Message } from "../../types/agentTypes";
@@ -22,30 +22,28 @@ import Sandbox from "e2b";
 - Now Coder run inside sandbox and that will have some code present in it.
 
 */
-interface CoderReq{
-
-}
-type CoderRes = LLMRresponse | ToolCallRes
-export class CoderAgent extends BaseAgent<CoderReq, CoderRes>{
+type CoderRequest = string // not needed here. 
+type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+type CoderAgentResponse = ToolResult | string
+export class CoderAgent extends BaseAgent<CoderRequest, CoderLLMResponse, CoderAgentResponse>{
     constructor(
-        userId: string, 
+        userId: string,
         projectId: string,
+        sandboxId: string,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
-        public boilerPlate: string,
         public s3Id?: string,
-        sandboxId?: string
     ){super(userId, projectId, sandboxId)}
 
     
-    override async callLLM(): Promise<WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done> {
+    override async callLLM(boilerPlate: string): Promise<CoderLLMResponse> {
         if(this.context.length == 0){ // assuming you won't push to context initially
-            return await b.CoderAgent(CODER_PROMPT, this.boilerPlate, this.context)
+            return await b.CoderAgent(CODER_PROMPT, boilerPlate, this.context)
         }
         else{
             return await b.CoderAgent(CODER_PROMPT, "", this.context)
         }
     }
-    override async executeFunction(response: WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done): Promise<ToolResult> {
+    override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{
             if(response.action === 'read' || response.action === 'writeFile' || response.action === 'delete' || response.action === 'runCommand'){
                 const sandboxRes: CoderContext = await this.sandbox.Execute(this.sandboxId, response)
@@ -54,16 +52,17 @@ export class CoderAgent extends BaseAgent<CoderReq, CoderRes>{
                 const fetchInfo: string = await fetchDocs(response.library, response.query)
             }
             else if(response.action === 'research'){
-                const research = await Researcher.Search(response.query, "webSearch")
+                // const research = await Researcher.Search(response.query, "webSearch")
             }
             else if(response.action === 'done'){
                 // const syncToS3 = await sandbox.SyncS3()
-                return response
+                return "coder agent done"
             }
         }
         catch(e){
-
+            throw new Error("Error occurred in coder agent tool call")
         }
+        return "Unknown Error occurred"
     }
     // async runLoop(): Promise<WriteFile | RunCommand  | Done>{
     //     const researchAgent: Researcher = new Researcher()

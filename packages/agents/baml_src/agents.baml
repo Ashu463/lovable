@@ -154,7 +154,6 @@ class EditFile{
     content string
 }
 class ToolResult{
-    action "toolResult"
     success bool
-    content string?
+    content FileEdit[]?
 }

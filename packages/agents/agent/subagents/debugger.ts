@@ -8,12 +8,12 @@ export interface DebuggerAgentResponse{
     editedFiles: FileEdit[],
     // errorsFixed: Error[]
 }
-type DebuggerRequest = Error[] 
+type DebuggerRequest = Error[]
 // TODO: implement line by line edit feature, instead writing complete file 
 type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
 // type DebuggerToolResponse = 
-export class DebuggerAgent extends BaseAgent<DebuggerRequest,DebuggerLLMResponse, DebuggerAgentResponse>{
+export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerLLMResponse, DebuggerAgentResponse>{
 
     constructor(
         userId: string,

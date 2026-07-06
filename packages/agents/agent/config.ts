@@ -99,3 +99,19 @@ Rules:
 
 MCP tools:
 - sandbox.read_file: read package.json and main source files for context`
+
+export const UI_DESIGNER_PROMPT = `
+You are a UI designer and have abilities to generate UI desgins in form of html code
+You have qna tool in order to ask user preference where you can ask design related questions from the user
+
+Rules: 
+- 
+`
+export const UI_VARIANTS_PROMPT = `
+    You produce input parameters for a design-generation tool, not designs themselves.
+    Given a user's feature/product description, produce 3 distinct prompt variants.
+    Vary layout paradigm, visual tone, or interaction pattern across the 3 — not
+    superficial color-only changes.
+    Output strictly as JSON: { "prompts": ["...", "...", "..."] }
+    No prose outside the JSON.
+`

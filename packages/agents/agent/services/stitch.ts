@@ -12,7 +12,7 @@ type CreateProjectResult = {
 
 export async function makeOneScreen(prompt: string, userId: string): Promise<Screen> {
     const projectResult: CreateProjectResult = await stitch.callTool("create_project", {
-    title: userId,
+      title: userId,
     });
 
     const projectId = projectResult.project!.projectId;

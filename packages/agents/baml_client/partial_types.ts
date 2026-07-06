@@ -156,9 +156,8 @@ export namespace partial_types {
       dependency: number[]
     }
     export interface ToolResult {
-      action?: "toolResult" | null
       success?: boolean | null
-      content?: string | null
+      content?: FileEdit[] | null
     }
     export interface WriteFile {
       action?: "writeFile" | null

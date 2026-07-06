@@ -236,9 +236,8 @@ export interface Todo {
 }
 
 export interface ToolResult {
-  action: "toolResult"
   success: boolean
-  content?: string | null
+  content?: FileEdit[] | null
   
 }
 

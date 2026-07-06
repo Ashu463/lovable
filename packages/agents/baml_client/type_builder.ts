@@ -83,7 +83,7 @@ export default class TypeBuilder {
     
     Todo: ClassViewer<'Todo', "id" | "task" | "agent" | "status" | "dependency">;
     
-    ToolResult: ClassViewer<'ToolResult', "action" | "success" | "content">;
+    ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
     WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
     
@@ -215,7 +215,7 @@ export default class TypeBuilder {
         ]);
         
         this.ToolResult = this.tb.classViewer("ToolResult", [
-          "action","success","content",
+          "success","content",
         ]);
         
         this.WriteFile = this.tb.classViewer("WriteFile", [

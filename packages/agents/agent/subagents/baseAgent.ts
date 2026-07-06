@@ -6,7 +6,11 @@ type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Rese
 export abstract class BaseAgent<Tinput, TLLMResponse, TResult>{
     context: Message[] = []
     protected sandbox: E2BSandbox
-    constructor(public userId: string, public projectId: string, public sandboxId: string){
+    constructor(
+        public userId: string, 
+        public projectId: string, 
+        public sandboxId: string
+    ){
         this.sandbox = new E2BSandbox(this.userId, this.projectId, this.sandboxId)
 
     }
