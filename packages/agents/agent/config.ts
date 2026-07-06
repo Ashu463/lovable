@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client/extension";
 
 export const prisma = new PrismaClient()
+export const PORT = 3000
+export const MAX_BOOT_WAIT_MS = 20000
+export const POLL_INTERVAL_MS = 500
 
 export const MAIN_SYSTEM_PROMPT = ``
 export const COMPLEXITY_SYSTEM_PROMPT = ``
@@ -75,19 +78,7 @@ MCP tools:
 - sandbox.get_logs: fetch latest runtime logs if needed
 - researcher: delegate to researcher agent if fix requires external knowledge`
 
-export const TESTER_PROMPT = `
-You are a test writing agent.
-Write Vitest unit tests for non-trivial logic and components.
-
-Rules:
-- Skip pure layout/UI-only components
-- Test files mirror source paths under __tests__/
-- Vitest + React Testing Library only
-
-MCP tools:
-- sandbox.read_file: read source files before writing tests
-- sandbox.write_file: write test files
-- sandbox.run_command: run vitest to verify tests pass`
+export const TESTER_PROMPT = ``
 
 export const DOCS_WRITER_PROMPT = `
 You are a documentation agent.

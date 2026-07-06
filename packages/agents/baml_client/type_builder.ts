@@ -47,6 +47,8 @@ export default class TypeBuilder {
     
     Error: ClassViewer<'Error', "fileName" | "error">;
     
+    ErrorResponse: ClassViewer<'ErrorResponse', "error" | "file" | "line">;
+    
     Errors: ClassViewer<'Errors', "actions">;
     
     FetchDocs: ClassViewer<'FetchDocs', "action" | "query" | "library">;
@@ -94,7 +96,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggingDone","DeleteFile","Done","EditFile","Error","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TaskComplexity","TesterResponse","Todo","ToolResult","WriteFile",
+            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggingDone","DeleteFile","Done","EditFile","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TaskComplexity","TesterResponse","Todo","ToolResult","WriteFile",
           ]),
           enums: new Set([
             "Skill",
@@ -140,6 +142,10 @@ export default class TypeBuilder {
         
         this.Error = this.tb.classViewer("Error", [
           "fileName","error",
+        ]);
+        
+        this.ErrorResponse = this.tb.classViewer("ErrorResponse", [
+          "error","file","line",
         ]);
         
         this.Errors = this.tb.classViewer("Errors", [

@@ -123,6 +123,13 @@ export interface Error {
   
 }
 
+export interface ErrorResponse {
+  error: string
+  file: string
+  line: number
+  
+}
+
 export interface Errors {
   actions: "errors"
   

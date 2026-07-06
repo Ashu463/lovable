@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggingDone,  DeleteFile,  Done,  EditFile,  Error,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
+import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggingDone,  DeleteFile,  Done,  EditFile,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -78,6 +78,11 @@ export namespace partial_types {
     export interface Error {
       fileName?: string | null
       error?: string | null
+    }
+    export interface ErrorResponse {
+      error?: string | null
+      file?: string | null
+      line?: number | null
     }
     export interface Errors {
       actions?: "errors" | null
