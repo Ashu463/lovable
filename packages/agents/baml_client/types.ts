@@ -47,17 +47,12 @@ export function all_succeeded<CheckName extends string>(checks: Record<CheckName
 export function get_checks<CheckName extends string>(checks: Record<CheckName, Check>): Check[] {
     return Object.values(checks)
 }
-export enum Skill {
-  WebSearch = "WebSearch",
-  Read_blog = "Read_blog",
-  Read_docs = "Read_docs",
-  Read_file = "Read_file",
-  Write_file = "Write_file",
-  Edit_file = "Edit_file",
-  Bash = "Bash",
-  Pytest = "Pytest",
-  Jest = "Jest",
-  Read_codebase = "Read_codebase",
+export enum Agent {
+  CoderAgent = "CoderAgent",
+  DebuggerAgent = "DebuggerAgent",
+  TesterAgent = "TesterAgent",
+  UIExpertAgent = "UIExpertAgent",
+  ResearcherAgent = "ResearcherAgent",
 }
 
 export interface AgentResponse {
@@ -91,10 +86,23 @@ export interface CoderContext {
   
 }
 
+export interface ComplexityLevel {
+  complex: boolean
+  qnaNeeded: boolean
+  
+}
+
 export interface DebuggingDone {
   action: "done"
   editedFile: FileEdit[]
   errors: Record<string, string>
+  
+}
+
+export interface Decision {
+  actor: string
+  decision: string
+  accepted: string
   
 }
 
@@ -114,6 +122,20 @@ export interface EditFile {
   action: "edit"
   fileName: string
   content: string
+  
+}
+
+export interface EpisodicMemory {
+  sessionGoal: string
+  userRequests: string[]
+  impFacts: string[]
+  decisions: string[]
+  toolResults: string[]
+  generatedArtifacts: string[]
+  openTasks: string[]
+  preferences: string[]
+  entities: string[]
+  summary: string
   
 }
 
@@ -166,14 +188,9 @@ export interface Message {
   
 }
 
-export interface Option {
-  text: string
-  
-}
-
 export interface Question {
   question: string
-  option: Option[]
+  option: string[]
   
 }
 
@@ -195,31 +212,9 @@ export interface ResearcherResponse {
   
 }
 
-export interface Resume {
-  name: string
-  email: string
-  experience: string[]
-  skills: string[]
-  
-}
-
 export interface RunCommand {
   action: "runCommand"
   command: string
-  
-}
-
-export interface SubAgent {
-  name: string
-  skills: Skill[]
-  
-}
-
-export interface Task {
-  id: string
-  objective: string
-  agent: string
-  depends_upon: string[]
   
 }
 

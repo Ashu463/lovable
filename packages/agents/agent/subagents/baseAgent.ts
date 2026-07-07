@@ -1,5 +1,5 @@
 import type { DeleteFile, Done, FetchDocs, Message, ReadFile, Research, RunCommand, WriteFile } from "../../baml_client";
-import { E2BSandbox } from "../services/sandbox";
+import { E2BSandbox } from "../utils/sandbox";
 
 type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
 

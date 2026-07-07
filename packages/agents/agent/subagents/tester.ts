@@ -1,7 +1,8 @@
 import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse } from "../../baml_client"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, TESTER_PROMPT } from "../config"
+import { TESTER_PROMPT } from "../config/sysPrompts"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse

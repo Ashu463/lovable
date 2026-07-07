@@ -31,7 +31,7 @@ export class DAG{
             
     }
     // I'm heavily assuming that ids of task will be from 1 to n.
-    TopologicalSort(): number[]{
+    TopologicalSort(): Todo[]{
         this.answer = []
         this.todosGraph = this.makeGraph(this.todos)
         this.visited = new Map()
@@ -42,7 +42,10 @@ export class DAG{
             }
         }
 
-        return this.answer
+        const sequenctialTodos: Todo[] = this.answer.map(taskId => this.todos.find(todo => todo.id === taskId))
+            .filter((todo): todo is Todo => todo !== undefined)
+        
+        return sequenctialTodos
     }
 
     makeGraph(todos: Todo[]): Map<number, number[]> {

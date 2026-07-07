@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggingDone, DeleteFile, Done, EditFile, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
+import type {Agent, AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, DebuggingDone, Decision, DeleteFile, Done, EditFile, EpisodicMemory, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -53,24 +53,24 @@ export class LlmResponseParser {
     }
   }
   
-  CheckComplexityAndPlanTask(
+  CheckComplexity(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.Task {
+  ): types.ComplexityLevel {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexityAndPlanTask",
+        "CheckComplexity",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.Task
+      ) as types.ComplexityLevel
     } catch (error) {
       throw toBamlError(error);
     }
@@ -99,6 +99,29 @@ export class LlmResponseParser {
     }
   }
   
+  CompressContext(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.EpisodicMemory {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CompressContext",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.EpisodicMemory
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   DebuggerAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -117,29 +140,6 @@ export class LlmResponseParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractResume(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.Resume {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "ExtractResume",
-        llmResponse,
-        false,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as types.Resume
     } catch (error) {
       throw toBamlError(error);
     }
@@ -237,6 +237,52 @@ export class LlmResponseParser {
     }
   }
   
+  PlanComplexTask(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.Todo[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "PlanComplexTask",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.Todo[]
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  PlanSimpleTask(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "PlanSimpleTask",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   ReframeError(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -301,6 +347,29 @@ export class LlmResponseParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as types.AgentResponse
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  SummarizeEpisodic(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "SummarizeEpisodic",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
     } catch (error) {
       throw toBamlError(error);
     }
@@ -381,24 +450,24 @@ export class LlmStreamParser {
     }
   }
   
-  CheckComplexityAndPlanTask(
+  CheckComplexity(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.Task {
+  ): partial_types.ComplexityLevel {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexityAndPlanTask",
+        "CheckComplexity",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.Task
+      ) as partial_types.ComplexityLevel
     } catch (error) {
       throw toBamlError(error);
     }
@@ -427,6 +496,29 @@ export class LlmStreamParser {
     }
   }
   
+  CompressContext(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.EpisodicMemory {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CompressContext",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.EpisodicMemory
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   DebuggerAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -445,29 +537,6 @@ export class LlmStreamParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  ExtractResume(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.Resume {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "ExtractResume",
-        llmResponse,
-        true,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as partial_types.Resume
     } catch (error) {
       throw toBamlError(error);
     }
@@ -565,6 +634,52 @@ export class LlmStreamParser {
     }
   }
   
+  PlanComplexTask(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.Todo[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "PlanComplexTask",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.Todo[]
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  PlanSimpleTask(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "PlanSimpleTask",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   ReframeError(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -629,6 +744,29 @@ export class LlmStreamParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as partial_types.AgentResponse
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  SummarizeEpisodic(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "SummarizeEpisodic",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
     } catch (error) {
       throw toBamlError(error);
     }

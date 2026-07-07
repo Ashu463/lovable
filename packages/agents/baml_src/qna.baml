@@ -1,16 +1,28 @@
 class Question{
     question string
-    option Option[]
+    option string[]
 }
-class Option{
-    text string
+class ComplexityLevel{
+    complex bool
+    qnaNeeded bool
 }
-function GenerateQuestion(prompt: string, questionPrompt: string) -> Question[]{
+function CheckComplexity(userPrompt: string, systemPrompt: string) -> ComplexityLevel{
 
-    client "openai-generic/deepseek-v4-flash"
+    client OpenAIGeneric
     prompt #"
-        {{questionPrompt}}
-        {{prompt}}
+        {{systemPrompt}}
+        {{userPrompt}}
 
+        {{ctx.output_format}}
+    "#
+}
+function GenerateQuestion(userPrompt: string, systemPrompt: string) -> Question[]{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}}
+
+        {{ctx.output_format}}
     "#
 }

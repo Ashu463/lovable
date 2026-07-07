@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, DebuggingDone, DeleteFile, Done, EditFile, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Option, Question, ReadFile, Research, ResearcherResponse, Resume, RunCommand, Skill, SubAgent, Task, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
+import type {Agent, AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, DebuggingDone, Decision, DeleteFile, Done, EditFile, EpisodicMemory, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -153,10 +153,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             }
             
-        async CheckComplexityAndPlanTask(
-        userPrompt: string,subAgents: types.SubAgent[],
+        async CheckComplexity(
+        userPrompt: string,systemPrompt: string,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.Task> {
+        ): Promise<types.ComplexityLevel> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -167,8 +167,8 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
 
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
-          const __stream__ = this.stream.CheckComplexityAndPlanTask(
-          userPrompt,subAgents,
+          const __stream__ = this.stream.CheckComplexity(
+          userPrompt,systemPrompt,
           __baml_options__
           );
 
@@ -190,9 +190,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
 
             const __raw__ = await this.runtime.callFunction(
-            "CheckComplexityAndPlanTask",
+            "CheckComplexity",
             {
-            "userPrompt": userPrompt,"subAgents": subAgents
+            "userPrompt": userPrompt,"systemPrompt": systemPrompt
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -203,7 +203,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.Task
+            return __raw__.parsed(false) as types.ComplexityLevel
             } catch (error) {
             throw toBamlError(error);
             }
@@ -265,6 +265,62 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             }
             
+        async CompressContext(
+        systemPrompt: string,session: string[],
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<types.EpisodicMemory> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.CompressContext(
+          systemPrompt,session,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "CompressContext",
+            {
+            "systemPrompt": systemPrompt,"session": session
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as types.EpisodicMemory
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
         async DebuggerAgent(
         systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
         __baml_options__?: BamlCallOptions<never>
@@ -316,62 +372,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __options__.watchers,
             )
             return __raw__.parsed(false) as types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone
-            } catch (error) {
-            throw toBamlError(error);
-            }
-            }
-            
-        async ExtractResume(
-        resume: string,
-        __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.Resume> {
-          try {
-          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-          const __signal__ = __options__.signal;
-
-          if (__signal__?.aborted) {
-          throw new BamlAbortError('Operation was aborted', __signal__.reason);
-          }
-
-          // Check if onTick is provided - route through streaming if so
-          if (__options__.onTick) {
-          const __stream__ = this.stream.ExtractResume(
-          resume,
-          __baml_options__
-          );
-
-          return await __stream__.getFinalResponse();
-          }
-
-          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-          [__options__.collector]) : [];
-          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-          const __env__: Record<string, string> = Object.fromEntries(
-            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-            );
-
-            // Resolve client option to clientRegistry (client takes precedence)
-            let __clientRegistry__ = __options__.clientRegistry;
-            if (__options__.client) {
-              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-              __clientRegistry__.setPrimary(__options__.client);
-            }
-
-            const __raw__ = await this.runtime.callFunction(
-            "ExtractResume",
-            {
-            "resume": resume
-            },
-            this.ctxManager.cloneContext(),
-            __options__.tb?.__tb(),
-            __clientRegistry__,
-            __collector__,
-            __options__.tags || {},
-            __env__,
-            __signal__,
-            __options__.watchers,
-            )
-            return __raw__.parsed(false) as types.Resume
             } catch (error) {
             throw toBamlError(error);
             }
@@ -434,7 +434,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async GenerateQuestion(
-        prompt: string,questionPrompt: string,
+        userPrompt: string,systemPrompt: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.Question[]> {
           try {
@@ -448,7 +448,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.GenerateQuestion(
-          prompt,questionPrompt,
+          userPrompt,systemPrompt,
           __baml_options__
           );
 
@@ -472,7 +472,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "GenerateQuestion",
             {
-            "prompt": prompt,"questionPrompt": questionPrompt
+            "userPrompt": userPrompt,"systemPrompt": systemPrompt
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -596,6 +596,118 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __options__.watchers,
             )
             return __raw__.parsed(false) as types.FinalResponse
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
+        async PlanComplexTask(
+        systemPrompt: string,userPrompt: string,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<types.Todo[]> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.PlanComplexTask(
+          systemPrompt,userPrompt,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "PlanComplexTask",
+            {
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as types.Todo[]
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
+        async PlanSimpleTask(
+        systemPrompt: string,userPrompt: string,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<string> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.PlanSimpleTask(
+          systemPrompt,userPrompt,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "PlanSimpleTask",
+            {
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as string
             } catch (error) {
             throw toBamlError(error);
             }
@@ -764,6 +876,62 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __options__.watchers,
             )
             return __raw__.parsed(false) as types.AgentResponse
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
+        async SummarizeEpisodic(
+        systemPrompt: string,episodicMem: types.EpisodicMemory,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<string> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.SummarizeEpisodic(
+          systemPrompt,episodicMem,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "SummarizeEpisodic",
+            {
+            "systemPrompt": systemPrompt,"episodicMem": episodicMem
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as string
             } catch (error) {
             throw toBamlError(error);
             }
@@ -969,10 +1137,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   }
                   
-            CheckComplexityAndPlanTask(
-            userPrompt: string,subAgents: types.SubAgent[],
+            CheckComplexity(
+            userPrompt: string,systemPrompt: string,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.Task, types.Task>
+            ): BamlStream<partial_types.ComplexityLevel, types.ComplexityLevel>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -998,7 +1166,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
               try {
               __options__.onTick!("Unknown", __log__);
               } catch (error) {
-              console.error("Error in onTick callback for CheckComplexityAndPlanTask", error);
+              console.error("Error in onTick callback for CheckComplexity", error);
               }
               }
               };
@@ -1017,9 +1185,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 }
 
                 const __raw__ = this.runtime.streamFunction(
-                "CheckComplexityAndPlanTask",
+                "CheckComplexity",
                 {
-                "userPrompt": userPrompt,"subAgents": subAgents
+                "userPrompt": userPrompt,"systemPrompt": systemPrompt
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -1031,10 +1199,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.Task, types.Task>(
+                return new BamlStream<partial_types.ComplexityLevel, types.ComplexityLevel>(
                   __raw__,
-                  (a): partial_types.Task => a,
-                  (a): types.Task => a,
+                  (a): partial_types.ComplexityLevel => a,
+                  (a): types.ComplexityLevel => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -1117,6 +1285,80 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   }
                   
+            CompressContext(
+            systemPrompt: string,session: string[],
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<partial_types.EpisodicMemory, types.EpisodicMemory>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for CompressContext", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "CompressContext",
+                {
+                "systemPrompt": systemPrompt,"session": session
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<partial_types.EpisodicMemory, types.EpisodicMemory>(
+                  __raw__,
+                  (a): partial_types.EpisodicMemory => a,
+                  (a): types.EpisodicMemory => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
             DebuggerAgent(
             systemPrompt: string,errors: types.Error[],toolResult?: types.ToolResult | null,
             __baml_options__?: BamlCallOptions<never>
@@ -1183,80 +1425,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   __raw__,
                   (a): partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.Research | partial_types.DebuggingDone => a,
                   (a): types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone => a,
-                  this.ctxManager.cloneContext(),
-                  __options__.signal,
-                  )
-                  } catch (error) {
-                  throw toBamlError(error);
-                  }
-                  }
-                  
-            ExtractResume(
-            resume: string,
-            __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.Resume, types.Resume>
-              {
-              try {
-              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-              const __signal__ = __options__.signal;
-
-              if (__signal__?.aborted) {
-              throw new BamlAbortError('Operation was aborted', __signal__.reason);
-              }
-
-              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-              [__options__.collector]) : [];
-
-              let __onTickWrapper__: (() => void) | undefined;
-
-              // Create collector and wrap onTick if provided
-              if (__options__.onTick) {
-              const __tickCollector__ = new Collector("on-tick-collector");
-              __collector__ = [...__collector__, __tickCollector__];
-
-              __onTickWrapper__ = () => {
-              const __log__ = __tickCollector__.last;
-              if (__log__) {
-              try {
-              __options__.onTick!("Unknown", __log__);
-              } catch (error) {
-              console.error("Error in onTick callback for ExtractResume", error);
-              }
-              }
-              };
-              }
-
-              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-              const __env__: Record<string, string> = Object.fromEntries(
-                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-                );
-
-                // Resolve client option to clientRegistry (client takes precedence)
-                let __clientRegistry__ = __options__.clientRegistry;
-                if (__options__.client) {
-                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-                  __clientRegistry__.setPrimary(__options__.client);
-                }
-
-                const __raw__ = this.runtime.streamFunction(
-                "ExtractResume",
-                {
-                "resume": resume
-                },
-                undefined,
-                this.ctxManager.cloneContext(),
-                __options__.tb?.__tb(),
-                __clientRegistry__,
-                __collector__,
-                __options__.tags || {},
-                __env__,
-                __signal__,
-                __onTickWrapper__,
-                )
-                return new BamlStream<partial_types.Resume, types.Resume>(
-                  __raw__,
-                  (a): partial_types.Resume => a,
-                  (a): types.Resume => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -1340,7 +1508,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             GenerateQuestion(
-            prompt: string,questionPrompt: string,
+            userPrompt: string,systemPrompt: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.Question[], types.Question[]>
               {
@@ -1389,7 +1557,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "GenerateQuestion",
                 {
-                "prompt": prompt,"questionPrompt": questionPrompt
+                "userPrompt": userPrompt,"systemPrompt": systemPrompt
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -1553,6 +1721,154 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   __raw__,
                   (a): partial_types.FinalResponse => a,
                   (a): types.FinalResponse => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
+            PlanComplexTask(
+            systemPrompt: string,userPrompt: string,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<partial_types.Todo[], types.Todo[]>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for PlanComplexTask", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "PlanComplexTask",
+                {
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<partial_types.Todo[], types.Todo[]>(
+                  __raw__,
+                  (a): partial_types.Todo[] => a,
+                  (a): types.Todo[] => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
+            PlanSimpleTask(
+            systemPrompt: string,userPrompt: string,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<string, string>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for PlanSimpleTask", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "PlanSimpleTask",
+                {
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<string, string>(
+                  __raw__,
+                  (a): string => a,
+                  (a): string => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -1775,6 +2091,80 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   __raw__,
                   (a): partial_types.AgentResponse => a,
                   (a): types.AgentResponse => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
+            SummarizeEpisodic(
+            systemPrompt: string,episodicMem: types.EpisodicMemory,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<string, string>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for SummarizeEpisodic", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "SummarizeEpisodic",
+                {
+                "systemPrompt": systemPrompt,"episodicMem": episodicMem
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<string, string>(
+                  __raw__,
+                  (a): string => a,
+                  (a): string => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

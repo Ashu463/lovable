@@ -3,7 +3,7 @@ import { makeOneScreen } from "../services/stitch"
 import { BaseAgent } from "./baseAgent"
 import { b } from "../../baml_client"
 import { makeBoilerPlate } from "../MCPs/figma"
-import { UI_VARIANTS_PROMPT } from "../config"
+import { UI_VARIANTS_PROMPT } from "../config/sysPrompts"
 
 interface Design {
     designId: string,

@@ -3,7 +3,7 @@ dotenv.config()
 import type { AgentRequest, LLMResponse, Todo } from "../types/types";
 import { events } from "./events";
 
-import { fetchContext } from './memory';
+import { fetchContext } from './utils/memory';
 import { streamLLM } from './llm';
 import { Agent } from './agent';
 

@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  DebuggingDone,  DeleteFile,  Done,  EditFile,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Option,  Question,  ReadFile,  Research,  ResearcherResponse,  Resume,  RunCommand,  Skill,  SubAgent,  Task,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
+import type {  Agent,  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  DebuggingDone,  Decision,  DeleteFile,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -57,10 +57,19 @@ export namespace partial_types {
       type?: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research" | null
       content?: string | null
     }
+    export interface ComplexityLevel {
+      complex?: boolean | null
+      qnaNeeded?: boolean | null
+    }
     export interface DebuggingDone {
       action?: "done" | null
       editedFile: FileEdit[]
       errors: Record<string, string>
+    }
+    export interface Decision {
+      actor?: string | null
+      decision?: string | null
+      accepted?: string | null
     }
     export interface DeleteFile {
       action?: "delete" | null
@@ -74,6 +83,18 @@ export namespace partial_types {
       action?: "edit" | null
       fileName?: string | null
       content?: string | null
+    }
+    export interface EpisodicMemory {
+      sessionGoal?: string | null
+      userRequests: string[]
+      impFacts: string[]
+      decisions: string[]
+      toolResults: string[]
+      generatedArtifacts: string[]
+      openTasks: string[]
+      preferences: string[]
+      entities: string[]
+      summary?: string | null
     }
     export interface Error {
       fileName?: string | null
@@ -108,12 +129,9 @@ export namespace partial_types {
     }
     export interface Message {
     }
-    export interface Option {
-      text?: string | null
-    }
     export interface Question {
       question?: string | null
-      option: Option[]
+      option: string[]
     }
     export interface ReadFile {
       action?: "read" | null
@@ -127,25 +145,9 @@ export namespace partial_types {
       query?: string | null
       result?: BraveRes | ApifyRes | null
     }
-    export interface Resume {
-      name?: string | null
-      email?: string | null
-      experience: string[]
-      skills: string[]
-    }
     export interface RunCommand {
       action?: "runCommand" | null
       command?: string | null
-    }
-    export interface SubAgent {
-      name?: string | null
-      skills: types.Skill[]
-    }
-    export interface Task {
-      id?: string | null
-      objective?: string | null
-      agent?: string | null
-      depends_upon: string[]
     }
     export interface TaskComplexity {
       complexity?: boolean | null

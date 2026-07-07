@@ -1,7 +1,7 @@
 import type { WriteFile, ReadFile, RunCommand, DeleteFile, FetchDocs, Research, Done, Error, DebuggingDone, ToolResult, FileEdit } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
-import { DEBUGGER_PROMPT } from "../config";
+import { DEBUGGER_PROMPT } from "../config/sysPrompts";
 
 export interface DebuggerAgentResponse{
     success: Boolean,

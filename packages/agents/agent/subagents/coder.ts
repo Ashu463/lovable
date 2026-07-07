@@ -1,7 +1,7 @@
-import { CODER_PROMPT } from "../config";
+import { CODER_PROMPT } from "../config/sysPrompts";
 import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type ReadFile, type Research, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
-import { E2BSandbox } from "../services/sandbox";
+import { E2BSandbox } from "../utils/sandbox";
 import type { Message } from "../../types/agentTypes";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";

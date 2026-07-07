@@ -37,13 +37,19 @@ export default class TypeBuilder {
     
     CoderContext: ClassViewer<'CoderContext', "type" | "content">;
     
+    ComplexityLevel: ClassViewer<'ComplexityLevel', "complex" | "qnaNeeded">;
+    
     DebuggingDone: ClassViewer<'DebuggingDone', "action" | "editedFile" | "errors">;
+    
+    Decision: ClassViewer<'Decision', "actor" | "decision" | "accepted">;
     
     DeleteFile: ClassViewer<'DeleteFile', "action" | "path">;
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
     
     EditFile: ClassViewer<'EditFile', "action" | "fileName" | "content">;
+    
+    EpisodicMemory: ClassViewer<'EpisodicMemory', "sessionGoal" | "userRequests" | "impFacts" | "decisions" | "toolResults" | "generatedArtifacts" | "openTasks" | "preferences" | "entities" | "summary">;
     
     Error: ClassViewer<'Error', "fileName" | "error">;
     
@@ -61,8 +67,6 @@ export default class TypeBuilder {
     
     Message: ClassViewer<'Message'>;
     
-    Option: ClassViewer<'Option', "text">;
-    
     Question: ClassViewer<'Question', "question" | "option">;
     
     ReadFile: ClassViewer<'ReadFile', "action" | "path">;
@@ -71,13 +75,7 @@ export default class TypeBuilder {
     
     ResearcherResponse: ClassViewer<'ResearcherResponse', "query" | "result">;
     
-    Resume: ClassViewer<'Resume', "name" | "email" | "experience" | "skills">;
-    
     RunCommand: ClassViewer<'RunCommand', "action" | "command">;
-    
-    SubAgent: ClassViewer<'SubAgent', "name" | "skills">;
-    
-    Task: ClassViewer<'Task', "id" | "objective" | "agent" | "depends_upon">;
     
     TaskComplexity: ClassViewer<'TaskComplexity', "complexity" | "POA">;
     
@@ -90,16 +88,16 @@ export default class TypeBuilder {
     WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
     
     
-    Skill: EnumViewer<'Skill', "WebSearch" | "Read_blog" | "Read_docs" | "Read_file" | "Write_file" | "Edit_file" | "Bash" | "Pytest" | "Jest" | "Read_codebase">;
+    Agent: EnumViewer<'Agent', "CoderAgent" | "DebuggerAgent" | "TesterAgent" | "UIExpertAgent" | "ResearcherAgent">;
     
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","DebuggingDone","DeleteFile","Done","EditFile","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Option","Question","ReadFile","Research","ResearcherResponse","Resume","RunCommand","SubAgent","Task","TaskComplexity","TesterResponse","Todo","ToolResult","WriteFile",
+            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","DebuggingDone","Decision","DeleteFile","Done","EditFile","EpisodicMemory","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","TaskComplexity","TesterResponse","Todo","ToolResult","WriteFile",
           ]),
           enums: new Set([
-            "Skill",
+            "Agent",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
@@ -124,8 +122,16 @@ export default class TypeBuilder {
           "type","content",
         ]);
         
+        this.ComplexityLevel = this.tb.classViewer("ComplexityLevel", [
+          "complex","qnaNeeded",
+        ]);
+        
         this.DebuggingDone = this.tb.classViewer("DebuggingDone", [
           "action","editedFile","errors",
+        ]);
+        
+        this.Decision = this.tb.classViewer("Decision", [
+          "actor","decision","accepted",
         ]);
         
         this.DeleteFile = this.tb.classViewer("DeleteFile", [
@@ -138,6 +144,10 @@ export default class TypeBuilder {
         
         this.EditFile = this.tb.classViewer("EditFile", [
           "action","fileName","content",
+        ]);
+        
+        this.EpisodicMemory = this.tb.classViewer("EpisodicMemory", [
+          "sessionGoal","userRequests","impFacts","decisions","toolResults","generatedArtifacts","openTasks","preferences","entities","summary",
         ]);
         
         this.Error = this.tb.classViewer("Error", [
@@ -172,10 +182,6 @@ export default class TypeBuilder {
           
         ]);
         
-        this.Option = this.tb.classViewer("Option", [
-          "text",
-        ]);
-        
         this.Question = this.tb.classViewer("Question", [
           "question","option",
         ]);
@@ -192,20 +198,8 @@ export default class TypeBuilder {
           "query","result",
         ]);
         
-        this.Resume = this.tb.classViewer("Resume", [
-          "name","email","experience","skills",
-        ]);
-        
         this.RunCommand = this.tb.classViewer("RunCommand", [
           "action","command",
-        ]);
-        
-        this.SubAgent = this.tb.classViewer("SubAgent", [
-          "name","skills",
-        ]);
-        
-        this.Task = this.tb.classViewer("Task", [
-          "id","objective","agent","depends_upon",
         ]);
         
         this.TaskComplexity = this.tb.classViewer("TaskComplexity", [
@@ -229,8 +223,8 @@ export default class TypeBuilder {
         ]);
         
         
-        this.Skill = this.tb.enumViewer("Skill", [
-          "WebSearch","Read_blog","Read_docs","Read_file","Write_file","Edit_file","Bash","Pytest","Jest","Read_codebase",
+        this.Agent = this.tb.enumViewer("Agent", [
+          "CoderAgent","DebuggerAgent","TesterAgent","UIExpertAgent","ResearcherAgent",
         ]);
         
     }

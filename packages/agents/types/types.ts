@@ -1,3 +1,5 @@
+import type { Screen } from "@google/stitch-sdk";
+
 export interface AgentRequest{
     // chatId: string,
     // userId: string, 
@@ -48,4 +50,14 @@ export interface Tool{
 // }
 export interface LLMResponse{
     
+}
+
+export interface BootstrapResponse{
+    userPrompt: string, 
+    isComplex: boolean,
+    design: Screen
+}
+export interface Answers{
+    question: string, 
+    answer: string
 }

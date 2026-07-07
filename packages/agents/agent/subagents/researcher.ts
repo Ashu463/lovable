@@ -1,7 +1,3 @@
-import type { CoderContext } from "../../baml_client";
-import { RESEARCHER_PROMPT } from "../config";
-import { skills } from "../skills";
-import {b} from '../../baml_client'
 import { BaseAgent } from "./baseAgent";
 import { webSearch } from "../MCPs/tavily";
 import { webScrape } from "../MCPs/apify";

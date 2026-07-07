@@ -21,6 +21,7 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
     const project = stitch.project(projectId);
 
     const screen: Screen = await project.generate(prompt);
+    console.log(screen, " is the complete screen by stitch")
 
     const htmlUrl = await screen.getHtml();
     const imageUrl = await screen.getImage();
@@ -29,6 +30,7 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
     return screen
 }
 
+console.log(makeOneScreen("Create a black screen todo app", "user-123"))
 // future scope
 export async function makeMultipleScreens(){
 

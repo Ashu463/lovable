@@ -1,6 +1,6 @@
 import { Sandbox } from 'e2b'
 import type { DeleteFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
-import { R2 } from './file-storage/fileStorage';
+import { R2 } from '../services/file-storage/fileStorage';
 import path from 'path'
 /*
 Steps/flow I thought for sandboxes
@@ -49,11 +49,7 @@ Steps:
 */
 export class E2BSandbox{
 
-    constructor(
-        public userId: string, 
-        public projectId: string,
-        public sandboxId?: string
-    ){}
+    constructor(){}
 
     r2 = new R2()
     async Connect(id: string){
