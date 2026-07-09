@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, DebuggingDone, Decision, DeleteFile, Done, EditFile, EpisodicMemory, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, TaskComplexity, TesterResponse, Todo, ToolResult, WriteFile} from "./types"
+import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, DebuggingDone, Decision, DeleteFile, Done, EditFile, EpisodicMemory, Error, ErrorResponse, Errors, FetchDocs, FileEdit, FinalResponse, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, TaskComplexity, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -125,6 +125,39 @@ export class HttpRequest {
         "CoderAgent",
         {
           "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        false,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CompactContext(
+      systemPrompt: string,context: types.Message[],
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "CompactContext",
+        {
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -290,6 +323,39 @@ export class HttpRequest {
         "GetTodos",
         {
           "userPrompt": userPrompt,"systemPrompt": systemPrompt
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        false,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  MainLLMCall(
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "MainLLMCall",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -488,6 +554,39 @@ export class HttpRequest {
         "StreamOneAgent",
         {
           "userPrompt": userPrompt,"systemPrompt": systemPrompt
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        false,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  SummarizeContext(
+      systemPrompt: string,context: types.Message[],
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "SummarizeContext",
+        {
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -704,6 +803,39 @@ export class HttpStreamRequest {
     }
   }
   
+  CompactContext(
+      systemPrompt: string,context: types.Message[],
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "CompactContext",
+        {
+          "systemPrompt": systemPrompt,"context": context
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        true,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   CompressContext(
       systemPrompt: string,session: string[],
       __baml_options__?: BamlCallOptions<never>
@@ -857,6 +989,39 @@ export class HttpStreamRequest {
         "GetTodos",
         {
           "userPrompt": userPrompt,"systemPrompt": systemPrompt
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        true,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  MainLLMCall(
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "MainLLMCall",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1055,6 +1220,39 @@ export class HttpStreamRequest {
         "StreamOneAgent",
         {
           "userPrompt": userPrompt,"systemPrompt": systemPrompt
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        true,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  SummarizeContext(
+      systemPrompt: string,context: types.Message[],
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "SummarizeContext",
+        {
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

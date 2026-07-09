@@ -13,11 +13,6 @@ class CoderContext{
     type "writeFile"| "readFile" | "commandResult" | "infoResult" | "research" 
     content string
 }
-class Message {
-    // observations: string[]
-    // notes: string[]
-    // completedTasks: string[]
-}
 function CoderAgent(
     systemPrompt: string, 
     figmaBoilerPlate: string?, 

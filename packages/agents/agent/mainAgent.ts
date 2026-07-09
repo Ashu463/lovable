@@ -1,23 +1,48 @@
-import type { MainLLMResponse } from "../types/mainAgentTypes"
-import { MAX_ITERATIONS } from "./config/systemConfig"
+import type { Screen } from "@google/stitch-sdk"
+import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
+import type { SSEBody } from "../types/mainAgentTypes"
+import { MAIN_SYSTEM_PROMPT } from "./config/sysPrompts"
+import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAX_CONTEXT_WINDOW_LENGTH, MAX_ITERATIONS } from "./config/systemConfig"
+import { webScrape } from "./MCPs/apify"
+import { fetchDocs } from "./MCPs/context7"
+import { webSearch } from "./MCPs/tavily"
+import { makeOneScreen } from "./services/stitch"
+import { ContextManager } from "./utils/context"
+import { encoding_for_model } from "tiktoken"
+import { R2 } from "./services/file-storage/fileStorage"
+import axios from "axios"
 
-class MainAgent{
+import { E2BSandbox } from "./utils/sandbox"
+export class MainAgent{
     public iterations: number
-    public masterContext: string[]
+    public masterContext: string
+    public lastCompactedIndex: number
+    public K: number
+
+    public contextManager: ContextManager
+    public sandbox: E2BSandbox
+    public r2: R2
     constructor(
         public userPrompt: string,
-        public userId: string, 
-        public sandboxId: string
+        public userId: string,
+        public projectId: string,
+        public sessionId: string,
+        public semanticMem: string, // any semantic data about the user. 
+        public session: Message[],
+        public context: Message[],
+        public sandboxId: string,
     ){ 
         this.iterations = 0
-        this.masterContext = []
+        this.masterContext = ""
+        this.lastCompactedIndex = 0
+        this.K = COMPACTION_PARAMETER
+        this.contextManager = new ContextManager(MAIN_SYSTEM_PROMPT, this.userPrompt, this.semanticMem)
+        this.r2 = new R2()
+        this.sandbox = new E2BSandbox()
     }
     async spawnMainAgent(){
         this.runLoop()
-        this.syncToR2()
         // push to github
-        this.deployPipeline()
-        this.epilouge()
     }
     async runLoop(){
         /* Steps: 
@@ -45,52 +70,199 @@ class MainAgent{
         - can we push to github after each iteration of the loop? 
         - 
         */
-        let hasMoreToolCalls = true
-        while(hasMoreToolCalls || this.iterations < MAX_ITERATIONS){
-            
-            const context: string = await this.buildContext(this.userPrompt)
-            
-            const response: MainLLMResponse = await this.callLLM(context);
 
-            if(response.status === 'completed') break;
+        try{
+            while(this.iterations < MAX_ITERATIONS){
+                let iterationLog: Message[] = []
+                
+                const response: LLMResponse = await this.callLLM(this.userPrompt);
+                
+                await this.emitSSEUpdate({
+                    type: 'llm_response',
+                    content: response.content,
+                    iteration: this.iterations
+                })
+                iterationLog.push({
+                    role: "assistant",
+                    content: response.content,
+                    timestamp: new Date().toISOString()
+                })
+    
+                if(response.stopReason === 'completed') {
+                    await this.emitSSEUpdate({
+                        type: 'completed',
+                        iteration: this.iterations
+                    })
+                    break;
+                }
+                if(response.stopReason === 'aborted'){
+                    await this.emitSSEUpdate({
+                        type: 'aborted',
+                        iteration: this.iterations
+                    })
+                    break;
+                }
+    
+                if(response.stopReason === 'QnA'){
+                    if(!response.questions) throw new Error("LLM failed to generate question")
+                    const questions: Question[] = response.questions
+                    await this.emitSSEUpdate({
+                        type: 'clarification_needed',
+                        content: JSON.stringify(questions),
+                        iteration: this.iterations
+                    })
+                    // render these questions to frontend
+                }
+    
+                if(response.stopReason === 'toolCall'){
+                    if(!response.toolCall){
+                        throw new Error("Tool call not sended by LLM")
+                    }
+                    await this.emitSSEUpdate({
+                        type: 'tool_call',
+                        content: response.toolCall.type,
+                        iteration: this.iterations
+                    })
+                    const toolResult: string | Screen = await this.executeTool(response?.toolCall)
+                    await this.emitSSEUpdate({
+                        type: 'tool_result',
+                        content: JSON.stringify(toolResult),
+                        iteration: this.iterations
+                    })
+                    iterationLog.push({
+                        role: 'toolCall',
+                        content: JSON.stringify(toolResult),
+                        timestamp: new Date().toISOString()
+    
+                    })
+                    
+                }
+    
+                // update the context and session
+                iterationLog.map((log) =>{
+                    this.session.push(log)
+                    this.context.push(log)
+                })
+    
+                await this.saveSessionState(this.iterations)   // write to Postgres — failure recovery
+                this.iterations++
+            }
+        }
+        catch(e){
+            console.error(e)
+            throw e
+        }
 
-            
-            const toolResult = await this.executeTool(response.toolCall)
-            
-            await this.syncToR2()           // checkpoint file state
-            await this.emitSSEUpdate()      // tell backend what just happened
-            await this.saveSessionState()   // write to Postgres — failure recovery
-            await this.updateContext() 
+        // save session somewhere so that I've conversation somewhere. 
+    }
+    async callLLM(userPrompt: string): Promise<LLMResponse>{
+        try{
+            const response: LLMResponse = await b.MainLLMCall(MAIN_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem)
+            return response
+        }
+        catch(e){
+            console.error(e)
+            throw e
         }
     }
-    async buildContext(){
+    async manageContext(): Promise<Message[]> {
 
+        const totalTokens = this.estimateTokens(this.context)
+        if(totalTokens <= COMPACT_THRESHOLD) return this.context
+
+        const compactedContext = await this.contextManager.CompactContext(this.context)
+        const compactedTokens = this.estimateTokens(compactedContext)
+
+        if(compactedTokens <= COMPACT_THRESHOLD) return compactedContext
+
+        return await this.contextManager.SummarizeContext(compactedContext)        
+        // if compacted context doesn't shows significant improvement then
+        // context summarize with that 80% of the window length criteria
+    
     }
-    async callLLM(context: string){
-
+    estimateTokens(context: Message[]): number {
+        const encoder = encoding_for_model("gpt-4o")
+        return encoder.encode(context.map(m => m.content).join('')).length
     }
-    async executeToolCall(){
+    async syncToR2(path: string, content: string){
+        const key = this.r2.filesPrefix(this.userId, this.projectId)
 
+        try{
+            await this.r2.putFile(key + path, content)
+        }
+        catch(e){
+            console.error(e)
+            throw e
+        }
     }
-    async syncToR2(){
-
+    async emitSSEUpdate(event: SSEBody){
+        await axios.post(`${BACKEND_URL}/internal/sessions/${this.sessionId}/events`,event)
     }
-    async emitSSEUpdate(){
-
+    async saveSessionState(currentStep: number){
+        await axios.post(`${BACKEND_URL}/internal/sessions/${this.sessionId}/state`, {
+            current_step: currentStep,
+            context_snapshot: this.context,
+            iteration: this.iterations,
+        })
     }
-    async saveSessionState(){
 
+    async executeTool(toolCall: ToolCall): Promise<string | Screen> {
+        let response: string | Screen = ""
+
+        switch (toolCall.type) {
+            case ToolType.Apify:
+                if (!toolCall.apify) throw new Error("Apify tool call missing params")
+                response = await webScrape(toolCall.apify.urls, toolCall.apify.maxPages)
+                break
+
+            case ToolType.Context7:
+                if (!toolCall.context7) throw new Error("Context7 tool call missing params")
+                response = await fetchDocs(toolCall.context7.library, toolCall.context7.query)
+                break
+
+            case ToolType.Tavily:
+                if (!toolCall.tavily) throw new Error("Tavily tool call missing params")
+                response = await webSearch(toolCall.tavily.query, toolCall.tavily.maxResults)
+                break
+
+            case ToolType.Stitch:
+                if (!toolCall.stitch) throw new Error("Stitch tool call missing params")
+                response = await makeOneScreen(toolCall.stitch.prompt, toolCall.stitch.userId)
+                break
+
+            case ToolType.ReadFile:
+                if (!toolCall.readFile) throw new Error("ReadFile tool call missing params")
+                response = await this.sandbox.Execute(this.sandboxId, {action: "read", path: toolCall.readFile.path})
+                break
+
+            case ToolType.WriteFile:
+                if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
+                response = await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})
+                await this.syncToR2(toolCall.writeFile.path, toolCall.writeFile.content)  // checkpoint immediately on write
+                break
+
+            case ToolType.EditFile:
+                if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
+                response = await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.editFile.fileName, content: toolCall.editFile.content})
+                await this.syncToR2(toolCall.editFile.fileName, toolCall.editFile.content)
+                break
+
+            case ToolType.DeleteFile:
+                if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
+                response = await this.sandbox.Execute(this.sandboxId, {action: "delete", path: toolCall.deleteFile.path})
+                break
+
+            case ToolType.RunCommand:
+                if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
+                response = await this.sandbox.Execute(this.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})
+                break
+
+            default:
+            throw new Error(`Unhandled tool type: ${toolCall.type}`)
+        }
+
+        return response
     }
-    async updateContext(){
-
-    }
-    deployPipeline(){
-        /*Steps: krta hu ruko
 
 
-        */
-    }
-    epilouge(){
-
-    }
 }

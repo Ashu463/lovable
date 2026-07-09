@@ -17,6 +17,11 @@ class EpisodicMemory{
     summary string
 }
 
+class Message {
+    role "user" | "assistant" | "toolCall" | "system"
+    content string
+    timestamp string
+}
 function CompressContext(systemPrompt: string, session: string[]) -> EpisodicMemory{
 
     client OpenAIGeneric
@@ -34,6 +39,27 @@ function SummarizeEpisodic(systemPrompt: string, episodicMem: EpisodicMemory) ->
     prompt #"
         {{systemPrompt}}
         {{episodicMem}}
+
+        {{ctx.output_format}}
+    "#
+}
+
+function CompactContext(systemPrompt: string, context: Message[]) -> Message[]{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
+
+        {{ctx.output_format}}
+    "#
+}
+function SummarizeContext(systemPrompt: string, context: Message[]) -> Message[]{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
 
         {{ctx.output_format}}
     "#

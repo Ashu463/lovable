@@ -55,7 +55,26 @@ export enum Agent {
   ResearcherAgent = "ResearcherAgent",
 }
 
+export enum ToolType {
+  Apify = "Apify",
+  Context7 = "Context7",
+  Tavily = "Tavily",
+  Stitch = "Stitch",
+  ReadFile = "ReadFile",
+  WriteFile = "WriteFile",
+  EditFile = "EditFile",
+  RunCommand = "RunCommand",
+  DeleteFile = "DeleteFile",
+  QnA = "QnA",
+}
+
 export interface AgentResponse {
+  
+}
+
+export interface Apify {
+  urls: string[]
+  maxPages: number
   
 }
 
@@ -89,6 +108,12 @@ export interface CoderContext {
 export interface ComplexityLevel {
   complex: boolean
   qnaNeeded: boolean
+  
+}
+
+export interface Context7 {
+  library: string
+  query: string
   
 }
 
@@ -184,7 +209,18 @@ export interface ItemRes {
   
 }
 
+export interface LLMResponse {
+  stopReason: "completed" | "aborted" | "toolCall" | "QnA"
+  content: string
+  toolCall?: ToolCall | null
+  questions?: Question[] | null
+  
+}
+
 export interface Message {
+  role: "user" | "assistant" | "toolCall" | "system"
+  content: string
+  timestamp: string
   
 }
 
@@ -218,9 +254,21 @@ export interface RunCommand {
   
 }
 
+export interface StitchTool {
+  prompt: string
+  userId: string
+  
+}
+
 export interface TaskComplexity {
   complexity: boolean
   POA: Todo[] | string
+  
+}
+
+export interface Tavily {
+  query: string
+  maxResults: number
   
 }
 
@@ -234,6 +282,20 @@ export interface Todo {
   agent: string
   status: "pending" | "completed"
   dependency: number[]
+  
+}
+
+export interface ToolCall {
+  type: ToolType
+  apify?: Apify | null
+  context7?: Context7 | null
+  tavily?: Tavily | null
+  stitch?: StitchTool | null
+  readFile?: ReadFile | null
+  writeFile?: WriteFile | null
+  editFile?: EditFile | null
+  runCommand?: RunCommand | null
+  deleteFile?: DeleteFile | null
   
 }
 

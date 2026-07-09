@@ -2,16 +2,15 @@ import { PrismaClient } from "../generated/prisma/client"
 import type { AgentResponse, Message } from "../types/agentTypes"
 import { SubAgentStatus, type AgentRole, type Answers, type BootstrapResponse } from "../types/types"
 import { E2BSandbox } from "./utils/sandbox"
-import { skills } from "./skills"
 import { CoderAgent } from "./subagents/coder"
 import { Researcher } from "./subagents/researcher"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Question, type TaskComplexity, type Todo, type Task} from '../baml_client/types'
-import { BACKEND_URL, COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT, TODO_SYSTEM_PROMPT } from "./config/sysPrompts"
+import { COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT, TODO_SYSTEM_PROMPT } from "./config/sysPrompts"
 import { DAG } from "./services/dag"
-import { UIExpert, UIExpert } from "./subagents/uiExpert"
 import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
+import { MainAgent } from "./mainAgent"
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
 
 /* Steps (updated on 6 july) e2e
@@ -106,7 +105,7 @@ export class OrchestratorAgent{
         }
         else{
             // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, sandboxId)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, sessionId, semanticMem, sessionStorage, ContextManager, sandboxId)
 
         }
     }

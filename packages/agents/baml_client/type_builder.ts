@@ -29,6 +29,8 @@ export default class TypeBuilder {
     
     AgentResponse: ClassViewer<'AgentResponse'>;
     
+    Apify: ClassViewer<'Apify', "urls" | "maxPages">;
+    
     ApifyRes: ClassViewer<'ApifyRes', "status" | "itemcount" | "scrapeRes">;
     
     BraveRes: ClassViewer<'BraveRes', "type" | "result">;
@@ -38,6 +40,8 @@ export default class TypeBuilder {
     CoderContext: ClassViewer<'CoderContext', "type" | "content">;
     
     ComplexityLevel: ClassViewer<'ComplexityLevel', "complex" | "qnaNeeded">;
+    
+    Context7: ClassViewer<'Context7', "library" | "query">;
     
     DebuggingDone: ClassViewer<'DebuggingDone', "action" | "editedFile" | "errors">;
     
@@ -65,7 +69,9 @@ export default class TypeBuilder {
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
     
-    Message: ClassViewer<'Message'>;
+    LLMResponse: ClassViewer<'LLMResponse', "stopReason" | "content" | "toolCall" | "questions">;
+    
+    Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
     Question: ClassViewer<'Question', "question" | "option">;
     
@@ -77,11 +83,17 @@ export default class TypeBuilder {
     
     RunCommand: ClassViewer<'RunCommand', "action" | "command">;
     
+    StitchTool: ClassViewer<'StitchTool', "prompt" | "userId">;
+    
     TaskComplexity: ClassViewer<'TaskComplexity', "complexity" | "POA">;
+    
+    Tavily: ClassViewer<'Tavily', "query" | "maxResults">;
     
     TesterResponse: ClassViewer<'TesterResponse'>;
     
     Todo: ClassViewer<'Todo', "id" | "task" | "agent" | "status" | "dependency">;
+    
+    ToolCall: ClassViewer<'ToolCall', "type" | "apify" | "context7" | "tavily" | "stitch" | "readFile" | "writeFile" | "editFile" | "runCommand" | "deleteFile">;
     
     ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
@@ -90,20 +102,26 @@ export default class TypeBuilder {
     
     Agent: EnumViewer<'Agent', "CoderAgent" | "DebuggerAgent" | "TesterAgent" | "UIExpertAgent" | "ResearcherAgent">;
     
+    ToolType: EnumViewer<'ToolType', "Apify" | "Context7" | "Tavily" | "Stitch" | "ReadFile" | "WriteFile" | "EditFile" | "RunCommand" | "DeleteFile" | "QnA">;
+    
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","DebuggingDone","Decision","DeleteFile","Done","EditFile","EpisodicMemory","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","TaskComplexity","TesterResponse","Todo","ToolResult","WriteFile",
+            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggingDone","Decision","DeleteFile","Done","EditFile","EpisodicMemory","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","StitchTool","TaskComplexity","Tavily","TesterResponse","Todo","ToolCall","ToolResult","WriteFile",
           ]),
           enums: new Set([
-            "Agent",
+            "Agent","ToolType",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
         
         this.AgentResponse = this.tb.classViewer("AgentResponse", [
           
+        ]);
+        
+        this.Apify = this.tb.classViewer("Apify", [
+          "urls","maxPages",
         ]);
         
         this.ApifyRes = this.tb.classViewer("ApifyRes", [
@@ -124,6 +142,10 @@ export default class TypeBuilder {
         
         this.ComplexityLevel = this.tb.classViewer("ComplexityLevel", [
           "complex","qnaNeeded",
+        ]);
+        
+        this.Context7 = this.tb.classViewer("Context7", [
+          "library","query",
         ]);
         
         this.DebuggingDone = this.tb.classViewer("DebuggingDone", [
@@ -178,8 +200,12 @@ export default class TypeBuilder {
           "title","description","url",
         ]);
         
+        this.LLMResponse = this.tb.classViewer("LLMResponse", [
+          "stopReason","content","toolCall","questions",
+        ]);
+        
         this.Message = this.tb.classViewer("Message", [
-          
+          "role","content","timestamp",
         ]);
         
         this.Question = this.tb.classViewer("Question", [
@@ -202,8 +228,16 @@ export default class TypeBuilder {
           "action","command",
         ]);
         
+        this.StitchTool = this.tb.classViewer("StitchTool", [
+          "prompt","userId",
+        ]);
+        
         this.TaskComplexity = this.tb.classViewer("TaskComplexity", [
           "complexity","POA",
+        ]);
+        
+        this.Tavily = this.tb.classViewer("Tavily", [
+          "query","maxResults",
         ]);
         
         this.TesterResponse = this.tb.classViewer("TesterResponse", [
@@ -212,6 +246,10 @@ export default class TypeBuilder {
         
         this.Todo = this.tb.classViewer("Todo", [
           "id","task","agent","status","dependency",
+        ]);
+        
+        this.ToolCall = this.tb.classViewer("ToolCall", [
+          "type","apify","context7","tavily","stitch","readFile","writeFile","editFile","runCommand","deleteFile",
         ]);
         
         this.ToolResult = this.tb.classViewer("ToolResult", [
@@ -225,6 +263,10 @@ export default class TypeBuilder {
         
         this.Agent = this.tb.enumViewer("Agent", [
           "CoderAgent","DebuggerAgent","TesterAgent","UIExpertAgent","ResearcherAgent",
+        ]);
+        
+        this.ToolType = this.tb.enumViewer("ToolType", [
+          "Apify","Context7","Tavily","Stitch","ReadFile","WriteFile","EditFile","RunCommand","DeleteFile","QnA",
         ]);
         
     }

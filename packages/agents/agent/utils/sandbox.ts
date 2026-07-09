@@ -60,7 +60,7 @@ export class E2BSandbox{
     // implement to increase the TTL of sandbox by one hour whenever any of these 
     // functions get called.
     
-    async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand){
+    async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand): Promise<string>{
         const sandbox = await this.Connect(id)
         // const homeDir = 
         if(payload.action === 'read'){
@@ -102,6 +102,7 @@ export class E2BSandbox{
                 throw new Error("Error occurred while executing write sandbox cmd")
             }
         }
+        return ""
     }
 
      /* Steps: 

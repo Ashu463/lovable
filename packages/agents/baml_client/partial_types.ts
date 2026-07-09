@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentResponse,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  DebuggingDone,  Decision,  DeleteFile,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  TaskComplexity,  TesterResponse,  Todo,  ToolResult,  WriteFile } from "./types"
+import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  DebuggingDone,  Decision,  DeleteFile,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  TaskComplexity,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -37,6 +37,10 @@ export interface StreamState<T> {
 
 export namespace partial_types {
     export interface AgentResponse {
+    }
+    export interface Apify {
+      urls: string[]
+      maxPages?: number | null
     }
     export interface ApifyRes {
       status?: string | null
@@ -60,6 +64,10 @@ export namespace partial_types {
     export interface ComplexityLevel {
       complex?: boolean | null
       qnaNeeded?: boolean | null
+    }
+    export interface Context7 {
+      library?: string | null
+      query?: string | null
     }
     export interface DebuggingDone {
       action?: "done" | null
@@ -127,7 +135,16 @@ export namespace partial_types {
       description?: string | null
       url?: string | null
     }
+    export interface LLMResponse {
+      stopReason?: "completed" | "aborted" | "toolCall" | "QnA" | null
+      content?: string | null
+      toolCall?: ToolCall | null
+      questions?: Question[] | null
+    }
     export interface Message {
+      role?: "user" | "assistant" | "toolCall" | "system" | null
+      content?: string | null
+      timestamp?: string | null
     }
     export interface Question {
       question?: string | null
@@ -149,9 +166,17 @@ export namespace partial_types {
       action?: "runCommand" | null
       command?: string | null
     }
+    export interface StitchTool {
+      prompt?: string | null
+      userId?: string | null
+    }
     export interface TaskComplexity {
       complexity?: boolean | null
       POA?: Todo[] | string | null
+    }
+    export interface Tavily {
+      query?: string | null
+      maxResults?: number | null
     }
     export interface TesterResponse {
     }
@@ -161,6 +186,18 @@ export namespace partial_types {
       agent?: string | null
       status?: "pending" | "completed" | null
       dependency: number[]
+    }
+    export interface ToolCall {
+      type?: types.ToolType | null
+      apify?: Apify | null
+      context7?: Context7 | null
+      tavily?: Tavily | null
+      stitch?: StitchTool | null
+      readFile?: ReadFile | null
+      writeFile?: WriteFile | null
+      editFile?: EditFile | null
+      runCommand?: RunCommand | null
+      deleteFile?: DeleteFile | null
     }
     export interface ToolResult {
       success?: boolean | null
