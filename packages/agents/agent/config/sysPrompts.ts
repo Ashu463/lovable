@@ -38,6 +38,8 @@ Rules:
 Respond only in the structured format provided. Do not include reasoning outside 
 the content field.
 `
+
+export const SUBAGENT_SYSTEM_PROMPT = ``
 export const COMPLEXITY_SYSTEM_PROMPT = ``
 
 export const PLAN_TASK_SYSTEM_PROMPT = ``
@@ -200,3 +202,5 @@ Output: a single Message with role "system" whose content preserves:
 Be lossy on phrasing. Be lossless on facts, outcomes, and file/entity names.
 Target under 400 tokens.
 `
+
+export const SUBAGENT_SUMMARY_PROPMT = ``

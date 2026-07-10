@@ -2,9 +2,6 @@ class Error{
     fileName string
     error string
 }
-class Errors{
-    actions "errors"
-}
 class DebuggingDone{
     action "done"
     editedFile FileEdit[]
@@ -14,7 +11,8 @@ class DebuggingDone{
 // I'm sending errors at each iteration I guess which is not needed.
 function DebuggerAgent(
     systemPrompt: string,
-    errors: Error[], 
+    errors: Error[],
+    context: Message[],
     toolResult: ToolResult?
 ) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone{
     

@@ -103,7 +103,7 @@ function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterRespon
 class Todo{
     id int
     task string
-    agent string
+    agent "coder" | "debugger" | "tester" | "researcher"
     status "pending" | "completed"
     dependency int[]
 }
@@ -122,9 +122,24 @@ function GetTodos(userPrompt: string, systemPrompt: string) -> TaskComplexity{
     "#
 }
 
-// ---New Edit 5/July/26, this would be acting as utils for baml types
+// ---New Edit 5/July/26, this file would be acting as utils for baml types
 class Research{
     action "research"
+    searchType WebSearch | WebScrape | DocsSeach
+}
+class WebScrape{
+    type "webScrape"
+    urls string[]
+    maxPages int
+}
+class WebSearch{
+    type "webSearch"
+    query string
+    maxResults int
+}
+class DocsSeach{
+    type "docsSearch"
+    library string
     query string
 }
 class FileEdit{

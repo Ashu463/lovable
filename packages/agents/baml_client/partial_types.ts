@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  DebuggingDone,  Decision,  DeleteFile,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  Errors,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  TaskComplexity,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  WriteFile } from "./types"
+import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  DebuggingDone,  Decision,  DeleteFile,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  TaskComplexity,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -83,6 +83,11 @@ export namespace partial_types {
       action?: "delete" | null
       path?: string | null
     }
+    export interface DocsSeach {
+      type?: "docsSearch" | null
+      library?: string | null
+      query?: string | null
+    }
     export interface Done {
       action?: "done" | null
       filesEdited: FileEdit[]
@@ -112,9 +117,6 @@ export namespace partial_types {
       error?: string | null
       file?: string | null
       line?: number | null
-    }
-    export interface Errors {
-      actions?: "errors" | null
     }
     export interface FetchDocs {
       action?: "fetchDocs" | null
@@ -156,7 +158,7 @@ export namespace partial_types {
     }
     export interface Research {
       action?: "research" | null
-      query?: string | null
+      searchType?: WebSearch | WebScrape | DocsSeach | null
     }
     export interface ResearcherResponse {
       query?: string | null
@@ -183,7 +185,7 @@ export namespace partial_types {
     export interface Todo {
       id?: number | null
       task?: string | null
-      agent?: string | null
+      agent?: "coder" | "debugger" | "tester" | "researcher" | null
       status?: "pending" | "completed" | null
       dependency: number[]
     }
@@ -202,6 +204,16 @@ export namespace partial_types {
     export interface ToolResult {
       success?: boolean | null
       content?: FileEdit[] | null
+    }
+    export interface WebScrape {
+      type?: "webScrape" | null
+      urls: string[]
+      maxPages?: number | null
+    }
+    export interface WebSearch {
+      type?: "webSearch" | null
+      query?: string | null
+      maxResults?: number | null
     }
     export interface WriteFile {
       action?: "writeFile" | null

@@ -2,7 +2,7 @@ import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { SSEBody } from "../types/mainAgentTypes"
 import { MAIN_SYSTEM_PROMPT } from "./config/sysPrompts"
-import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAX_CONTEXT_WINDOW_LENGTH, MAX_ITERATIONS } from "./config/systemConfig"
+import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAX_CONTEXT_WINDOW_LENGTH, MAX_MAIN_ITERATIONS } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
 import { webSearch } from "./MCPs/tavily"
@@ -72,7 +72,7 @@ export class MainAgent{
         */
 
         try{
-            while(this.iterations < MAX_ITERATIONS){
+            while(this.iterations < MAX_MAIN_ITERATIONS){
                 let iterationLog: Message[] = []
                 
                 const response: LLMResponse = await this.callLLM(this.userPrompt);
@@ -196,10 +196,10 @@ export class MainAgent{
         }
     }
     async emitSSEUpdate(event: SSEBody){
-        await axios.post(`${BACKEND_URL}/internal/sessions/${this.sessionId}/events`,event)
+        await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/events`, event)
     }
     async saveSessionState(currentStep: number){
-        await axios.post(`${BACKEND_URL}/internal/sessions/${this.sessionId}/state`, {
+        await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
             current_step: currentStep,
             context_snapshot: this.context,
             iteration: this.iterations,

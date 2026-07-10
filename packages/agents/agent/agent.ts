@@ -1,16 +1,18 @@
 import { PrismaClient } from "../generated/prisma/client"
-import type { AgentResponse, Message } from "../types/agentTypes"
+import type { Project, User } from "../types/agentTypes"
 import { SubAgentStatus, type AgentRole, type Answers, type BootstrapResponse } from "../types/types"
 import { E2BSandbox } from "./utils/sandbox"
-import { CoderAgent } from "./subagents/coder"
-import { Researcher } from "./subagents/researcher"
 import { b } from "../baml_client"
-import {type ComplexityLevel, type Question, type TaskComplexity, type Todo, type Task} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT, TODO_SYSTEM_PROMPT } from "./config/sysPrompts"
+import {type ComplexityLevel, type Question, type TaskComplexity, type Todo} from '../baml_client/types'
+import { COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
+import { BACKEND_URL } from "./config/systemConfig"
+import { SubAgent } from "./subAgent"
+import { UIExpert } from "./subagents/uiExpert"
+import type { SubAgentTaskInput } from "../types/mainAgentTypes"
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
 
 /* Steps (updated on 6 july) e2e
@@ -93,69 +95,119 @@ export class OrchestratorAgent{
         const sandbox: E2BSandbox = new E2BSandbox()
         const sandboxId: string = await sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
 
+        const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
+
+        const project = await axios.get<Project>(`${BACKEND_URL}/get/projects/${this.userId}/${this.projectId}`)
+        
         if(data.isComplex){
             const tasks: Todo[] = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: Todo[] = dag.TopologicalSort()
 
+            let needsBoilerPlate: boolean = true;
             for(const todo of sequentialTodos){
-                const subAgent: SubAgent = new SubAgent(todo.agent, todo.task, sandboxId)
+
+                if(todo.agent === 'coder'){
+                    // make the input and mark boilerplate requirement as false
+                    needsBoilerPlate = false
+
+                    if(needsBoilerPlate === false){
+                        
+                    }
+                }
+                
+                
+                const subAgent: SubAgent = new SubAgent()
+                if(todo.agent === )
+                // if two or three tasks are done, then halt everything and do a quick 
+                // debugging and testing.
+
+                // emit sse udpates after completion of each step
+                // that testing trigger after two to three task completion
             }
         }
         else{
             // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, sessionId, semanticMem, sessionStorage, ContextManager, sandboxId)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, sessionId, user.data.semanticMem, project.data.sessions, project.data.context, sandboxId)
 
+            mainAgent.runLoop()
+
+            // trigger evals
+            // trigger deploy pipeline.
+            // and then epilouge.
+        }
+    }
+
+    buildTaskInput(todo: Todo, priorResults: Map<string, TaskSummary>): SubAgentTaskInput {
+        switch (todo.agent) {
+            case 'coder':
+            return { agentType: 'coder', boilerplate: getBoilerplateFor(todo), task: todo }
+            case 'debugger':
+            return { agentType: 'debugger', errors: collectErrorsFrom(priorResults), toolResult: getLastToolResult(priorResults), task: todo }
+            case 'tester':
+            return { agentType: 'tester', error: getRelevantError(todo), task: todo }
+            case 'researcher':
+            return { agentType: 'researcher', query: todo.query!, maxResults: todo.maxResults ?? 5, task: todo }
+            default:
+            throw new Error(`Unknown agent type: ${todo.agent}`)
+        }
+    }
+
+    createSubAgent(
+        input: SubAgentTaskInput,
+        userId: string,
+        projectId: string,
+        sandboxId: string,
+        semanticMem: string,
+        ): SubAgent<SubAgentTaskInput> {
+        switch (input.agentType) {
+            case 'coder':
+            return new SubAgent<CoderTaskInput>(input, userId, projectId, sandboxId, semanticMem)
+            case 'debugger':
+            return new SubAgent<DebuggerTaskInput>(input, userId, projectId, sandboxId, semanticMem)
+            case 'tester':
+            return new SubAgent<TesterTaskInput>(input, userId, projectId, sandboxId, semanticMem)
+            case 'researcher':
+            return new SubAgent<ResearchTaskInput>(input, userId, projectId, sandboxId, semanticMem)
+        }
+    }
+    buildSubAgentInput(todo: Todo): SubAgentTaskInput {
+        switch (todo.agent) {
+            case "coder":
+                return {
+                    agentType: "coder",
+                    task: todo,
+                };
+
+            case "debugger":
+            return {
+                agentType: "debugger",
+                errors: this.currentErrors,
+                toolResult: this.lastToolResult,
+                task: todo,
+            };
+
+            case "tester":
+            return {
+                agentType: "tester",
+                error: this.lastError,
+                task: todo,
+            };
+
+            case "researcher":
+            return {
+                agentType: "researcher",
+                query: todo.task,
+                maxResults: 10,
+                task: todo,
+            };
+
+            default:
+            throw new Error(`Unknown agent ${todo.agent}`);
         }
     }
 
 }
 // This one would be triggered when there will be no sub agents
-
-
-class SubAgent{
-    constructor(
-        public agent: string,
-        public task: Task,
-        public context: Message[],
-        // public skills: Skill[], // TODOs: fix kr bhai isko,
-        public sandbox: object,
-        public status: SubAgentStatus = SubAgentStatus.Idle,
-        private prisma: PrismaClient
-    ){}
-    async spawnSubAgent(userId: string, agentType: string){
-        const user = await this.prisma.user.findUnique({where: {userId}, include:{sandbox: true}})
-        let sbId: string = "";
-        if(user?.sandbox?.status === 'live'){
-            sbId = user.sandbox.sandboxId
-        }
-        else{
-            // create a new sandbox first and update the user as well.
-        }
-        // sandbox is up, now operate accordingly
-        if(agentType === "researcher"){
-            let subAgent: Researcher = new Researcher()
-        }
-        else if(agentType === 'coder'){
-            let subAgent: CoderAgent = new CoderAgent(this.prompt, this.context, sbId)
-            subAgent.runLoop()
-        }
-
-    }
-    runLoop(){
-        /*Steps: 
-        
-        - Now for single execution of each task
-            - make the LLM Call with given skills, it returns the output
-            - execute those skills call
-            - parse back to LLM, loop it. 
-            - execute tool calls, 
-            - spin up the sandbox and write into it. 
-            - keep snapshotting the sandbox
-            - loop this thing.
-
-        */
-    }
-}
 

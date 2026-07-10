@@ -1,9 +1,5 @@
+import type { Message } from "../baml_client"
 
-export interface Message {
-    observations: string[]
-    notes: string[]
-    completedTasks: string[]
-}
 export interface AgentResponse{
     
 }
@@ -52,9 +48,19 @@ export interface TesterResponse{
 export interface SandboxRes{
     
 }
-export interface Context{
-    
-}
-
 // -----Updated types, Jul 7 2026 -------
-export interface 
+
+export interface User{
+    userId: string
+    projects: Project[],
+    semanticMem: string,
+}
+export interface Project{
+    projectId: string, 
+    sessions: Message[],
+    context: Message[]
+}
+interface Session{
+    sessionId: string, 
+    session: Message[]
+}

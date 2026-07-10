@@ -37,7 +37,7 @@ export class Researcher extends BaseAgent<ReasercherInput, ResearcherResponse, R
         }
         return res
     }
-    async WebScrape(url: string, maxPages: number): Promise<string>{
+    async WebScrape(url: string[], maxPages: number): Promise<string>{
         let res = ""
         try{
             res = await webScrape(url, maxPages)

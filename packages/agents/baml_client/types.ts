@@ -137,6 +137,13 @@ export interface DeleteFile {
   
 }
 
+export interface DocsSeach {
+  type: "docsSearch"
+  library: string
+  query: string
+  
+}
+
 export interface Done {
   action: "done"
   filesEdited: FileEdit[]
@@ -174,11 +181,6 @@ export interface ErrorResponse {
   error: string
   file: string
   line: number
-  
-}
-
-export interface Errors {
-  actions: "errors"
   
 }
 
@@ -238,7 +240,7 @@ export interface ReadFile {
 
 export interface Research {
   action: "research"
-  query: string
+  searchType: WebSearch | WebScrape | DocsSeach
   
 }
 
@@ -279,7 +281,7 @@ export interface TesterResponse {
 export interface Todo {
   id: number
   task: string
-  agent: string
+  agent: "coder" | "debugger" | "tester" | "researcher"
   status: "pending" | "completed"
   dependency: number[]
   
@@ -302,6 +304,20 @@ export interface ToolCall {
 export interface ToolResult {
   success: boolean
   content?: FileEdit[] | null
+  
+}
+
+export interface WebScrape {
+  type: "webScrape"
+  urls: string[]
+  maxPages: number
+  
+}
+
+export interface WebSearch {
+  type: "webSearch"
+  query: string
+  maxResults: number
   
 }
 

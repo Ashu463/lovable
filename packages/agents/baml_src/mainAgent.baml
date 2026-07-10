@@ -48,7 +48,6 @@ class LLMResponse{
     toolCall ToolCall?
     questions Question[]?
 }   
-    type: "llm_response" | "tool_call" | "tool_result" | "clarification_needed" | "completed" | "aborted"
 
 function MainLLMCall(systemPrompt: string, userPrompt: string, context: Message[], semanticMem: string) -> LLMResponse{
 

@@ -1,5 +1,10 @@
 import Sandbox from "e2b"
-import type { DeleteFile, EditFile, Question, ReadFile, RunCommand, WriteFile } from "../baml_client"
+import type { DeleteFile, Done, EditFile, Error, FetchDocs, Question, ReadFile, Research, RunCommand, Todo, ToolResult, WriteFile } from "../baml_client"
+import type { CoderAgent } from "../agent/subagents/coder"
+import type { DebuggerAgent } from "../agent/subagents/debugger"
+import type { TesterAgent } from "../agent/subagents/tester"
+import type { UIExpert } from "../agent/subagents/uiExpert"
+import type { Researcher } from "../agent/subagents/researcher"
 
 export interface MainLLMResponse{
     status: "toolCall" | "completed"
@@ -31,3 +36,34 @@ export interface SSEBody{
     toolType?: string,
     iteration: number
 }
+
+export type Agent = CoderAgent | DebuggerAgent | TesterAgent | UIExpert | Researcher
+export type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+
+interface CoderTaskInput {
+  agentType: 'coder'
+  boilerplate?: string
+  task: Todo
+}
+
+interface DebuggerTaskInput {
+  agentType: 'debugger'
+  errors: Error[]
+  toolResult: ToolRes
+  task: Todo
+}
+
+interface TesterTaskInput {
+  agentType: 'tester'
+  error: Error
+  task: Todo
+}
+
+interface ResearchTaskInput {
+  agentType: 'researcher'
+  query: string
+  maxResults: number
+  task: Todo
+}
+
+export type SubAgentTaskInput = CoderTaskInput | DebuggerTaskInput | TesterTaskInput | ResearchTaskInput

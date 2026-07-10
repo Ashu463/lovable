@@ -49,6 +49,8 @@ export default class TypeBuilder {
     
     DeleteFile: ClassViewer<'DeleteFile', "action" | "path">;
     
+    DocsSeach: ClassViewer<'DocsSeach', "type" | "library" | "query">;
+    
     Done: ClassViewer<'Done', "action" | "filesEdited">;
     
     EditFile: ClassViewer<'EditFile', "action" | "fileName" | "content">;
@@ -58,8 +60,6 @@ export default class TypeBuilder {
     Error: ClassViewer<'Error', "fileName" | "error">;
     
     ErrorResponse: ClassViewer<'ErrorResponse', "error" | "file" | "line">;
-    
-    Errors: ClassViewer<'Errors', "actions">;
     
     FetchDocs: ClassViewer<'FetchDocs', "action" | "query" | "library">;
     
@@ -77,7 +77,7 @@ export default class TypeBuilder {
     
     ReadFile: ClassViewer<'ReadFile', "action" | "path">;
     
-    Research: ClassViewer<'Research', "action" | "query">;
+    Research: ClassViewer<'Research', "action" | "searchType">;
     
     ResearcherResponse: ClassViewer<'ResearcherResponse', "query" | "result">;
     
@@ -97,6 +97,10 @@ export default class TypeBuilder {
     
     ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
+    WebScrape: ClassViewer<'WebScrape', "type" | "urls" | "maxPages">;
+    
+    WebSearch: ClassViewer<'WebSearch', "type" | "query" | "maxResults">;
+    
     WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
     
     
@@ -108,7 +112,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggingDone","Decision","DeleteFile","Done","EditFile","EpisodicMemory","Error","ErrorResponse","Errors","FetchDocs","FileEdit","FinalResponse","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","StitchTool","TaskComplexity","Tavily","TesterResponse","Todo","ToolCall","ToolResult","WriteFile",
+            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggingDone","Decision","DeleteFile","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","StitchTool","TaskComplexity","Tavily","TesterResponse","Todo","ToolCall","ToolResult","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ToolType",
@@ -160,6 +164,10 @@ export default class TypeBuilder {
           "action","path",
         ]);
         
+        this.DocsSeach = this.tb.classViewer("DocsSeach", [
+          "type","library","query",
+        ]);
+        
         this.Done = this.tb.classViewer("Done", [
           "action","filesEdited",
         ]);
@@ -178,10 +186,6 @@ export default class TypeBuilder {
         
         this.ErrorResponse = this.tb.classViewer("ErrorResponse", [
           "error","file","line",
-        ]);
-        
-        this.Errors = this.tb.classViewer("Errors", [
-          "actions",
         ]);
         
         this.FetchDocs = this.tb.classViewer("FetchDocs", [
@@ -217,7 +221,7 @@ export default class TypeBuilder {
         ]);
         
         this.Research = this.tb.classViewer("Research", [
-          "action","query",
+          "action","searchType",
         ]);
         
         this.ResearcherResponse = this.tb.classViewer("ResearcherResponse", [
@@ -254,6 +258,14 @@ export default class TypeBuilder {
         
         this.ToolResult = this.tb.classViewer("ToolResult", [
           "success","content",
+        ]);
+        
+        this.WebScrape = this.tb.classViewer("WebScrape", [
+          "type","urls","maxPages",
+        ]);
+        
+        this.WebSearch = this.tb.classViewer("WebSearch", [
+          "type","query","maxResults",
         ]);
         
         this.WriteFile = this.tb.classViewer("WriteFile", [

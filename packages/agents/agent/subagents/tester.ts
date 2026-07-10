@@ -9,7 +9,13 @@ type TesterLLMResponse = ErrorResponse
 type TesterResponse = ""
 export class TesterAgent extends BaseAgent<TesterInput, TesterLLMResponse, TesterResponse>{
     
-    constructor(userId: string, projectId: string, sandboxId: string){super(userId, projectId, sandboxId)}
+    constructor(
+        userId: string, 
+        projectId: string, 
+        sandboxId: string)
+    {
+        super(userId, projectId, sandboxId)
+    }
 
     async testCodebase() : Promise<ErrorResponse>{
         let error!: ErrorResponse

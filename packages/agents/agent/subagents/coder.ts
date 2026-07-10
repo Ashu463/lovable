@@ -1,11 +1,9 @@
 import { CODER_PROMPT } from "../config/sysPrompts";
-import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type ReadFile, type Research, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
+import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";
-import type { Message } from "../../types/agentTypes";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";
-import Sandbox from "e2b";
 
 /* Steps: 
 - Make connection to the db
@@ -22,47 +20,80 @@ import Sandbox from "e2b";
 - Now Coder run inside sandbox and that will have some code present in it.
 
 */
-type CoderRequest = string // not needed here. 
+interface CoderRequest{
+    context: Message[]
+    boilerPlate?: string
+} 
 type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
-type CoderAgentResponse = ToolResult | string
+type CoderAgentResponse = {
+    success: boolean, 
+    response: string,
+    toolResult?: ToolResult
+}
 export class CoderAgent extends BaseAgent<CoderRequest, CoderLLMResponse, CoderAgentResponse>{
+
+    private researcher: Researcher
     constructor(
         userId: string,
         projectId: string,
         sandboxId: string,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
-        public s3Id?: string,
-    ){super(userId, projectId, sandboxId)}
+    ){super(userId, projectId, sandboxId)
+        this.researcher = new Researcher(this.userId, this.projectId, this.sandboxId)
+    }
 
     
-    override async callLLM(boilerPlate: string): Promise<CoderLLMResponse> {
-        if(this.context.length == 0){ // assuming you won't push to context initially
-            return await b.CoderAgent(CODER_PROMPT, boilerPlate, this.context)
+    override async callLLM(request: CoderRequest): Promise<CoderLLMResponse> {
+        if(request.boilerPlate){ // assuming you won't push to context initially
+            return await b.CoderAgent(CODER_PROMPT, request.boilerPlate, request.context)
         }
         else{
-            return await b.CoderAgent(CODER_PROMPT, "", this.context)
+            return await b.CoderAgent(CODER_PROMPT, "", request.context)
         }
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{
             if(response.action === 'read' || response.action === 'writeFile' || response.action === 'delete' || response.action === 'runCommand'){
-                const sandboxRes: CoderContext = await this.sandbox.Execute(this.sandboxId, response)
-            }
-            else if(response.action === 'fetchDocs'){
-                const fetchInfo: string = await fetchDocs(response.library, response.query)
+                const sandboxRes = await this.sandbox.Execute(this.sandboxId, response)
+                return {
+                    success: true, 
+                    response: sandboxRes
+                }
             }
             else if(response.action === 'research'){
-                // const research = await Researcher.Search(response.query, "webSearch")
+                let researchResponse: string = ""
+                if(response.searchType.type === 'webSearch'){
+                    researchResponse = await this.researcher.WebSearch(response.searchType.query, response.searchType.maxResults)
+                }
+                else if(response.searchType.type === 'webScrape'){
+                    researchResponse = await this.researcher.WebScrape(response.searchType.urls, response.searchType.maxPages)
+                }
+                else if(response.searchType.type === 'docsSearch'){
+                    researchResponse = await fetchDocs(response.searchType.library, response.searchType.query)
+                }
+                else{
+                    throw new Error("Invalid research type")
+                }
+                return {
+                    success: true,
+                    response: researchResponse
+                }
             }
             else if(response.action === 'done'){
                 // const syncToS3 = await sandbox.SyncS3()
-                return "coder agent done"
+                return {
+                    success: true,
+                    response: `Coder Agent completed it's work`
+                }
             }
         }
         catch(e){
             throw new Error("Error occurred in coder agent tool call")
         }
-        return "Unknown Error occurred"
+        return {
+            success: false,
+            response: "Unknown Error occurred"
+        }
     }
     // async runLoop(): Promise<WriteFile | RunCommand  | Done>{
     //     const researchAgent: Researcher = new Researcher()

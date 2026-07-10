@@ -1,5 +1,5 @@
 import { b, type EpisodicMemory } from "../../baml_client"
-import type { ContextStruct } from "../../types/mainAgentTypes"
+// import type { ContextStruct } from "../../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
@@ -81,45 +81,13 @@ export class ContextManager{
         const olderCompacted = await b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf)
 
         return [...olderCompacted, ...recentHalf]
-        const encoder = encoding_for_model("gpt-4")
-        const len = context.length
-        let firstHalf: Message[] = []
-        let secondHalf: Message[] = []
-        let it = 0;
-        for(const msg of context){
-            if(it < len/2) firstHalf.push(msg)
-            else secondHalf.push(msg)
-        }
-        let firstHalfCompacted: Message[]
-        try{
-            firstHalfCompacted = 
-        }
-        catch(e){
-            console.error(e)
-            throw e
-        }
-        let secondHalfCompacted: Message[]
-        const firstHalfMsgs = firstHalfCompacted.map((msg) => msg.content).join(" ")
-        if(encoder.encode(firstHalfMsgs).length > COMPACT_THRESHOLD){
-            try{
-                secondHalfCompacted = await b.CompactContext(COMPACT_CONTEXT_PROMPT, secondHalf)
-            }
-            catch(e){
-                console.error(e)
-                throw e
-            }
-        }
-        else{
-            return firstHalfCompacted
-        }
-        const compactedContext: Message[] = [...firstHalfCompacted, ...secondHalfCompacted]
-
-        return compactedContext
+        
     }
     async SummarizeContext(context: Message[]): Promise<Message[]>{
         // note that we'll be using complete original context array not the compacted one.
         return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, context)
     }
+    // TODO: do this 
     async IsolateContext(): Promise<string> {
 
     }

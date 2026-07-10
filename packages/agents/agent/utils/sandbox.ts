@@ -76,7 +76,7 @@ export class E2BSandbox{
             try{
                 const writeRes = await sandbox.files.write(payload.path, payload.content)
                 
-                return writeRes
+                return `Content written at ${writeRes.path}`
             }
             catch(e){
                 throw new Error("Error occurred while executing write sandbox file")
@@ -86,7 +86,7 @@ export class E2BSandbox{
             try{
                 const deleteRes = await sandbox.files.remove(payload.path)
                 
-                return deleteRes
+                return `Deleted file is ${deleteRes}`
             }
             catch(e){
                 throw new Error("Error occurred while executing deleting sandbox file")
@@ -96,7 +96,10 @@ export class E2BSandbox{
             try{
                 const cmdRes = await sandbox.commands.run(payload.command)
                 
-                return cmdRes
+                if(cmdRes.error){
+                    return cmdRes.error
+                }
+                return cmdRes.stderr + cmdRes.stdout
             }
             catch(e){
                 throw new Error("Error occurred while executing write sandbox cmd")
