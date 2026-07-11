@@ -23,7 +23,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video, FunctionLog
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, DebuggingDone, Decision, DeleteFile, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, TaskComplexity, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, SubAgentContext, TaskComplexity, TaskSummary, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -109,7 +109,7 @@ env?: Record<string, string | undefined>
       }
       
   async CoderAgent(
-  systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+  systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -142,7 +142,7 @@ env?: Record<string, string | undefined>
       }
       
   async CompactContext(
-  systemPrompt: string,context: types.Message[],
+  systemPrompt: string,context: types.SubAgentContext[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -208,7 +208,7 @@ env?: Record<string, string | undefined>
       }
       
   async DebuggerAgent(
-  systemPrompt: string,errors: types.Error[],context: types.Message[],toolResult?: types.ToolResult | null,
+  systemPrompt: string,errors: types.Error[],context: types.DebuggerContext[],toolResult?: types.ToolResult | null,
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -604,7 +604,7 @@ env?: Record<string, string | undefined>
       }
       
   async SummarizeContext(
-  systemPrompt: string,context: types.Message[],
+  systemPrompt: string,context: types.SubAgentContext[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -808,7 +808,7 @@ env?: Record<string, string | undefined>
           }
           
       async CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -841,7 +841,7 @@ env?: Record<string, string | undefined>
           }
           
       async CompactContext(
-      systemPrompt: string,context: types.Message[],
+      systemPrompt: string,context: types.SubAgentContext[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -907,7 +907,7 @@ env?: Record<string, string | undefined>
           }
           
       async DebuggerAgent(
-      systemPrompt: string,errors: types.Error[],context: types.Message[],toolResult?: types.ToolResult | null,
+      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext[],toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -1303,7 +1303,7 @@ env?: Record<string, string | undefined>
           }
           
       async SummarizeContext(
-      systemPrompt: string,context: types.Message[],
+      systemPrompt: string,context: types.SubAgentContext[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {

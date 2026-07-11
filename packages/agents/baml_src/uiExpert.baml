@@ -1,4 +1,12 @@
 
+class Design{
+    taskId int
+    summary string
+}
+class UIExpertContext{
+    userPrompt string
+    priorDesigns Design[]
+}
 
 function FramePrompts(systemPrompt: string, userPrompt: string) -> string{
     client OpenAIGeneric

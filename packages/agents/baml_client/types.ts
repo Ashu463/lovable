@@ -55,6 +55,14 @@ export enum Agent {
   ResearcherAgent = "ResearcherAgent",
 }
 
+export enum ContextType {
+  CoderContext = "CoderContext",
+  DebuggerContext = "DebuggerContext",
+  TesterContext = "TesterContext",
+  UIExpertContext = "UIExpertContext",
+  ResearcherContext = "ResearcherContext",
+}
+
 export enum ToolType {
   Apify = "Apify",
   Context7 = "Context7",
@@ -100,8 +108,8 @@ export interface BraveResult {
 }
 
 export interface CoderContext {
-  type: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research"
-  content: string
+  dependentSummary: TaskSummary[]
+  repoTree: string
   
 }
 
@@ -114,6 +122,12 @@ export interface ComplexityLevel {
 export interface Context7 {
   library: string
   query: string
+  
+}
+
+export interface DebuggerContext {
+  originalError: string
+  fixHistory: Fixes[]
   
 }
 
@@ -134,6 +148,12 @@ export interface Decision {
 export interface DeleteFile {
   action: "delete"
   path: string
+  
+}
+
+export interface Design {
+  taskId: number
+  summary: string
   
 }
 
@@ -204,6 +224,12 @@ export interface FinalResponse {
   
 }
 
+export interface Fixes {
+  error: string
+  fixSummary: string
+  
+}
+
 export interface ItemRes {
   title: string
   description: string
@@ -262,9 +288,20 @@ export interface StitchTool {
   
 }
 
+export interface SubAgentContext {
+  type: ContextType
+  
+}
+
 export interface TaskComplexity {
   complexity: boolean
   POA: Todo[] | string
+  
+}
+
+export interface TaskSummary {
+  taskId: string
+  summary: string
   
 }
 
@@ -281,7 +318,7 @@ export interface TesterResponse {
 export interface Todo {
   id: number
   task: string
-  agent: "coder" | "debugger" | "tester" | "researcher"
+  agent: "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
   status: "pending" | "completed"
   dependency: number[]
   
@@ -304,6 +341,12 @@ export interface ToolCall {
 export interface ToolResult {
   success: boolean
   content?: FileEdit[] | null
+  
+}
+
+export interface UIExpertContext {
+  userPrompt: string
+  priorDesigns: Design[]
   
 }
 

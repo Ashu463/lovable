@@ -1,4 +1,4 @@
-import type { WriteFile, ReadFile, RunCommand, DeleteFile, FetchDocs, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message } from "../../baml_client";
+import type { WriteFile, ReadFile, RunCommand, DeleteFile, FetchDocs, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/sysPrompts";
@@ -33,7 +33,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerLLMRespons
     }
 
 
-    override async callLLM(content: DebuggerRequest, context: Message[]): Promise<DebuggerLLMResponse> {
+    override async callLLM(content: DebuggerRequest, context: DebuggerContext[]): Promise<DebuggerLLMResponse> {
         
         try{
             const response = await b.DebuggerAgent(DEBUGGER_PROMPT, content.errors, context, content?.toolResult)
@@ -51,7 +51,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerLLMRespons
             const sandboxRes = await this.sandbox.Execute(this.sandboxId, response)
             return {
                 success: true,
-                editedFiles: sandboxRes
+                editedFiles: sandboxRes.content
             }
         }
         else if(response.action === 'research'){

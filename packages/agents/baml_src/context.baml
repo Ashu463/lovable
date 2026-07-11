@@ -44,7 +44,7 @@ function SummarizeEpisodic(systemPrompt: string, episodicMem: EpisodicMemory) ->
     "#
 }
 
-function CompactContext(systemPrompt: string, context: Message[]) -> Message[]{
+function CompactContext(systemPrompt: string, context: SubAgentContext[]) -> SubAgentContext[]{
 
     client OpenAIGeneric
     prompt #"
@@ -54,7 +54,7 @@ function CompactContext(systemPrompt: string, context: Message[]) -> Message[]{
         {{ctx.output_format}}
     "#
 }
-function SummarizeContext(systemPrompt: string, context: Message[]) -> Message[]{
+function SummarizeContext(systemPrompt: string, context: SubAgentContext[]) -> SubAgentContext[]{
 
     client OpenAIGeneric
     prompt #"

@@ -103,7 +103,7 @@ function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterRespon
 class Todo{
     id int
     task string
-    agent "coder" | "debugger" | "tester" | "researcher"
+    agent "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
     status "pending" | "completed"
     dependency int[]
 }
@@ -171,4 +171,18 @@ class EditFile{
 class ToolResult{
     success bool
     content FileEdit[]?
+}
+class TaskSummary{
+    taskId string
+    summary string
+}
+enum ContextType{
+    CoderContext
+    DebuggerContext
+    TesterContext
+    UIExpertContext
+    ResearcherContext
+}
+class SubAgentContext{
+    type ContextType
 }

@@ -37,17 +37,21 @@ export default class TypeBuilder {
     
     BraveResult: ClassViewer<'BraveResult', "title" | "url" | "description" | "pageAge">;
     
-    CoderContext: ClassViewer<'CoderContext', "type" | "content">;
+    CoderContext: ClassViewer<'CoderContext', "dependentSummary" | "repoTree">;
     
     ComplexityLevel: ClassViewer<'ComplexityLevel', "complex" | "qnaNeeded">;
     
     Context7: ClassViewer<'Context7', "library" | "query">;
+    
+    DebuggerContext: ClassViewer<'DebuggerContext', "originalError" | "fixHistory">;
     
     DebuggingDone: ClassViewer<'DebuggingDone', "action" | "editedFile" | "errors">;
     
     Decision: ClassViewer<'Decision', "actor" | "decision" | "accepted">;
     
     DeleteFile: ClassViewer<'DeleteFile', "action" | "path">;
+    
+    Design: ClassViewer<'Design', "taskId" | "summary">;
     
     DocsSeach: ClassViewer<'DocsSeach', "type" | "library" | "query">;
     
@@ -67,6 +71,8 @@ export default class TypeBuilder {
     
     FinalResponse: ClassViewer<'FinalResponse', "status" | "previewUrl" | "deployUrl">;
     
+    Fixes: ClassViewer<'Fixes', "error" | "fixSummary">;
+    
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
     
     LLMResponse: ClassViewer<'LLMResponse', "stopReason" | "content" | "toolCall" | "questions">;
@@ -85,7 +91,11 @@ export default class TypeBuilder {
     
     StitchTool: ClassViewer<'StitchTool', "prompt" | "userId">;
     
+    SubAgentContext: ClassViewer<'SubAgentContext', "type">;
+    
     TaskComplexity: ClassViewer<'TaskComplexity', "complexity" | "POA">;
+    
+    TaskSummary: ClassViewer<'TaskSummary', "taskId" | "summary">;
     
     Tavily: ClassViewer<'Tavily', "query" | "maxResults">;
     
@@ -97,6 +107,8 @@ export default class TypeBuilder {
     
     ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
+    UIExpertContext: ClassViewer<'UIExpertContext', "userPrompt" | "priorDesigns">;
+    
     WebScrape: ClassViewer<'WebScrape', "type" | "urls" | "maxPages">;
     
     WebSearch: ClassViewer<'WebSearch', "type" | "query" | "maxResults">;
@@ -106,16 +118,18 @@ export default class TypeBuilder {
     
     Agent: EnumViewer<'Agent', "CoderAgent" | "DebuggerAgent" | "TesterAgent" | "UIExpertAgent" | "ResearcherAgent">;
     
+    ContextType: EnumViewer<'ContextType', "CoderContext" | "DebuggerContext" | "TesterContext" | "UIExpertContext" | "ResearcherContext">;
+    
     ToolType: EnumViewer<'ToolType', "Apify" | "Context7" | "Tavily" | "Stitch" | "ReadFile" | "WriteFile" | "EditFile" | "RunCommand" | "DeleteFile" | "QnA">;
     
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggingDone","Decision","DeleteFile","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","StitchTool","TaskComplexity","Tavily","TesterResponse","Todo","ToolCall","ToolResult","WebScrape","WebSearch","WriteFile",
+            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherResponse","RunCommand","StitchTool","SubAgentContext","TaskComplexity","TaskSummary","Tavily","TesterResponse","Todo","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
-            "Agent","ToolType",
+            "Agent","ContextType","ToolType",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
@@ -141,7 +155,7 @@ export default class TypeBuilder {
         ]);
         
         this.CoderContext = this.tb.classViewer("CoderContext", [
-          "type","content",
+          "dependentSummary","repoTree",
         ]);
         
         this.ComplexityLevel = this.tb.classViewer("ComplexityLevel", [
@@ -150,6 +164,10 @@ export default class TypeBuilder {
         
         this.Context7 = this.tb.classViewer("Context7", [
           "library","query",
+        ]);
+        
+        this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
+          "originalError","fixHistory",
         ]);
         
         this.DebuggingDone = this.tb.classViewer("DebuggingDone", [
@@ -162,6 +180,10 @@ export default class TypeBuilder {
         
         this.DeleteFile = this.tb.classViewer("DeleteFile", [
           "action","path",
+        ]);
+        
+        this.Design = this.tb.classViewer("Design", [
+          "taskId","summary",
         ]);
         
         this.DocsSeach = this.tb.classViewer("DocsSeach", [
@@ -200,6 +222,10 @@ export default class TypeBuilder {
           "status","previewUrl","deployUrl",
         ]);
         
+        this.Fixes = this.tb.classViewer("Fixes", [
+          "error","fixSummary",
+        ]);
+        
         this.ItemRes = this.tb.classViewer("ItemRes", [
           "title","description","url",
         ]);
@@ -236,8 +262,16 @@ export default class TypeBuilder {
           "prompt","userId",
         ]);
         
+        this.SubAgentContext = this.tb.classViewer("SubAgentContext", [
+          "type",
+        ]);
+        
         this.TaskComplexity = this.tb.classViewer("TaskComplexity", [
           "complexity","POA",
+        ]);
+        
+        this.TaskSummary = this.tb.classViewer("TaskSummary", [
+          "taskId","summary",
         ]);
         
         this.Tavily = this.tb.classViewer("Tavily", [
@@ -260,6 +294,10 @@ export default class TypeBuilder {
           "success","content",
         ]);
         
+        this.UIExpertContext = this.tb.classViewer("UIExpertContext", [
+          "userPrompt","priorDesigns",
+        ]);
+        
         this.WebScrape = this.tb.classViewer("WebScrape", [
           "type","urls","maxPages",
         ]);
@@ -275,6 +313,10 @@ export default class TypeBuilder {
         
         this.Agent = this.tb.enumViewer("Agent", [
           "CoderAgent","DebuggerAgent","TesterAgent","UIExpertAgent","ResearcherAgent",
+        ]);
+        
+        this.ContextType = this.tb.enumViewer("ContextType", [
+          "CoderContext","DebuggerContext","TesterContext","UIExpertContext","ResearcherContext",
         ]);
         
         this.ToolType = this.tb.enumViewer("ToolType", [

@@ -4,6 +4,7 @@ import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_G
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
 import { COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+import type { SubAgentsContext } from "../../types/subAgentsTypes"
 
 export class ContextManager{
 
@@ -71,7 +72,7 @@ export class ContextManager{
         return encoder.encode(context.map(m => m.content).join('')).length
     }
     // Context Reduction
-    async CompactContext(context: Message[]): Promise<Message[]>{
+    async CompactContext(context: SubAgentsContext[]): Promise<SubAgentsContext[]>{
         // compact 50% of the starting context, not the latest one until it gets 
         // within the limits. very smart thing it is.
         const mid = Math.floor(context.length/2)
@@ -83,7 +84,7 @@ export class ContextManager{
         return [...olderCompacted, ...recentHalf]
         
     }
-    async SummarizeContext(context: Message[]): Promise<Message[]>{
+    async SummarizeContext(context: SubAgentsContext[]): Promise<SubAgentsContext[]>{
         // note that we'll be using complete original context array not the compacted one.
         return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, context)
     }

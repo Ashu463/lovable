@@ -22,7 +22,7 @@ import type { BamlRuntime, FunctionResult, BamlCtxManager, Image, Audio, Pdf, Vi
 import { toBamlError, BamlAbortError, ClientRegistry, type HTTPRequest } from "@boundaryml/baml"
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, DebuggingDone, Decision, DeleteFile, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, TaskComplexity, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, SubAgentContext, TaskComplexity, TaskSummary, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { HttpRequest, HttpStreamRequest } from "./sync_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -198,7 +198,7 @@ export class BamlSyncClient {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.Message[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
       __baml_options__?: BamlCallOptions<never>
   ): types.WriteFile | types.ReadFile | types.RunCommand | types.DeleteFile | types.FetchDocs | types.Research | types.Done {
     try {
@@ -248,9 +248,9 @@ export class BamlSyncClient {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.Message[],
+      systemPrompt: string,context: types.SubAgentContext[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.Message[] {
+  ): types.SubAgentContext[] {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -291,7 +291,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.Message[]
+      return __raw__.parsed(false) as types.SubAgentContext[]
     } catch (error: any) {
       throw toBamlError(error);
     }
@@ -348,7 +348,7 @@ export class BamlSyncClient {
   }
   
   DebuggerAgent(
-      systemPrompt: string,errors: types.Error[],context: types.Message[],toolResult?: types.ToolResult | null,
+      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext[],toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
   ): types.ReadFile | types.RunCommand | types.WriteFile | types.Research | types.DebuggingDone {
     try {
@@ -948,9 +948,9 @@ export class BamlSyncClient {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.Message[],
+      systemPrompt: string,context: types.SubAgentContext[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.Message[] {
+  ): types.SubAgentContext[] {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -991,7 +991,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.Message[]
+      return __raw__.parsed(false) as types.SubAgentContext[]
     } catch (error: any) {
       throw toBamlError(error);
     }

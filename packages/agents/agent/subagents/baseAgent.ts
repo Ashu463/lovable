@@ -1,8 +1,9 @@
 import type { Message } from "../../baml_client";
+import type { SubAgentsContext } from "../../types/subAgentsTypes";
 import { E2BSandbox } from "../utils/sandbox";
 
 
-export abstract class BaseAgent<Tinput, TLLMResponse, TResult>{
+export abstract class BaseAgent<Tinput, TContext, TLLMResponse, TResult>{
     protected sandbox: E2BSandbox
     constructor(
         public userId: string, 
@@ -11,6 +12,6 @@ export abstract class BaseAgent<Tinput, TLLMResponse, TResult>{
     ){
         this.sandbox = new E2BSandbox()
     }
-    abstract callLLM(content: Tinput, context: Message[]): Promise<TLLMResponse>
+    abstract callLLM(content: Tinput, context: TContext): Promise<TLLMResponse>
     abstract executeFunction(content: TLLMResponse): Promise<TResult | null>
 }

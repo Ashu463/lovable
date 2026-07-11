@@ -39,31 +39,3 @@ export interface SSEBody{
 
 export type Agent = CoderAgent | DebuggerAgent | TesterAgent | UIExpert | Researcher
 export type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
-
-interface CoderTaskInput {
-  agentType: 'coder'
-  boilerplate?: string
-  task: Todo
-}
-
-interface DebuggerTaskInput {
-  agentType: 'debugger'
-  errors: Error[]
-  toolResult: ToolRes
-  task: Todo
-}
-
-interface TesterTaskInput {
-  agentType: 'tester'
-  error: Error
-  task: Todo
-}
-
-interface ResearchTaskInput {
-  agentType: 'researcher'
-  query: string
-  maxResults: number
-  task: Todo
-}
-
-export type SubAgentTaskInput = CoderTaskInput | DebuggerTaskInput | TesterTaskInput | ResearchTaskInput

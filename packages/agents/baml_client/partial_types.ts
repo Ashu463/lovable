@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  DebuggingDone,  Decision,  DeleteFile,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  TaskComplexity,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentContext,  TaskComplexity,  TaskSummary,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -58,8 +58,8 @@ export namespace partial_types {
       pageAge?: string | null
     }
     export interface CoderContext {
-      type?: "writeFile" | "readFile" | "commandResult" | "infoResult" | "research" | null
-      content?: string | null
+      dependentSummary: TaskSummary[]
+      repoTree?: string | null
     }
     export interface ComplexityLevel {
       complex?: boolean | null
@@ -68,6 +68,10 @@ export namespace partial_types {
     export interface Context7 {
       library?: string | null
       query?: string | null
+    }
+    export interface DebuggerContext {
+      originalError?: string | null
+      fixHistory: Fixes[]
     }
     export interface DebuggingDone {
       action?: "done" | null
@@ -82,6 +86,10 @@ export namespace partial_types {
     export interface DeleteFile {
       action?: "delete" | null
       path?: string | null
+    }
+    export interface Design {
+      taskId?: number | null
+      summary?: string | null
     }
     export interface DocsSeach {
       type?: "docsSearch" | null
@@ -132,6 +140,10 @@ export namespace partial_types {
       previewUrl?: string | null
       deployUrl?: string | null
     }
+    export interface Fixes {
+      error?: string | null
+      fixSummary?: string | null
+    }
     export interface ItemRes {
       title?: string | null
       description?: string | null
@@ -172,9 +184,16 @@ export namespace partial_types {
       prompt?: string | null
       userId?: string | null
     }
+    export interface SubAgentContext {
+      type?: types.ContextType | null
+    }
     export interface TaskComplexity {
       complexity?: boolean | null
       POA?: Todo[] | string | null
+    }
+    export interface TaskSummary {
+      taskId?: string | null
+      summary?: string | null
     }
     export interface Tavily {
       query?: string | null
@@ -185,7 +204,7 @@ export namespace partial_types {
     export interface Todo {
       id?: number | null
       task?: string | null
-      agent?: "coder" | "debugger" | "tester" | "researcher" | null
+      agent?: "coder" | "debugger" | "tester" | "researcher" | "uiExpert" | null
       status?: "pending" | "completed" | null
       dependency: number[]
     }
@@ -204,6 +223,10 @@ export namespace partial_types {
     export interface ToolResult {
       success?: boolean | null
       content?: FileEdit[] | null
+    }
+    export interface UIExpertContext {
+      userPrompt?: string | null
+      priorDesigns: Design[]
     }
     export interface WebScrape {
       type?: "webScrape" | null

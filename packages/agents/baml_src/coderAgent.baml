@@ -10,13 +10,14 @@ class Done{
 }
 
 class CoderContext{
-    type "writeFile"| "readFile" | "commandResult" | "infoResult" | "research" 
-    content string
+    dependentSummary TaskSummary[]
+    repoTree string
 }
+
 function CoderAgent(
     systemPrompt: string, 
     figmaBoilerPlate: string?, 
-    context: Message[],
+    context: CoderContext[],
 ) -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done  
     {
     // also this figmaBoilerPlate would be run for the first time iteration

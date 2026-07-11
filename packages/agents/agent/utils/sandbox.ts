@@ -47,6 +47,12 @@ Steps:
 - sandbox spawned with new session id
 - then agent flow takes over
 */
+export interface ExecuteRes{
+    success: boolean,
+    content: string,
+    stdout?: string,
+    stderr?: string
+}
 export class E2BSandbox{
 
     constructor(){}
@@ -60,13 +66,16 @@ export class E2BSandbox{
     // implement to increase the TTL of sandbox by one hour whenever any of these 
     // functions get called.
     
-    async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand): Promise<string>{
+    async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
         const sandbox = await this.Connect(id)
         // const homeDir = 
         if(payload.action === 'read'){
             try{
-                const result = sandbox.files.read(payload.path)
-                return result
+                const result: string = await sandbox.files.read(payload.path)
+                return {
+                    success: true,
+                    content: result
+                }
             }
             catch(e){
                 throw new Error("Error occured while reading from sandbox file")
@@ -76,7 +85,10 @@ export class E2BSandbox{
             try{
                 const writeRes = await sandbox.files.write(payload.path, payload.content)
                 
-                return `Content written at ${writeRes.path}`
+                return {
+                    success: true,
+                    content: `Content written at ${writeRes.path}`
+                }
             }
             catch(e){
                 throw new Error("Error occurred while executing write sandbox file")
@@ -86,7 +98,10 @@ export class E2BSandbox{
             try{
                 const deleteRes = await sandbox.files.remove(payload.path)
                 
-                return `Deleted file is ${deleteRes}`
+                return {
+                    success: true,
+                    content: `Deleted file is ${deleteRes}`
+                }
             }
             catch(e){
                 throw new Error("Error occurred while executing deleting sandbox file")
@@ -94,18 +109,31 @@ export class E2BSandbox{
         }
         else if(payload.action === 'runCommand'){
             try{
-                const cmdRes = await sandbox.commands.run(payload.command)
-                
-                if(cmdRes.error){
-                    return cmdRes.error
+                const cmdRes = await sandbox.commands.run(payload.command, {
+                    timeoutMs: 60000
+                })
+
+                if(cmdRes.exitCode !== 0){
+                    return {
+                        success: false, 
+                        content: cmdRes.stderr || cmdRes.stdout
+                    }
                 }
-                return cmdRes.stderr + cmdRes.stdout
+                return {
+                    success: false,
+                    content: "Run command response attached",
+                    stderr: cmdRes.stderr,
+                    stdout: cmdRes.stdout
+                }
             }
             catch(e){
                 throw new Error("Error occurred while executing write sandbox cmd")
             }
         }
-        return ""
+        return {
+            success: false,
+            content: "Unknown error occurred"
+        }
     }
 
      /* Steps: 

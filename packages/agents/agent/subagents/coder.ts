@@ -21,7 +21,7 @@ import { BaseAgent } from "./baseAgent";
 
 */
 interface CoderRequest{
-    context: Message[]
+    context: CoderContext[]
     boilerPlate?: string
 } 
 type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
@@ -57,7 +57,7 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderLLMResponse, CoderA
                 const sandboxRes = await this.sandbox.Execute(this.sandboxId, response)
                 return {
                     success: true, 
-                    response: sandboxRes
+                    response: sandboxRes.content 
                 }
             }
             else if(response.action === 'research'){

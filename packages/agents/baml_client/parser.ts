@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, DebuggingDone, Decision, DeleteFile, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, TaskComplexity, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, SubAgentContext, TaskComplexity, TaskSummary, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -102,7 +102,7 @@ export class LlmResponseParser {
   CompactContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.Message[] {
+  ): types.SubAgentContext[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -116,7 +116,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.Message[]
+      ) as types.SubAgentContext[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -424,7 +424,7 @@ export class LlmResponseParser {
   SummarizeContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.Message[] {
+  ): types.SubAgentContext[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -438,7 +438,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.Message[]
+      ) as types.SubAgentContext[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -591,7 +591,7 @@ export class LlmStreamParser {
   CompactContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.Message[] {
+  ): partial_types.SubAgentContext[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -605,7 +605,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.Message[]
+      ) as partial_types.SubAgentContext[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -913,7 +913,7 @@ export class LlmStreamParser {
   SummarizeContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.Message[] {
+  ): partial_types.SubAgentContext[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -927,7 +927,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.Message[]
+      ) as partial_types.SubAgentContext[]
     } catch (error) {
       throw toBamlError(error);
     }

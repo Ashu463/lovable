@@ -7,12 +7,19 @@ class DebuggingDone{
     editedFile FileEdit[]
     errors map<string, string>
 }
-
+class Fixes{
+    error string
+    fixSummary string
+}
+class DebuggerContext{
+    originalError string
+    fixHistory Fixes[]
+}
 // I'm sending errors at each iteration I guess which is not needed.
 function DebuggerAgent(
     systemPrompt: string,
     errors: Error[],
-    context: Message[],
+    context: DebuggerContext[],
     toolResult: ToolResult?
 ) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone{
     
