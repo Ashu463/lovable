@@ -27,6 +27,8 @@ export { FieldType, EnumBuilder, ClassBuilder }
 export default class TypeBuilder {
     private tb: _TypeBuilder;
     
+    AgentContext: ClassViewer<'AgentContext'>;
+    
     AgentResponse: ClassViewer<'AgentResponse'>;
     
     Apify: ClassViewer<'Apify', "urls" | "maxPages">;
@@ -93,7 +95,7 @@ export default class TypeBuilder {
     
     StitchTool: ClassViewer<'StitchTool', "prompt" | "userId">;
     
-    SubAgentsContext: ClassViewer<'SubAgentsContext', "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert">;
+    SubAgentsContexts: ClassViewer<'SubAgentsContexts', "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert">;
     
     TaskComplexity: ClassViewer<'TaskComplexity', "complexity" | "POA">;
     
@@ -130,13 +132,17 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","RunCommand","StitchTool","SubAgentsContext","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","Todo","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
+            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","RunCommand","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","Todo","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
+        
+        this.AgentContext = this.tb.classViewer("AgentContext", [
+          
+        ]);
         
         this.AgentResponse = this.tb.classViewer("AgentResponse", [
           
@@ -270,7 +276,7 @@ export default class TypeBuilder {
           "prompt","userId",
         ]);
         
-        this.SubAgentsContext = this.tb.classViewer("SubAgentsContext", [
+        this.SubAgentsContexts = this.tb.classViewer("SubAgentsContexts", [
           "coder","debuggerr","tester","researcher","uiExpert",
         ]);
         

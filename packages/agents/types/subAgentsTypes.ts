@@ -6,50 +6,44 @@
 import type { CoderContext, DebuggerContext, Todo, ToolResult, UIExpertContext } from "../baml_client"
 
 // }
-
-
-interface CoderTaskInput {
-  agentType: 'coder'
-  boilerplate?: string
-  task: Todo
-}
-
-interface DebuggerTaskInput {
-  agentType: 'debugger'
-  errors: Error[]
-  toolResult: ToolResult
-  task: Todo
-}
-
-interface TesterTaskInput {
-  agentType: 'tester'
-  error: Error
-  task: Todo
-}
-
-interface ResearchTaskInput {
-  agentType: 'researcher'
-  query: string
-  maxResults: number
-  task: Todo
-}
-
-interface UIExpertTaskInput{
-    agentType: 'uiExpert',
-    query: string,
+export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
+export interface BaseTaskInput{
     task: Todo
+    agentType: SubAgentType
 }
-export type SubAgentTaskInput = {
+type CoderTaskInput = BaseTaskInput & {
+    boilerplate?: string
+}
+
+type DebuggerTaskInput = BaseTaskInput & {
+    errors: Error[]
+    toolResult: ToolResult
+}
+
+type TesterTaskInput = BaseTaskInput & {
+    error: Error
+}
+
+type ResearchTaskInput = BaseTaskInput & {
+    query: string
+    maxResults: number
+}
+
+type UIExpertTaskInput = BaseTaskInput & {
+    query: string,
+}
+export type InputMap = {
     coder: CoderTaskInput;
     debuggerr: DebuggerTaskInput,
     tester: TesterTaskInput,
     researcher: ResearchTaskInput,
     uiExpert: UIExpertTaskInput
-
 }
-export type SubAgentsContext = {
+// export type InputMap = CoderTaskInput | DebuggerTaskInput | TesterTaskInput | ResearchTaskInput | UIExpertTaskInput
+
+export type ContextMap = {
     coder: CoderContext,
-    debugger: DebuggerContext,
+    debuggerr: DebuggerContext,
     tester: TesterContext,
     researcher: ResearcherContext,
     uiExpert: UIExpertContext
@@ -61,47 +55,27 @@ export type ResearcherContext = {
 export type TesterContext = Record<string, never>
 
 // session types for subagents
-export type SubAgentsSession = {
+export type SessionMap = {
     coder: CoderSession,
     debuggerr: DebuggerSession,
     tester: TesterSession,
     researcher: ResearcherSession,
     uiExpert: UIExpertSession
 }
-export type DebuggerSession = {
-    taskId: number
-    status: 'in_progress' | 'halted' | 'resolved';
+export type Role = "user" | "assistant" | "tool"
+export type Status = 'in_progress' | 'halted' | 'resolved' | 'done';
+type BaseSession = {
+    taskId: number;
+    role: Role
+    status: Status
     iterationCount: number;
-    context: DebuggerContext;       // embeds it
-    rawTranscript?: string;         // full LLM back-and-forth, for debugging/audit — you said this matters for Debugger specifically
-    startedAt: string;
-    lastUpdatedAt: string;
+    timestamp: string;
+    content?: any
 };
-export type CoderSession = {
-    taskId: number,
-    status: 'in_progress' | 'halted' | 'done';
-    iterationCount: number,
-    context: CoderContext,
-    startedAt: string;
-    lastUpdatedAt: string;
-}
-export type TesterSession = {
-    iterationCount: number,
-    context: TesterContext,
-    startedAt: string;
-    lastUpdatedAt: string;
-}
-export type ResearcherSession = {
-    taskId: number,
-    iterationCount: number, 
-    context: ResearcherContext,
-    startedAt: string;
-    lastUpdatedAt: string;
-}
-export type UIExpertSession = {
-    taskId: number,
-    iterationCount: number,
-    context: UIExpertContext,
-    startedAt: string;
-    lastUpdatedAt: string;
-}
+export type DebuggerSession = BaseSession & {
+    rawTranscript?: string;         // full LLM back-and-forth, for debugging/audit — you said this matters for Debugger specifically
+};
+export type CoderSession = BaseSession
+export type TesterSession = BaseSession
+export type ResearcherSession = BaseSession
+export type UIExpertSession = BaseSession

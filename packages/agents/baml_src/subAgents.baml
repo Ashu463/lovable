@@ -1,5 +1,5 @@
-
-function GenerateSummary(systemPrompt: string, context: Message[]) -> string{
+class AgentContext{}
+function GenerateSummary(systemPrompt: string, context: SubAgentsContext) -> string{
 
     client OpenAIGeneric
     prompt #"

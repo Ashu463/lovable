@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, StitchTool, SubAgentsContext, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -322,9 +322,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async CompactContext(
-        systemPrompt: string,context: types.SubAgentsContext,
+        systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.SubAgentsContext> {
+        ): Promise<types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -371,7 +371,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.SubAgentsContext
+            return __raw__.parsed(false) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
             } catch (error) {
             throw toBamlError(error);
             }
@@ -658,7 +658,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async GenerateSummary(
-        systemPrompt: string,context: types.Message[],
+        systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<string> {
           try {
@@ -1218,9 +1218,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async SummarizeContext(
-        systemPrompt: string,context: types.SubAgentsContext,
+        systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.SubAgentsContext> {
+        ): Promise<types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -1267,7 +1267,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.SubAgentsContext
+            return __raw__.parsed(false) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
             } catch (error) {
             throw toBamlError(error);
             }
@@ -1808,9 +1808,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             CompactContext(
-            systemPrompt: string,context: types.SubAgentsContext,
+            systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.SubAgentsContext, types.SubAgentsContext>
+            ): BamlStream<partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext, types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1869,10 +1869,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.SubAgentsContext, types.SubAgentsContext>(
+                return new BamlStream<partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext, types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext>(
                   __raw__,
-                  (a): partial_types.SubAgentsContext => a,
-                  (a): types.SubAgentsContext => a,
+                  (a): partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext => a,
+                  (a): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -2252,7 +2252,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             GenerateSummary(
-            systemPrompt: string,context: types.Message[],
+            systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<string, string>
               {
@@ -2992,9 +2992,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             SummarizeContext(
-            systemPrompt: string,context: types.SubAgentsContext,
+            systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.SubAgentsContext, types.SubAgentsContext>
+            ): BamlStream<partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext, types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -3053,10 +3053,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.SubAgentsContext, types.SubAgentsContext>(
+                return new BamlStream<partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext, types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext>(
                   __raw__,
-                  (a): partial_types.SubAgentsContext => a,
-                  (a): types.SubAgentsContext => a,
+                  (a): partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext => a,
+                  (a): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

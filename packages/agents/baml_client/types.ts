@@ -76,6 +76,10 @@ export enum ToolType {
   QnA = "QnA",
 }
 
+export interface AgentContext {
+  
+}
+
 export interface AgentResponse {
   
 }
@@ -293,7 +297,7 @@ export interface StitchTool {
   
 }
 
-export interface SubAgentsContext {
+export interface SubAgentsContexts {
   coder: CoderContext
   debuggerr: DebuggerContext
   tester: TesterContext
@@ -383,3 +387,5 @@ export interface WriteFile {
   content: string
   
 }
+
+export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext

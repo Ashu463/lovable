@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContext,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -36,6 +36,8 @@ export interface StreamState<T> {
 }
 
 export namespace partial_types {
+    export interface AgentContext {
+    }
     export interface AgentResponse {
     }
     export interface Apify {
@@ -187,7 +189,7 @@ export namespace partial_types {
       prompt?: string | null
       userId?: string | null
     }
-    export interface SubAgentsContext {
+    export interface SubAgentsContexts {
       coder?: CoderContext | null
       debuggerr?: DebuggerContext | null
       tester?: TesterContext | null
@@ -252,4 +254,6 @@ export namespace partial_types {
       path?: string | null
       content?: string | null
     }
+export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext | null
+
 }

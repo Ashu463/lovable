@@ -188,7 +188,7 @@ class ResearcherContext{
 }
 class TesterContext{}
 
-class SubAgentsContext{
+class SubAgentsContexts{
     coder CoderContext
     debuggerr DebuggerContext // this is not a typo, I made this intentionally 
                             // because baml have debugger keyword and they don't let me use that.
@@ -196,3 +196,4 @@ class SubAgentsContext{
     researcher ResearcherContext
     uiExpert UIExpertContext
 }
+type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext

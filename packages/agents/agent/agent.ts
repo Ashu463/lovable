@@ -12,7 +12,7 @@ import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGING_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent, type SubAgentsContext } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-import type { SubAgentTaskInput } from "../types/mainAgentTypes"
+import type { InputMap } from "../types/mainAgentTypes"
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
 
 type Agent = "coder" | "debugger" | "tester" | "uiExpert" | "researcher"
@@ -133,7 +133,7 @@ export class OrchestratorAgent{
     }
 
     // -------------Everything below is for subagents ----------------
-    buildTaskInput(todo: Todo, priorResults: Map<string, TaskSummary>): SubAgentTaskInput {
+    buildTaskInput(todo: Todo, priorResults: Map<string, TaskSummary>): InputMap {
         switch (todo.agent) {
             case 'coder':
             return { agentType: 'coder', boilerplate: getBoilerplateFor(todo), task: todo }
@@ -149,12 +149,12 @@ export class OrchestratorAgent{
     }
 
     createSubAgent(
-        input: SubAgentTaskInput,
+        input: InputMap,
         userId: string,
         projectId: string,
         sandboxId: string,
         semanticMem: string,
-        ): SubAgent<SubAgentTaskInput> {
+        ): SubAgent<InputMap> {
         switch (input.agentType) {
             case 'coder':
             return new SubAgent<CoderTaskInput>(input, userId, projectId, sandboxId, semanticMem)
@@ -166,7 +166,7 @@ export class OrchestratorAgent{
             return new SubAgent<ResearchTaskInput>(input, userId, projectId, sandboxId, semanticMem)
         }
     }
-    buildSubAgentInput(todo: Todo): SubAgentTaskInput {
+    buildSubAgentInput(todo: Todo): InputMap {
         switch (todo.agent) {
             case "coder":
                 return {
