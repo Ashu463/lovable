@@ -175,7 +175,7 @@ env?: Record<string, string | undefined>
       }
       
   async CompactContext(
-  systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+  systemPrompt: string,context: types.Message[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -703,7 +703,7 @@ env?: Record<string, string | undefined>
       }
       
   async SummarizeContext(
-  systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+  systemPrompt: string,context: types.Message[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -1006,7 +1006,7 @@ env?: Record<string, string | undefined>
           }
           
       async CompactContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -1534,7 +1534,7 @@ env?: Record<string, string | undefined>
           }
           
       async SummarizeContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {

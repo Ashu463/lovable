@@ -120,8 +120,8 @@ export class E2BSandbox{
                     }
                 }
                 return {
-                    success: false,
-                    content: "Run command response attached",
+                    success: true,
+                    content: cmdRes.stderr + cmdRes.stdout,
                     stderr: cmdRes.stderr,
                     stdout: cmdRes.stdout
                 }

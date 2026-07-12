@@ -171,7 +171,7 @@ export class HttpRequest {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -699,7 +699,7 @@ export class HttpRequest {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1002,7 +1002,7 @@ export class HttpStreamRequest {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1530,7 +1530,7 @@ export class HttpStreamRequest {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {

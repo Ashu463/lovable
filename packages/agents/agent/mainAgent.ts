@@ -1,13 +1,12 @@
 import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { SSEBody } from "../types/mainAgentTypes"
-import { MAIN_SYSTEM_PROMPT } from "./config/sysPrompts"
+import { COMPACT_CONTEXT_PROMPT, MAIN_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
 import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAX_CONTEXT_WINDOW_LENGTH, MAX_MAIN_ITERATIONS } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
 import { webSearch } from "./MCPs/tavily"
 import { makeOneScreen } from "./services/stitch"
-import { ContextManager } from "./utils/context"
 import { encoding_for_model } from "tiktoken"
 import { R2 } from "./services/file-storage/fileStorage"
 import axios from "axios"
@@ -19,7 +18,6 @@ export class MainAgent{
     public lastCompactedIndex: number
     public K: number
 
-    public contextManager: ContextManager
     public sandbox: E2BSandbox
     public r2: R2
     constructor(
@@ -36,7 +34,6 @@ export class MainAgent{
         this.masterContext = ""
         this.lastCompactedIndex = 0
         this.K = COMPACTION_PARAMETER
-        this.contextManager = new ContextManager(MAIN_SYSTEM_PROMPT, this.userPrompt, this.semanticMem)
         this.r2 = new R2()
         this.sandbox = new E2BSandbox()
     }
@@ -165,20 +162,19 @@ export class MainAgent{
             throw e
         }
     }
-    async manageContext(): Promise<Message[]> {
+    async manageContext(): Promise<Message[]>{
+        if(this.estimateTokens(this.context) <= COMPACT_THRESHOLD) return this.context
 
-        const totalTokens = this.estimateTokens(this.context)
-        if(totalTokens <= COMPACT_THRESHOLD) return this.context
+        const len = this.context.length
+        const olderHalf = this.context.slice(0, len/2)
+        const olderHalfContext = {
 
-        const compactedContext = await this.contextManager.CompactContext(this.context)
-        const compactedTokens = this.estimateTokens(compactedContext)
+        }
+        const olderCompacted: Message[] = await b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf)
+        const updated: Message[] = [...olderCompacted, ...this.context.slice(len/2, len)]
+        if(this.estimateTokens(updated) <= COMPACT_THRESHOLD) return updated
 
-        if(compactedTokens <= COMPACT_THRESHOLD) return compactedContext
-
-        return await this.contextManager.SummarizeContext(compactedContext)        
-        // if compacted context doesn't shows significant improvement then
-        // context summarize with that 80% of the window length criteria
-    
+        return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, this.context)
     }
     estimateTokens(context: Message[]): number {
         const encoder = encoding_for_model("gpt-4o")
@@ -207,61 +203,47 @@ export class MainAgent{
     }
 
     async executeTool(toolCall: ToolCall): Promise<string | Screen> {
-        let response: string | Screen = ""
 
         switch (toolCall.type) {
             case ToolType.Apify:
                 if (!toolCall.apify) throw new Error("Apify tool call missing params")
-                response = await webScrape(toolCall.apify.urls, toolCall.apify.maxPages)
-                break
+                return await webScrape(toolCall.apify.urls, toolCall.apify.maxPages)
 
             case ToolType.Context7:
                 if (!toolCall.context7) throw new Error("Context7 tool call missing params")
-                response = await fetchDocs(toolCall.context7.library, toolCall.context7.query)
-                break
+                return await fetchDocs(toolCall.context7.library, toolCall.context7.query)
 
             case ToolType.Tavily:
                 if (!toolCall.tavily) throw new Error("Tavily tool call missing params")
-                response = await webSearch(toolCall.tavily.query, toolCall.tavily.maxResults)
+                return await webSearch(toolCall.tavily.query, toolCall.tavily.maxResults)
                 break
 
             case ToolType.Stitch:
                 if (!toolCall.stitch) throw new Error("Stitch tool call missing params")
-                response = await makeOneScreen(toolCall.stitch.prompt, toolCall.stitch.userId)
-                break
+                return await makeOneScreen(toolCall.stitch.prompt, toolCall.stitch.userId)
 
             case ToolType.ReadFile:
                 if (!toolCall.readFile) throw new Error("ReadFile tool call missing params")
-                response = await this.sandbox.Execute(this.sandboxId, {action: "read", path: toolCall.readFile.path})
-                break
+                return (await this.sandbox.Execute(this.sandboxId, {action: "read", path: toolCall.readFile.path})).content
 
             case ToolType.WriteFile:
                 if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
-                response = await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})
-                await this.syncToR2(toolCall.writeFile.path, toolCall.writeFile.content)  // checkpoint immediately on write
-                break
+                return (await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})).content
 
             case ToolType.EditFile:
                 if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
-                response = await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.editFile.fileName, content: toolCall.editFile.content})
-                await this.syncToR2(toolCall.editFile.fileName, toolCall.editFile.content)
-                break
+                return (await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.editFile.fileName, content: toolCall.editFile.content})).content
 
             case ToolType.DeleteFile:
                 if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
-                response = await this.sandbox.Execute(this.sandboxId, {action: "delete", path: toolCall.deleteFile.path})
-                break
+                return (await this.sandbox.Execute(this.sandboxId, {action: "delete", path: toolCall.deleteFile.path})).content
 
             case ToolType.RunCommand:
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
-                response = await this.sandbox.Execute(this.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})
-                break
+                return (await this.sandbox.Execute(this.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
 
-            default:
-            throw new Error(`Unhandled tool type: ${toolCall.type}`)
+            default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
         }
-
-        return response
     }
 
 

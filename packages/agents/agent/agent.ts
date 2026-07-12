@@ -10,9 +10,9 @@ import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGING_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
-import { SubAgent, type SubAgentsContext } from "./subAgent"
+import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-import type { InputMap } from "../types/mainAgentTypes"
+// import type { InputMap } from "../types/mainAgentTypes"
 // This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
 
 type Agent = "coder" | "debugger" | "tester" | "uiExpert" | "researcher"
@@ -106,7 +106,6 @@ export class OrchestratorAgent{
                         
                         loopCount++;
                     }
-                    
                 }
                 // subagent spawning
                 // context making for various subagents i.e. that taskId

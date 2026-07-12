@@ -298,9 +298,9 @@ export class BamlSyncClient {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext {
+  ): types.Message[] {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -341,7 +341,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
+      return __raw__.parsed(false) as types.Message[]
     } catch (error: any) {
       throw toBamlError(error);
     }
@@ -1098,9 +1098,9 @@ export class BamlSyncClient {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext {
+  ): types.Message[] {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -1141,7 +1141,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
+      return __raw__.parsed(false) as types.Message[]
     } catch (error: any) {
       throw toBamlError(error);
     }

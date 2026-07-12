@@ -125,7 +125,7 @@ export class LlmResponseParser {
   CompactContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext {
+  ): types.Message[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -139,7 +139,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
+      ) as types.Message[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -493,7 +493,7 @@ export class LlmResponseParser {
   SummarizeContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext {
+  ): types.Message[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -507,7 +507,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext
+      ) as types.Message[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -706,7 +706,7 @@ export class LlmStreamParser {
   CompactContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext {
+  ): partial_types.Message[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -720,7 +720,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext
+      ) as partial_types.Message[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -1074,7 +1074,7 @@ export class LlmStreamParser {
   SummarizeContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext {
+  ): partial_types.Message[] {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -1088,7 +1088,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.CoderContext | partial_types.DebuggerContext | partial_types.TesterContext | partial_types.ResearcherContext | partial_types.UIExpertContext
+      ) as partial_types.Message[]
     } catch (error) {
       throw toBamlError(error);
     }
