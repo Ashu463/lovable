@@ -44,7 +44,7 @@ function SummarizeEpisodic(systemPrompt: string, episodicMem: EpisodicMemory) ->
     "#
 }
 
-function CompactContext(systemPrompt: string, context: SubAgentsContext[]) -> SubAgentsContext[]{
+function CompactContext(systemPrompt: string, context: SubAgentsContext) -> SubAgentsContext{
 
     client OpenAIGeneric
     prompt #"
@@ -54,7 +54,47 @@ function CompactContext(systemPrompt: string, context: SubAgentsContext[]) -> Su
         {{ctx.output_format}}
     "#
 }
-function SummarizeContext(systemPrompt: string, context: SubAgentsContext[]) -> SubAgentsContext[]{
+function CompactCoderContext(systemPrompt: string, context: CoderContext) -> CoderContext{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
+
+        {{ctx.output_format}}
+    "#
+}
+function CompactDebuggerContext(systemPrompt: string, context: DebuggerContext) -> DebuggerContext{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
+
+        {{ctx.output_format}}
+    "#
+}
+function SummarizeCoderContext(systemPrompt: string, context: CoderContext) -> CoderContext{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
+
+        {{ctx.output_format}}
+    "#
+}
+function SummarizeDebuggerContext(systemPrompt: string, context: DebuggerContext) -> DebuggerContext{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{context}}
+
+        {{ctx.output_format}}
+    "#
+}
+function SummarizeContext(systemPrompt: string, context: SubAgentsContext) -> SubAgentsContext{
 
     client OpenAIGeneric
     prompt #"
