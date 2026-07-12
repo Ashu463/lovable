@@ -270,6 +270,11 @@ export interface Research {
   
 }
 
+export interface ResearcherContext {
+  query: string
+  
+}
+
 export interface ResearcherResponse {
   query: string
   result: BraveRes | ApifyRes
@@ -288,8 +293,12 @@ export interface StitchTool {
   
 }
 
-export interface SubAgentContext {
-  type: ContextType
+export interface SubAgentsContext {
+  coder: CoderContext
+  debuggerr: DebuggerContext
+  tester: TesterContext
+  researcher: ResearcherContext
+  uiExpert: UIExpertContext
   
 }
 
@@ -308,6 +317,10 @@ export interface TaskSummary {
 export interface Tavily {
   query: string
   maxResults: number
+  
+}
+
+export interface TesterContext {
   
 }
 

@@ -1,6 +1,7 @@
 import { BaseAgent } from "./baseAgent";
 import { webSearch } from "../MCPs/tavily";
 import { webScrape } from "../MCPs/apify";
+import type { ResearcherContext } from "../../baml_client";
 
 /*
 what I'm thinking is that this researcher agent would use some RAG/memory things
@@ -10,7 +11,7 @@ and class here else it doesn't make sense at all.
 type ReasercherInput = string
 type ResearcherResponse = string
 type ResearcherResult = string
-export class Researcher extends BaseAgent<ReasercherInput, ResearcherResponse, ResearcherResult>{
+export class Researcher extends BaseAgent<ReasercherInput, ResearcherContext, ResearcherResponse, ResearcherResult>{
     
     constructor(
         // public query: string,

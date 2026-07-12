@@ -183,6 +183,16 @@ enum ContextType{
     UIExpertContext
     ResearcherContext
 }
-class SubAgentContext{
-    type ContextType
+class ResearcherContext{
+    query string
+}
+class TesterContext{}
+
+class SubAgentsContext{
+    coder CoderContext
+    debuggerr DebuggerContext // this is not a typo, I made this intentionally 
+                            // because baml have debugger keyword and they don't let me use that.
+    tester TesterContext
+    researcher ResearcherContext
+    uiExpert UIExpertContext
 }

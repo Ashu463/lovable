@@ -9,7 +9,7 @@ import { DAG } from "./services/dag"
 import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
-import { BACKEND_URL } from "./config/systemConfig"
+import { BACKEND_URL, DEBUGGING_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent, type SubAgentsContext } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { SubAgentTaskInput } from "../types/mainAgentTypes"
@@ -31,6 +31,7 @@ export class OrchestratorAgent{
         public userId: string, 
         public projectId: string,
         public sandboxId: string, // initially pass this as empty string, here after connecting it would have some value
+        public semanticMem: string
     ){
         this.uiExpert = new UIExpert(userId)
         this.context = []
@@ -93,7 +94,18 @@ export class OrchestratorAgent{
             for(var i = 0 ;i < sequentialTodos.length;){
                 // if (i % 2 === 0) // call tester <-> debugger loop here
                 if(i % 2 === 0){
-                    const error = this.HealthChecker()
+                    // spawn tester here
+                    // runloop of tester to fetch the errors
+                    // parse those errors to debugger
+                    // runloop of debugger
+                    // loop this thing for MAX_TESTING_TIMES
+                    let loopCount = 0;
+                    while(loopCount < DEBUGGING_MAX_ITERATIONS){
+
+                        const tester: SubAgent = new SubAgent("tester", "", this.userId, this.projectId, this.sandboxId, this.semanticMem)
+                        
+                        loopCount++;
+                    }
                     
                 }
                 // subagent spawning
@@ -189,35 +201,11 @@ export class OrchestratorAgent{
             throw new Error(`Unknown agent ${todo.agent}`);
         }
     }
-
-    async BuildContext(todo: Todo): Promise<SubAgentsContext>{
-        let res: string = ""
-        switch(todo.agent){
-            case "coder":
-                res = this.CoderContext(todo.dependency)
-                break;
-            
-            case "debugger":
-                res = await this.debuggerContext()
-                break;
-            
-            case "uiExpert": 
-                res: string = await this.uiExpertContext()
-                break;
-        }
-    }
-    CoderContext(dependentTasks: number[]): string{
-        let summaries: string = ""
-        for(const task of dependentTasks){
-            summaries += this.context.filter((context) => context.taskId === task).map((c) => c.summary)
-        }
-        return summaries
-    }
     async GenerateSummary(): Promise<string>{
 
     }
     // that tester <-> debugger loop
-    async HealthChecker(): Promise<string>{
+    async TesterAndDebuggerLoop(): Promise<string>{
 
 
         while(true){

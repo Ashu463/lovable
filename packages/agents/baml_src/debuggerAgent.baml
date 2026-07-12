@@ -19,7 +19,7 @@ class DebuggerContext{
 function DebuggerAgent(
     systemPrompt: string,
     errors: Error[],
-    context: DebuggerContext[],
+    context: DebuggerContext,
     toolResult: ToolResult?
 ) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone{
     

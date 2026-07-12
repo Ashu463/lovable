@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherResponse, RunCommand, StitchTool, SubAgentContext, TaskComplexity, TaskSummary, Tavily, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, StitchTool, SubAgentsContext, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, Todo, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -105,7 +105,7 @@ export class HttpRequest {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -138,7 +138,7 @@ export class HttpRequest {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.SubAgentContext[],
+      systemPrompt: string,context: types.SubAgentsContext[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -204,7 +204,7 @@ export class HttpRequest {
   }
   
   DebuggerAgent(
-      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext[],toolResult?: types.ToolResult | null,
+      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext,toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -600,7 +600,7 @@ export class HttpRequest {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.SubAgentContext[],
+      systemPrompt: string,context: types.SubAgentsContext[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -804,7 +804,7 @@ export class HttpStreamRequest {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext[],
+      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -837,7 +837,7 @@ export class HttpStreamRequest {
   }
   
   CompactContext(
-      systemPrompt: string,context: types.SubAgentContext[],
+      systemPrompt: string,context: types.SubAgentsContext[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -903,7 +903,7 @@ export class HttpStreamRequest {
   }
   
   DebuggerAgent(
-      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext[],toolResult?: types.ToolResult | null,
+      systemPrompt: string,errors: types.Error[],context: types.DebuggerContext,toolResult?: types.ToolResult | null,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1299,7 +1299,7 @@ export class HttpStreamRequest {
   }
   
   SummarizeContext(
-      systemPrompt: string,context: types.SubAgentContext[],
+      systemPrompt: string,context: types.SubAgentsContext[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {

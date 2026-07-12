@@ -1,10 +1,9 @@
-import { b, type EpisodicMemory } from "../../baml_client"
+import { b, type EpisodicMemory, type SubAgentsContext } from "../../baml_client"
 // import type { ContextStruct } from "../../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
 import { COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
-import type { SubAgentsContext } from "../../types/subAgentsTypes"
 
 export class ContextManager{
 

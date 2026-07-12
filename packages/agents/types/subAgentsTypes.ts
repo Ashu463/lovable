@@ -41,7 +41,7 @@ interface UIExpertTaskInput{
 }
 export type SubAgentTaskInput = {
     coder: CoderTaskInput;
-    debugger: DebuggerTaskInput,
+    debuggerr: DebuggerTaskInput,
     tester: TesterTaskInput,
     researcher: ResearchTaskInput,
     uiExpert: UIExpertTaskInput
@@ -63,7 +63,7 @@ export type TesterContext = Record<string, never>
 // session types for subagents
 export type SubAgentsSession = {
     coder: CoderSession,
-    debugger: DebuggerSession,
+    debuggerr: DebuggerSession,
     tester: TesterSession,
     researcher: ResearcherSession,
     uiExpert: UIExpertSession

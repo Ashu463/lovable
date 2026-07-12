@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentContext,  TaskComplexity,  TaskSummary,  Tavily,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContext,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -172,6 +172,9 @@ export namespace partial_types {
       action?: "research" | null
       searchType?: WebSearch | WebScrape | DocsSeach | null
     }
+    export interface ResearcherContext {
+      query?: string | null
+    }
     export interface ResearcherResponse {
       query?: string | null
       result?: BraveRes | ApifyRes | null
@@ -184,8 +187,12 @@ export namespace partial_types {
       prompt?: string | null
       userId?: string | null
     }
-    export interface SubAgentContext {
-      type?: types.ContextType | null
+    export interface SubAgentsContext {
+      coder?: CoderContext | null
+      debuggerr?: DebuggerContext | null
+      tester?: TesterContext | null
+      researcher?: ResearcherContext | null
+      uiExpert?: UIExpertContext | null
     }
     export interface TaskComplexity {
       complexity?: boolean | null
@@ -198,6 +205,8 @@ export namespace partial_types {
     export interface Tavily {
       query?: string | null
       maxResults?: number | null
+    }
+    export interface TesterContext {
     }
     export interface TesterResponse {
     }

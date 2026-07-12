@@ -20,7 +20,7 @@ type DebuggerRequest = {
 type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
 // type DebuggerToolResponse = 
-export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerLLMResponse, DebuggerAgentResponse>{
+export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, DebuggerLLMResponse, DebuggerAgentResponse>{
 
     private researcher: Researcher 
     constructor(
@@ -33,7 +33,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerLLMRespons
     }
 
 
-    override async callLLM(content: DebuggerRequest, context: DebuggerContext[]): Promise<DebuggerLLMResponse> {
+    override async callLLM(content: DebuggerRequest, context: DebuggerContext): Promise<DebuggerLLMResponse> {
         
         try{
             const response = await b.DebuggerAgent(DEBUGGER_PROMPT, content.errors, context, content?.toolResult)

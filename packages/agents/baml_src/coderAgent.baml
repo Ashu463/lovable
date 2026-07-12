@@ -17,7 +17,7 @@ class CoderContext{
 function CoderAgent(
     systemPrompt: string, 
     figmaBoilerPlate: string?, 
-    context: CoderContext[],
+    context: CoderContext,
 ) -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done  
     {
     // also this figmaBoilerPlate would be run for the first time iteration

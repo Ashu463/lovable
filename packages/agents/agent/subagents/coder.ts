@@ -21,7 +21,7 @@ import { BaseAgent } from "./baseAgent";
 
 */
 interface CoderRequest{
-    context: CoderContext[]
+    context: CoderContext
     boilerPlate?: string
 } 
 type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
@@ -30,7 +30,7 @@ type CoderAgentResponse = {
     response: string,
     toolResult?: ToolResult
 }
-export class CoderAgent extends BaseAgent<CoderRequest, CoderLLMResponse, CoderAgentResponse>{
+export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMResponse, CoderAgentResponse>{
 
     private researcher: Researcher
     constructor(

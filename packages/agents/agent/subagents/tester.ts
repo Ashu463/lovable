@@ -1,13 +1,13 @@
 import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
-import { b, type ErrorResponse } from "../../baml_client"
+import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_PROMPT } from "../config/sysPrompts"
 import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse
 type TesterResponse = ""
-export class TesterAgent extends BaseAgent<TesterInput, TesterLLMResponse, TesterResponse>{
+export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLMResponse, TesterResponse>{
     
     constructor(
         userId: string, 
