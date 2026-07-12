@@ -7,8 +7,8 @@ import { TesterAgent } from "./subagents/tester";
 import type { BaseAgent } from "./subagents/baseAgent";
 import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
-import { ContextManager } from "./utils/context";
-import { SUBAGENT_SUMMARY_PROPMT, SUBAGENT_SYSTEM_PROMPT } from "./config/sysPrompts";
+import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
+import { SUBAGENT_SUMMARY_PROPMT, SUBAGENT_SYSTEM_PROMPT, UI_DESIGNER_PROMPT } from "./config/sysPrompts";
 import type { SSEBody } from "../types/mainAgentTypes";
 import axios from "axios";
 import type { ResearcherContext, SubAgentsSession, SubAgentTaskInput } from "../types/subAgentsTypes";
@@ -21,7 +21,7 @@ export class SubAgent<T extends AgentType> {
     private context!:  SubAgentsContext[T] // FIX: please fix this '!' where I'm assuming this context array would never ever be null
     private session!: SubAgentsSession[T]
     private iteration: number = 0
-    private contextManager: ContextManager
+    private contextManager?: ContextManager<SubAgentsContext[T]>
     private taskId: number
     private sandbox: E2BSandbox
     private repoTree: string = ""
@@ -34,7 +34,7 @@ export class SubAgent<T extends AgentType> {
         public semanticMem: string,
     ) {
         this.agentInstance = this.createAgent(agentType)
-        this.contextManager = new ContextManager(SUBAGENT_SYSTEM_PROMPT, this.input.task.task, this.semanticMem)
+        this.contextManager = this.createContextManager()
         this.taskId = input.task.id 
         this.sandbox = new E2BSandbox()
     }
@@ -47,6 +47,13 @@ export class SubAgent<T extends AgentType> {
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandboxId) as any
         case 'uiExpert': return new UIExpert(this.userId) as any
         default: throw new Error(`${agentType} doesn't exist`) 
+        }
+    }
+    private createContextManager(){
+        switch(this.agentType){
+            case 'coder': return new CoderContextManager() as any
+            case 'debuggerr': return new DebuggerContextManager() as any
+            default: return undefined
         }
     }
 
@@ -67,7 +74,7 @@ export class SubAgent<T extends AgentType> {
             this.pushMessage('assistant', res)
             this.pushMessage('toolCall', toolRes)
 
-            this.context = await this.ManageContext()   
+            this.context = await this.ManageContext(toolRes)   
 
             await this.emitSSEUpdate({
                 type: 'tool_result',
@@ -87,7 +94,7 @@ export class SubAgent<T extends AgentType> {
             case 'debuggerr': return await this.BuildDebuggerContext() as SubAgentsContext[T]
             case 'researcher': return await this.BuildResearcherContext() as SubAgentsContext[T]
             case 'tester': return {} as SubAgentsContext[T]
-            case 'uiExpert': return await this.UIExpertContext() as SubAgentsContext[T]
+            case 'uiExpert': return await this.BuildUIExpertContext() as SubAgentsContext[T]
             default:    
                 throw new Error(`No such context builder for ${this.agentType}`)
         }
@@ -115,7 +122,7 @@ export class SubAgent<T extends AgentType> {
     async BuildResearcherContext(): Promise<ResearcherContext>{
         return { query: this.input.task.task }
     }
-    async UIExpertContext(): Promise<UIExpertContext>{
+    async BuildUIExpertContext(): Promise<UIExpertContext>{
         const priorDesigns = await axios.get(`${BACKEND_URL}/db/fetchPriorDesigns`, {
             params: { projectId: this.projectId }
         })
@@ -150,56 +157,62 @@ export class SubAgent<T extends AgentType> {
         }
     }
 
-    async buildInitialContext(input: T): Promise<Message[]> {
-        return [{
-            role: 'user',
-            content: JSON.stringify(input),   // task + agent-specific fields (boilerplate/errors/query etc)
-            //   id: generateId(),
-            timestamp: new Date().toISOString(),
-        }]
-    }
+    // const totalTokens = this.estimateTokens(this.context)
+    // if (totalTokens <= COMPACT_THRESHOLD) return this.context
+    
+    // const compactedContext = await this.contextManager.CompactContext(this.context)
+    // const compactedTokens = this.estimateTokens(compactedContext)
+    // if (compactedTokens <= COMPACT_THRESHOLD) return compactedContext
 
-    async ManageContext(toolRes?: any): Promise<SubAgentsContext[T]> {
-        switch(this.agentType){
-            case 'coder': return this.UpdateCoderContext() as SubAgentsContext[T]
-            case 'debuggerr': return this.UpdateDebuggerContext(toolRes) as SubAgentsContext[T]
-            default: return this.context
-        }
-        // const totalTokens = this.estimateTokens(this.context)
-        // if (totalTokens <= COMPACT_THRESHOLD) return this.context
+    // return await this.contextManager.SummarizeContext(compactedContext)
+
+    async ManageContext(toolRes: any): Promise<SubAgentsContext[T]> {
+        // which is not needed for tester, uiexpert, researcher.
+        if(!this.contextManager) return this.context
+
+        const updated = this.contextManager.appendTurn(this.context, toolRes)
         
-        // const compactedContext = await this.contextManager.CompactContext(this.context)
-        // const compactedTokens = this.estimateTokens(compactedContext)
-        // if (compactedTokens <= COMPACT_THRESHOLD) return compactedContext
+        const tokens = this.estimateTokens(updated)
+        if(tokens <= COMPACT_THRESHOLD) return updated
 
-        // return await this.contextManager.SummarizeContext(compactedContext)
-    }
-    async UpdateCoderContext(): Promise<CoderContext>{
-        const current = this.context as CoderContext
-        const totalTokens = this.estimateTokensCoder(current)
-        if (totalTokens <= COMPACT_THRESHOLD) return current
+        const compacted = await this.contextManager.CompactContext(updated)
+        if(this.estimateTokens(compacted) <= COMPACT_THRESHOLD) return compacted
 
-        const compactedContext = await this.contextManager.CompactContext(this.context)
-        const compactedTokens = this.estimateTokensCoder(compactedContext)
-        if (compactedTokens <= COMPACT_THRESHOLD) return compactedContext
-
-        return await this.contextManager.SummarizeContext(this.context)
+        return await this.contextManager.SummarizeContext(updated)
     }
-    UpdateDebuggerContext(toolRes: any): DebuggerContext {
-        const current = this.context as DebuggerContext
-        return {
-            originalError: current.originalError,
-            fixHistory: [
-                ...current.fixHistory,
-                { error: current.originalError, fixSummary: toolRes.summary ?? JSON.stringify(toolRes) }
-            ]
-        }
-    }
-    estimateTokensCoder(context: CoderContext): number {
+    estimateTokens(context: SubAgentsContext[T]): number{
         const encoder = encoding_for_model("gpt-4o")
-
-        return encoder.encode(context.map(item => JSON.stringify(item)).join('\n')).length
+        // BUG: stringifying it would skip the undefined fields present in context.
+        return encoder.encode(JSON.stringify(context)).length
     }
+    // async UpdateCoderContext(): Promise<CoderContext>{
+        
+    //     const current = this.context as CoderContext
+    //     const totalTokens = this.estimateTokensCoder(current)
+    //     if (totalTokens <= COMPACT_THRESHOLD) return current
+
+    //     const compactedContext = await this.contextManager?.CompactContext(this.context)
+    //     const compactedTokens = this.estimateTokens(compactedContext)
+
+    //     if (compactedTokens <= COMPACT_THRESHOLD) return compactedContext
+
+    //     return await this.contextManager?.SummarizeContext(this.context)
+    // }
+    // UpdateDebuggerContext(toolRes: any): DebuggerContext {
+    //     const current = this.context as DebuggerContext
+    //     return {
+    //         originalError: current.originalError,
+    //         fixHistory: [
+    //             ...current.fixHistory,
+    //             { error: current.originalError, fixSummary: toolRes.summary ?? JSON.stringify(toolRes) }
+    //         ]
+    //     }
+    // }
+    // estimateTokensCoder(context: CoderContext): number {
+    //     const encoder = encoding_for_model("gpt-4o")
+
+    //     return encoder.encode(context.map(item => JSON.stringify(item)).join('\n')).length
+    // }
 
     async emitSSEUpdate(event: SSEBody) {
         await axios.post(`${BACKEND_URL}/internal/tasks/${this.taskId}/events`, event)

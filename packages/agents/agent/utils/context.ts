@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type SubAgentsContext } from "../../baml_client"
+import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type ResearcherContext, type SubAgentsContext } from "../../baml_client"
 // import type { ContextStruct } from "../../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
@@ -7,12 +7,7 @@ import { COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemCo
 
 export abstract class ContextManager<TContext>{
 
-    constructor(
-        public systemPrompt: string, 
-        public originalTask: string, 
-        public semanticMem: string, // the memory which tells about general user behaviour
-        // public episodicSummary: string, // compressed version of this episodicMemory
-    ){}
+    constructor(){}
 
     // almost 100k tokens
     // async CompleteEpisodicSummary(session: string[]): Promise<EpisodicMemory>{
@@ -64,36 +59,38 @@ export abstract class ContextManager<TContext>{
     //     // semantic one from mem0 itself.
     //     const semanticMem: string = mem0.retrieve(`${currToolResult + recentHistory}`)
     //     return (WorkingMemory + JSON.stringify(episodicMemory) + semanticMem)
+    
+    // estimateTokens(context: Message[]): number {
+    //     const encoder = encoding_for_model("gpt-4o")
+    //     return encoder.encode(context.map(m => m.content).join('')).length
+    // }
     // }
 
-    estimateTokens(context: Message[]): number {
-        const encoder = encoding_for_model("gpt-4o")
-        return encoder.encode(context.map(m => m.content).join('')).length
-    }
     // Context Reduction
     abstract CompactContext(context: TContext): Promise<TContext>
         // compact 50% of the starting context, not the latest one until it gets 
         // within the limits. very smart thing it is.
-        // const mid = Math.floor(context.length/2)
-        // const olderHalf = context.slice(0, mid)
-        // const recentHalf = context.slice(mid, context.length)
-
-        // const olderCompacted = await b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf)
-
-        // return [...olderCompacted, ...recentHalf]
         
     
     abstract SummarizeContext(context: TContext): Promise<TContext>
         // note that we'll be using complete original context array not the compacted one.
-        // return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, context)
     
     // TODO: do this 
     abstract IsolateContext(): Promise<string>
     // only for MCP or RAG 
     abstract OffLoadContext(): Promise<string>
+
+    abstract appendTurn(context: TContext, toolRes: any): TContext
 }
 
 export class CoderContextManager extends ContextManager<CoderContext>{
+    appendTurn(context: CoderContext, toolRes: any): CoderContext {
+        const treeChanged = toolRes?.action === 'WriteFile' || toolRes?.action === 'DeleteFile'
+        return {
+            dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
+            repoTree: treeChanged ? toolRes.updatedTree : context.repoTree
+        }
+    }
 
     override async CompactContext(context: CoderContext): Promise<CoderContext> {
         const len = context.dependentSummary.length
@@ -124,6 +121,15 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 
 }
 export class DebuggerContextManager extends ContextManager<DebuggerContext>{
+    appendTurn(context: DebuggerContext, toolRes: any): DebuggerContext {
+        return {
+            originalError: context.originalError,
+            fixHistory: [
+                ...context.fixHistory,
+                { error: context.originalError, fixSummary: toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500) }
+            ]
+        }
+    }
 
     override async CompactContext(context: DebuggerContext): Promise<DebuggerContext> {
         const len = context.fixHistory.length
