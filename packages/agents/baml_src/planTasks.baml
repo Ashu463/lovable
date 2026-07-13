@@ -6,7 +6,7 @@ enum Agent {
   UIExpertAgent
   ResearcherAgent
 }
-function PlanComplexTask(systemPrompt: string, userPrompt: string) -> Todo[]{
+function PlanComplexTask(systemPrompt: string, userPrompt: string) -> PlannerTodo[]{
 
     client "openai-generic/deepseek-v4-flash"
     prompt #"

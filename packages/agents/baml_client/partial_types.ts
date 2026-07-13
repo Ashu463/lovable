@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  Todo,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -162,6 +162,13 @@ export namespace partial_types {
       content?: string | null
       timestamp?: string | null
     }
+    export interface PlannerTodo {
+      id?: number | null
+      task?: string | null
+      agent?: "coder" | "debugger" | "tester" | "researcher" | "uiExpert" | null
+      status?: "pending" | "completed" | null
+      dependency: number[]
+    }
     export interface Question {
       question?: string | null
       option: string[]
@@ -198,7 +205,7 @@ export namespace partial_types {
     }
     export interface TaskComplexity {
       complexity?: boolean | null
-      POA?: Todo[] | string | null
+      POA?: PlannerTodo[] | string | null
     }
     export interface TaskSummary {
       taskId?: string | null
@@ -211,13 +218,6 @@ export namespace partial_types {
     export interface TesterContext {
     }
     export interface TesterResponse {
-    }
-    export interface Todo {
-      id?: number | null
-      task?: string | null
-      agent?: "coder" | "debugger" | "tester" | "researcher" | "uiExpert" | null
-      status?: "pending" | "completed" | null
-      dependency: number[]
     }
     export interface ToolCall {
       type?: types.ToolType | null

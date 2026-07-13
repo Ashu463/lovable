@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type Message, type SubAgentsContext, type TaskSummary, type Todo, type UIExpertContext } from "../baml_client";
+import { b, type CoderContext, type DebuggerContext, type Message, type SubAgentsContext, type TaskSummary, type PlannerTodo, type UIExpertContext } from "../baml_client";
 import { CoderAgent } from "./subagents/coder";
 import { DebuggerAgent } from "./subagents/debugger";
 import { Researcher } from "./subagents/researcher";
@@ -191,7 +191,7 @@ export class SubAgent<T extends keyof ContextMap> {
         encoder.free()
         return num
     }
-    
+
     async emitSSEUpdate(event: SSEBody) {
         await axios.post(`${BACKEND_URL}/internal/tasks/${this.taskId}/events`, event)
     }

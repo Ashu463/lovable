@@ -96,7 +96,10 @@ Rules:
 MCP tools:
 - sandbox.read_file: read a file before editing
 - sandbox.write_file: write edited file content
-- sandbox.run_command: run a command if needed to verify`
+- sandbox.run_command: run a command if needed to verify
+-----------VERY IMP LINE -----------
+If relatedDesignRef is present in your task input, you must fetch the full design spec via fetchDesign(screenId) before writing any UI code.
+`
 
 export const DEBUGGER_PROMPT = `
 You are a debugging agent.

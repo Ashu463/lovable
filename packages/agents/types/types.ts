@@ -8,9 +8,6 @@ export interface AgentRequest{
     key: string
     prompt: string
 }
-export interface Todo{
-
-}
 export enum AgentRole {
     Research, 
     Coding,

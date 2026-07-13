@@ -18,7 +18,7 @@ model User {
   s3Id       String
 
   sandbox    Sandbox?
-  todos      Todo[]
+  todos      PlannerTodo[]
   chats      Conversation[]
 }
 
@@ -34,7 +34,7 @@ enum SBStatus{
   live
   down
 }
-model Todo{
+model PlannerTodo{
   id String @id @default(uuid())
   todo String
   status Status

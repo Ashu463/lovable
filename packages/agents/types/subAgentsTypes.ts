@@ -3,33 +3,28 @@
 //     stopReason: string,
 //     toolCall?: ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
-import type { CoderContext, DebuggerContext, Todo, ToolResult, UIExpertContext } from "../baml_client"
+import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertContext, Error } from "../baml_client"
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
 export interface BaseTaskInput{
-    task: Todo
+    task: PlannerTodo
     agentType: SubAgentType
 }
-type CoderTaskInput = BaseTaskInput & {
-    boilerplate?: string
-}
+export type CoderTaskInput = BaseTaskInput
 
-type DebuggerTaskInput = BaseTaskInput & {
+export type DebuggerTaskInput = BaseTaskInput & {
     errors: Error[]
     toolResult: ToolResult
 }
 
-type TesterTaskInput = BaseTaskInput & {
+export type TesterTaskInput = BaseTaskInput & {
     error: Error
 }
 
-type ResearchTaskInput = BaseTaskInput & {
-    query: string
-    maxResults: number
-}
+export type ResearchTaskInput = BaseTaskInput 
 
-type UIExpertTaskInput = BaseTaskInput & {
+export type UIExpertTaskInput = BaseTaskInput & {
     query: string,
 }
 export type InputMap = {

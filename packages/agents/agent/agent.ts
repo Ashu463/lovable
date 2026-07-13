@@ -3,18 +3,20 @@ import type { Project, User } from "../types/agentTypes"
 import { SubAgentStatus, type AgentRole, type Answers, type BootstrapResponse } from "../types/types"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
-import {type ComplexityLevel, type Message, type Question, type TaskComplexity, type Todo} from '../baml_client/types'
+import {type ComplexityLevel, type Error, type Message, type Question, type TaskComplexity, type TaskSummary, type PlannerTodo, type ToolResult} from '../baml_client/types'
 import { COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
-import { BACKEND_URL, DEBUGGING_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
+import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-// import type { InputMap } from "../types/mainAgentTypes"
-// This is the orchestrator agent, and will spawn subagents or main agent depending upon the need
+import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 
+
+type InputBuilder<T extends SubAgentType> = (todo: PlannerTodo, ctx: OrchestratorContext[], extra?: unknown) => InputMap[T]
+type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
 type Agent = "coder" | "debugger" | "tester" | "uiExpert" | "researcher"
 interface OrchestratorContext{
     taskId: number,
@@ -23,6 +25,7 @@ interface OrchestratorContext{
     success: boolean, 
     summary: string
 }
+
 export class OrchestratorAgent{
     private uiExpert: UIExpert
     private context: OrchestratorContext[]
@@ -31,10 +34,16 @@ export class OrchestratorAgent{
         public userId: string, 
         public projectId: string,
         public sandboxId: string, // initially pass this as empty string, here after connecting it would have some value
-        public semanticMem: string
+        public extra: unknown as CoderTaskInput,
     ){
         this.uiExpert = new UIExpert(userId)
         this.context = []
+    }
+
+    
+    shouldProvideBoilerPlate(): Boolean{
+
+        return true;
     }
 
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
@@ -82,44 +91,7 @@ export class OrchestratorAgent{
 
         const project = await axios.get<Project>(`${BACKEND_URL}/get/projects/${this.userId}/${this.projectId}`)
         
-        if(data.isComplex){
-            const tasks: Todo[] = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
-            
-            const dag: DAG = new DAG(tasks)
-            const sequentialTodos: Todo[] = dag.TopologicalSort()
-
-            let intialCoderCall = true;
-            let iteration: number = 0;
-            
-            for(var i = 0 ;i < sequentialTodos.length;){
-                // if (i % 2 === 0) // call tester <-> debugger loop here
-                if(i % 2 === 0){
-                    // spawn tester here
-                    // runloop of tester to fetch the errors
-                    // parse those errors to debugger
-                    // runloop of debugger
-                    // loop this thing for MAX_TESTING_TIMES
-                    let loopCount = 0;
-                    while(loopCount < DEBUGGING_MAX_ITERATIONS){
-
-                        const tester: SubAgent = new SubAgent("tester", "", this.userId, this.projectId, this.sandboxId, this.semanticMem)
-                        
-                        loopCount++;
-                    }
-                }
-                // subagent spawning
-                // context making for various subagents i.e. that taskId
-                
-                // calling subagent
-                // waiting for it's completion
-                // generating summary and pushing into orchestrator context[], {taskId, task, agentAssigned, summary, status}
-                // reseponse/state formation for orchestrator iself {status, detailSummary, errors (if any)}
-                // emit sse udpates after completion of each step
-                // 
-                i++;
-            }
-        }
-        else{
+        if(!data.isComplex){
             // do planning stuff in main agent system prompt itself.
             const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, sessionId, user.data.semanticMem, project.data.sessions, project.data.context, sandboxId)
 
@@ -129,10 +101,88 @@ export class OrchestratorAgent{
             // trigger deploy pipeline.
             // and then epilouge.
         }
+        else{
+            const tasks: PlannerTodo[] = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
+            
+            const dag: DAG = new DAG(tasks)
+            const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+
+            const inputBuilders: InputBuilders = {
+                coder: (todo, ctx, extra) => ({
+                    task: todo,
+                    agentType: 'coder',
+                    // boilerPlate: data.design // FIX: to be updated 
+                }),
+                debuggerr: (todo, ctx, extra) => ({
+                    task: todo,
+                    agentType: 'debuggerr',
+                    errors: (extra as {errors: Error[]}).errors,
+                    toolResult: (extra as {toolResult: ToolResult}).toolResult
+                }),
+                tester: (todo, ctx, extra) => ({
+                    task: todo,
+                    agentType: 'tester',
+                    error: (extra as {error: Error}).error
+                }),
+                researcher: (todo, ctx, extra) => ({
+                    task: todo, 
+                    agentType: 'researcher',
+                    query: (extra as {query: string}).query,
+                    maxResults: (extra as {maxResults: number}).maxResults
+                }),
+                uiExpert: (todo, ctx, extra) => ({
+                    task: todo, 
+                    agentType: 'uiExpert',
+                    query: (extra as {query: string}).query
+                })
+            }
+    
+            let intialCoderCall = true;
+            let iteration: number = 0;
+            /* Discussion: 
+            - I mean this totally makes sense that we should always run that tester <-> debugger loop after every coder task
+            - 
+    
+            Updated loop according to me: 
+            - received tasks from planner
+            - spawn that subagent and complete it's task 
+            - if that agent is coder then run the tester and debugger loop. 
+            - Rest the subagent's runLoop() method is handling everything
+    
+            */
+            for(let i = 0 ; i < sequentialTodos.length; i++){
+                // guardrail for the todo to ne not null
+                const todo = sequentialTodos[i];
+                if (!todo?.agent) continue;
+
+                const agentType: SubAgentType = todo?.agent
+                
+                const builder = inputBuilders[agentType]
+                const input = builder(todo, this.context, extra)
+                
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
+            }
+            // spawn tester here
+            // runloop of tester to fetch the errors
+            // parse those errors to debugger
+            // runloop of debugger
+            // loop this thing for MAX_TESTING_TIMES
+            // subagent spawning
+            // context making for various subagents i.e. that taskId
+            
+            // calling subagent
+            // waiting for it's completion
+            // generating summary and pushing into orchestrator context[], {taskId, task, agentAssigned, summary, status}
+            // reseponse/state formation for orchestrator iself {status, detailSummary, errors (if any)}
+            // emit sse udpates after completion of each step
+            // 
+            
+            
+        }
     }
 
     // -------------Everything below is for subagents ----------------
-    buildTaskInput(todo: Todo, priorResults: Map<string, TaskSummary>): InputMap {
+    buildTaskInput(todo: PlannerTodo, priorResults: Map<string, TaskSummary>): InputMap {
         switch (todo.agent) {
             case 'coder':
             return { agentType: 'coder', boilerplate: getBoilerplateFor(todo), task: todo }
@@ -165,7 +215,7 @@ export class OrchestratorAgent{
             return new SubAgent<ResearchTaskInput>(input, userId, projectId, sandboxId, semanticMem)
         }
     }
-    buildSubAgentInput(todo: Todo): InputMap {
+    buildSubAgentInput(todo: PlannerTodo): InputMap {
         switch (todo.agent) {
             case "coder":
                 return {
@@ -265,4 +315,33 @@ export class OrchestratorAgent{
         the summary kinda thing
     - handle partial or failures of the models.
     - return the response
+
+-------------boilerPlate for coder, Updated UI expert ----------------
+Also the main subagent class itself frame context, I don't need to take  care about that. 
+I got the idea of sending the boilerPlate. The first coder task doesn't seems reasonable 
+because it might be the case when the task need to have a fresh boilerPlate. I consider a 
+bad situtation in my mind that UI expert would only be called at the very starting time 
+which isn't true at all, maybe the complex task is divided into so many screen generation 
+task where the UI expert needed to generate the design, and in that case coder would need 
+the boiler plate there fore checking the initial call is a total diaster. Now the solution 
+would be to make the UI expert agent as child class for base agent which I'll do later, and 
+solution to the boiler plate would be: store the boilerPlate into sandbox generated by 
+UI expert always and always; and write this into the system prompt of coder agent that 
+fetch boilerPlate whenever you need it. that's just a simple tool call. Rest all other 
+solutions doesn't seems good to me, give your suggestions. Right now I've to update the 
+UI expert and I'm assuming my UI expert would be so intelligent that it could work on 
+previous generated design and update that and create new design for more other pages 
+following that specific design since I got to know that planner could generate consecutive 
+UI expert tasks. And thus shouldProvideBoilerPlate() won't make sense, what say?
+
+
+A great trade off: 
+I got a trade off if we are keeping the boiler plate inside a tool call, 
+there might be the possibility that coder agent never call it, 
+in that case it would get hallucinated a lot; which I would never want. 
+And the second way to store into the context would get compressed heavily
+(and that make sense a lot coz context compaction or summarization would be 
+hit only when at least 5 to 6 calls have been happened), 
+the third way is to make boiler plate mandatory field which would burst out the context window. 
+I'm geniunely interested in your true opinion. Think deeply and carefully.
 */

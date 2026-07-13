@@ -1,9 +1,9 @@
-import type { Todo } from "../../baml_client";
+import type { PlannerTodo } from "../../baml_client";
 
 export class DAG{
 
     constructor(
-        public todos: Todo[]
+        public todos: PlannerTodo[]
     ){}
 
     // answer: Array<number> = []
@@ -31,7 +31,7 @@ export class DAG{
             
     }
     // I'm heavily assuming that ids of task will be from 1 to n.
-    TopologicalSort(): Todo[]{
+    TopologicalSort(): PlannerTodo[]{
         this.answer = []
         this.todosGraph = this.makeGraph(this.todos)
         this.visited = new Map()
@@ -42,13 +42,13 @@ export class DAG{
             }
         }
 
-        const sequenctialTodos: Todo[] = this.answer.map(taskId => this.todos.find(todo => todo.id === taskId))
-            .filter((todo): todo is Todo => todo !== undefined)
+        const sequenctialTodos: PlannerTodo[] = this.answer.map(taskId => this.todos.find(todo => todo.id === taskId))
+            .filter((todo): todo is PlannerTodo => todo !== undefined)
         
         return sequenctialTodos
     }
 
-    makeGraph(todos: Todo[]): Map<number, number[]> {
+    makeGraph(todos: PlannerTodo[]): Map<number, number[]> {
         const graph = new Map<number, number[]>()
         for (const todo of todos) {
             graph.set(todo.id, todo.dependency)

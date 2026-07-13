@@ -100,7 +100,7 @@ function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterRespon
         {{ctx.output_format}}
     "#
 }
-class Todo{
+class PlannerTodo{
     id int
     task string
     agent "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
@@ -109,7 +109,7 @@ class Todo{
 }
 class TaskComplexity{
     complexity bool
-    POA Todo[] | string
+    POA PlannerTodo[] | string
 }
 function GetTodos(userPrompt: string, systemPrompt: string) -> TaskComplexity{
 

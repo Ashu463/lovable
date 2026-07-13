@@ -256,6 +256,15 @@ export interface Message {
   
 }
 
+export interface PlannerTodo {
+  id: number
+  task: string
+  agent: "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
+  status: "pending" | "completed"
+  dependency: number[]
+  
+}
+
 export interface Question {
   question: string
   option: string[]
@@ -308,7 +317,7 @@ export interface SubAgentsContexts {
 
 export interface TaskComplexity {
   complexity: boolean
-  POA: Todo[] | string
+  POA: PlannerTodo[] | string
   
 }
 
@@ -329,15 +338,6 @@ export interface TesterContext {
 }
 
 export interface TesterResponse {
-  
-}
-
-export interface Todo {
-  id: number
-  task: string
-  agent: "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
-  status: "pending" | "completed"
-  dependency: number[]
   
 }
 

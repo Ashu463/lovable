@@ -1,6 +1,6 @@
 import dotenv from 'dotenv'
 dotenv.config()
-import type { AgentRequest, LLMResponse, Todo } from "../types/types";
+import type { AgentRequest, LLMResponse, PlannerTodo } from "../types/types";
 import { events } from "./events";
 
 import { fetchContext } from './utils/memory';
@@ -40,7 +40,7 @@ export async function AgentCall(prompt: string, report: (status: string) => void
 
     */
    // TODO: implement BAML.
-    const taskComplexity: Promise<Todo[]> = await checkComplexityAndBuildTodo(payload.prompt)
+    const taskComplexity: Promise<PlannerTodo[]> = await checkComplexityAndBuildTodo(payload.prompt)
     let spawnSubagent = false;
     if(taskComplexity!.length > 0) spawnSubagent = true;
 
@@ -96,9 +96,9 @@ async function MainAgentLoop(payload: AgentRequest){
     
 }
 
-async function checkComplexityAndBuildTodo(user_prompt: string): Promise<Todo>{
+async function checkComplexityAndBuildTodo(user_prompt: string): Promise<PlannerTodo>{
     
-    let todos: Todo[] = []
+    let todos: PlannerTodo[] = []
     try{
         const response = await client.chat.completions.create({
             model: "deepseek-v4-flash",

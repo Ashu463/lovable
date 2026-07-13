@@ -1,5 +1,5 @@
 import Sandbox from "e2b"
-import type { DeleteFile, Done, EditFile, Error, FetchDocs, Question, ReadFile, Research, RunCommand, Todo, ToolResult, WriteFile } from "../baml_client"
+import type { DeleteFile, Done, EditFile, Error, FetchDocs, Question, ReadFile, Research, RunCommand, PlannerTodo, ToolResult, WriteFile } from "../baml_client"
 import type { CoderAgent } from "../agent/subagents/coder"
 import type { DebuggerAgent } from "../agent/subagents/debugger"
 import type { TesterAgent } from "../agent/subagents/tester"
