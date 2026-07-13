@@ -228,7 +228,34 @@ export class OrchestratorAgent{
                 
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
 
-                subagent.runLoop()
+                const result = await subagent.runLoop()
+                
+                let testsPassing: boolean | null = null;
+                let lastErrors = null
+
+                if (agentType === "coder") {
+                    testsPassing = false;
+                    let loopCount = 0;
+
+                    while (loopCount < DEBUGGERR_MAX_ITERATIONS && !testsPassing) {
+                        
+                    }
+                    loopCount++;
+                    }
+                }
+                this.context.push({
+                    taskId: todo.id,
+                    task: todo,
+                    agentAssigned: agentType,
+                    summary: result.summary,
+                    status: testsPassing === false ? "failed_after_max_iterations" : "success",
+                });
+
+                this.emitSSE({
+                    status: testsPassing === false ? "failed" : "success",
+                    detailSummary: result.summary,
+                    errors: testsPassing === false ? lastErrors : null,
+                });
             }
             // spawn tester here
             // runloop of tester to fetch the errors
@@ -250,74 +277,7 @@ export class OrchestratorAgent{
     }
 
     // -------------Everything below is for subagents ----------------
-    buildTaskInput(todo: PlannerTodo, priorResults: Map<string, TaskSummary>): InputMap {
-        switch (todo.agent) {
-            case 'coder':
-            return { agentType: 'coder', boilerplate: getBoilerplateFor(todo), task: todo }
-            case 'debugger':
-            return { agentType: 'debugger', errors: collectErrorsFrom(priorResults), toolResult: getLastToolResult(priorResults), task: todo }
-            case 'tester':
-            return { agentType: 'tester', error: getRelevantError(todo), task: todo }
-            case 'researcher':
-            return { agentType: 'researcher', query: todo.query!, maxResults: todo.maxResults ?? 5, task: todo }
-            default:
-            throw new Error(`Unknown agent type: ${todo.agent}`)
-        }
-    }
-
-    createSubAgent(
-        input: InputMap,
-        userId: string,
-        projectId: string,
-        sandboxId: string,
-        semanticMem: string,
-        ): SubAgent<InputMap> {
-        switch (input.agentType) {
-            case 'coder':
-            return new SubAgent<CoderTaskInput>(input, userId, projectId, sandboxId, semanticMem)
-            case 'debugger':
-            return new SubAgent<DebuggerTaskInput>(input, userId, projectId, sandboxId, semanticMem)
-            case 'tester':
-            return new SubAgent<TesterTaskInput>(input, userId, projectId, sandboxId, semanticMem)
-            case 'researcher':
-            return new SubAgent<ResearchTaskInput>(input, userId, projectId, sandboxId, semanticMem)
-        }
-    }
-    buildSubAgentInput(todo: PlannerTodo): InputMap {
-        switch (todo.agent) {
-            case "coder":
-                return {
-                    agentType: "coder",
-                    task: todo,
-                };
-
-            case "debugger":
-            return {
-                agentType: "debugger",
-                errors: this.currentErrors,
-                toolResult: this.lastToolResult,
-                task: todo,
-            };
-
-            case "tester":
-            return {
-                agentType: "tester",
-                error: this.lastError,
-                task: todo,
-            };
-
-            case "researcher":
-            return {
-                agentType: "researcher",
-                query: todo.task,
-                maxResults: 10,
-                task: todo,
-            };
-
-            default:
-            throw new Error(`Unknown agent ${todo.agent}`);
-        }
-    }
+    
     async GenerateSummary(): Promise<string>{
 
     }
