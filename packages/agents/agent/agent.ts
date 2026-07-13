@@ -12,10 +12,15 @@ import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
+import type { InputMap, SubAgentsTodo, SubAgentType } from "../types/subAgentsTypes"
 
 
-type InputBuilder<T extends SubAgentType> = (todo: PlannerTodo, ctx: OrchestratorContext[], extra?: unknown) => InputMap[T]
+type InputBuilder<T extends SubAgentType> = (
+    todo: PlannerTodo, 
+    ctx: OrchestratorContext[],
+    orchestratorState: OrchestratorState
+) => InputMap[T]
+
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
 type Agent = "coder" | "debugger" | "tester" | "uiExpert" | "researcher"
 interface OrchestratorContext{
@@ -25,25 +30,41 @@ interface OrchestratorContext{
     success: boolean, 
     summary: string
 }
+type OrchestratorState = {
+  screenId: string | null                       // current/most-recent screen context, if relevant
+  screenIdByTaskId: Map<number, string>          // taskId (uiExpert) -> screenId, for dependency-specific lookups
+  lastTestErrors: Error[]
+  lastToolResult: ToolResult | null
+  lastError: Error | null
+  errorsByTaskId: Map<number, Error[]>           // taskId (tester) -> errors, if debugger needs a specific tester's output
+}
 
 export class OrchestratorAgent{
     private uiExpert: UIExpert
     private context: OrchestratorContext[]
+    private state: OrchestratorState
     private sandbox: E2BSandbox = new E2BSandbox()
     constructor(
         public userId: string, 
         public projectId: string,
         public sandboxId: string, // initially pass this as empty string, here after connecting it would have some value
-        public extra: unknown as CoderTaskInput,
+        
     ){
         this.uiExpert = new UIExpert(userId)
         this.context = []
+        this.state = {
+            screenId: null,
+            screenIdByTaskId: new Map(),
+            lastTestErrors: [],
+            lastToolResult: null,
+            lastError: null,
+            errorsByTaskId: new Map(),
+        }
     }
 
     
-    shouldProvideBoilerPlate(): Boolean{
-
-        return true;
+    generateScreenId(todo: PlannerTodo): string {
+    return `screen_${todo.id}_${Date.now()}`
     }
 
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
@@ -108,34 +129,79 @@ export class OrchestratorAgent{
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
 
             const inputBuilders: InputBuilders = {
-                coder: (todo, ctx, extra) => ({
-                    task: todo,
+                coder: (todo, ctx, state) => ({
+                    task: {
+                        taskId: todo.id,
+                        task: todo.task,
+                        dependentTasks: todo.dependency,
+                        agentType: 'coder',
+                        agentSpecificData: {
+                            relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined,
+                        },
+                    },
                     agentType: 'coder',
-                    // boilerPlate: data.design // FIX: to be updated 
                 }),
-                debuggerr: (todo, ctx, extra) => ({
-                    task: todo,
-                    agentType: 'debuggerr',
-                    errors: (extra as {errors: Error[]}).errors,
-                    toolResult: (extra as {toolResult: ToolResult}).toolResult
-                }),
-                tester: (todo, ctx, extra) => ({
-                    task: todo,
-                    agentType: 'tester',
-                    error: (extra as {error: Error}).error
-                }),
-                researcher: (todo, ctx, extra) => ({
-                    task: todo, 
-                    agentType: 'researcher',
-                    query: (extra as {query: string}).query,
-                    maxResults: (extra as {maxResults: number}).maxResults
-                }),
-                uiExpert: (todo, ctx, extra) => ({
-                    task: todo, 
+
+                uiExpert: (todo, ctx, state) => ({
+                    task: {
+                    taskId: todo.id,
+                    task: todo.task,
+                    dependentTasks: todo.dependency,
                     agentType: 'uiExpert',
-                    query: (extra as {query: string}).query
-                })
-            }
+                    agentSpecificData: {
+                        screenId: state.screenId ?? this.generateScreenId(todo),
+                        mode: state.screenId ? 'update' : 'create',
+                        referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
+                    },
+                    },
+                    query: "",
+                    agentType: 'uiExpert',
+                }),
+
+                tester: (todo, ctx, state) => ({
+                    task: {
+                        taskId: todo.id,
+                        task: todo.task,
+                        dependentTasks: todo.dependency,
+                        agentType: 'tester',
+                        agentSpecificData: {},
+                    },
+                    agentType: 'tester',
+                }),
+
+                debuggerr: (todo, ctx, state) => {
+                    if(!this.state.lastToolResult){
+                        throw new Error(`debuggerr builder called without last tool result`)
+                    }
+                    const toolResult = this.state.lastToolResult
+                    return {
+                        task: {
+                            taskId: todo.id,
+                            task: todo.task,
+                            dependentTasks: todo.dependency,
+                            agentType: 'debuggerr',
+                            agentSpecificData: {},
+                        },
+                        agentType: 'debuggerr',
+                        errors: state.lastTestErrors,
+                        toolResult: toolResult,
+                    }
+                },
+
+                researcher: (todo, ctx, state) => ({
+                    task: {
+                        taskId: todo.id,
+                        task: todo.task,
+                        dependentTasks: todo.dependency,
+                        agentType: 'researcher',
+                        agentSpecificData: {
+                            query: todo.task,
+                            maxResults: 5,
+                        },
+                    },
+                    agentType: 'researcher',
+                }),
+                }
     
             let intialCoderCall = true;
             let iteration: number = 0;
@@ -155,12 +221,14 @@ export class OrchestratorAgent{
                 const todo = sequentialTodos[i];
                 if (!todo?.agent) continue;
 
-                const agentType: SubAgentType = todo?.agent
+                const agentType = todo?.agent
                 
-                const builder = inputBuilders[agentType]
-                const input = builder(todo, this.context, extra)
+                const input = inputBuilders[agentType](todo, this.context, this.state)
+                
                 
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
+
+                subagent.runLoop()
             }
             // spawn tester here
             // runloop of tester to fetch the errors

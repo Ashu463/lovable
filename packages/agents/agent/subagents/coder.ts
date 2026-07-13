@@ -22,7 +22,8 @@ import { BaseAgent } from "./baseAgent";
 */
 interface CoderRequest{
     context: CoderContext
-    boilerPlate?: string
+    boilerPlate?: string,
+    relatedDesignRef?: {screenId: string}
 } 
 type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
 type CoderAgentResponse = {

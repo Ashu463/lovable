@@ -103,7 +103,7 @@ function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterRespon
 class PlannerTodo{
     id int
     task string
-    agent "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
+    agent "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert"
     status "pending" | "completed"
     dependency int[]
 }

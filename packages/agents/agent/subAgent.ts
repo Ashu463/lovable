@@ -34,7 +34,7 @@ export class SubAgent<T extends keyof ContextMap> {
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
-        this.taskId = (this.input as BaseTaskInput).task.id
+        this.taskId = (this.input as BaseTaskInput).task.taskId
         this.sandbox = new E2BSandbox()
     }
 
@@ -114,7 +114,7 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
     async BuildCoderContext(): Promise<CoderContext>{
-        const dependentTaskIds = (this.input as BaseTaskInput).task.dependency
+        const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
             const cwd = await this.sandbox.Execute(this.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
             let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")

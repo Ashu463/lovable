@@ -259,7 +259,7 @@ export interface Message {
 export interface PlannerTodo {
   id: number
   task: string
-  agent: "coder" | "debugger" | "tester" | "researcher" | "uiExpert"
+  agent: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert"
   status: "pending" | "completed"
   dependency: number[]
   

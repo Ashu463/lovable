@@ -7,8 +7,21 @@ import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertCo
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
+export type SubAgentsTodo = {
+    taskId: number,
+    task: string,
+    dependentTasks: number[],
+    agentSpecificData: SubAgentTodoDataMap[SubAgentType]
+}
+type SubAgentTodoDataMap = {
+    coder: { relatedDesignRef?: { screenId: string } }
+    uiExpert: { screenId: string; mode: 'create' | 'update' | 'create-consistent'; referenceScreenIds?: string[] }
+    debuggerr: {} 
+    tester: {} 
+    researcher: { query: string; maxResults?: number }
+}
 export interface BaseTaskInput{
-    task: PlannerTodo
+    task: SubAgentsTodo
     agentType: SubAgentType
 }
 export type CoderTaskInput = BaseTaskInput
@@ -18,14 +31,12 @@ export type DebuggerTaskInput = BaseTaskInput & {
     toolResult: ToolResult
 }
 
-export type TesterTaskInput = BaseTaskInput & {
-    error: Error
-}
+export type TesterTaskInput = BaseTaskInput
 
 export type ResearchTaskInput = BaseTaskInput 
 
 export type UIExpertTaskInput = BaseTaskInput & {
-    query: string,
+    query: string, // this all need to refactored, dw
 }
 export type InputMap = {
     coder: CoderTaskInput;
