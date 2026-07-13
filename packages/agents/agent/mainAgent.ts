@@ -1,7 +1,7 @@
 import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
-import type { SSEBody } from "../types/mainAgentTypes"
-import { COMPACT_CONTEXT_PROMPT, MAIN_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
+import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
+import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
 import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAX_CONTEXT_WINDOW_LENGTH, MAX_MAIN_ITERATIONS } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
@@ -24,7 +24,6 @@ export class MainAgent{
         public userPrompt: string,
         public userId: string,
         public projectId: string,
-        public sessionId: string,
         public semanticMem: string, // any semantic data about the user. 
         public session: Message[],
         public context: Message[],
@@ -41,7 +40,7 @@ export class MainAgent{
         this.runLoop()
         // push to github
     }
-    async runLoop(){
+    async runLoop(): Promise<MainAgentResponse>{
         /* Steps: 
         - frame prompt
         - fetch context 
@@ -147,7 +146,14 @@ export class MainAgent{
         }
         catch(e){
             console.error(e)
-            throw e
+            return{
+                success: false,
+                summary: `Main Agent failed with error, ${e}`
+            }
+        }
+        return {
+            success: true,
+            summary: await this.BuildSummary()
         }
 
         // save session somewhere so that I've conversation somewhere. 
@@ -198,6 +204,7 @@ export class MainAgent{
         await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
             current_step: currentStep,
             context_snapshot: this.context,
+            session_snapshot: this.session,
             iteration: this.iterations,
         })
     }
@@ -245,6 +252,13 @@ export class MainAgent{
             default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
         }
     }
-
+    async BuildSummary(): Promise<string> {
+        try {
+            return await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.context)
+        } catch (e) {
+            console.error("Error occurred while generating summary")
+            throw e
+        }
+    }
 
 }

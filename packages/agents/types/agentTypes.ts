@@ -1,4 +1,5 @@
-import type { Message } from "../baml_client"
+import type { Screen } from "@google/stitch-sdk"
+import type { Error, Message, PlannerTodo } from "../baml_client"
 
 export interface AgentResponse{
     
@@ -63,4 +64,18 @@ export interface Project{
 interface Session{
     sessionId: string, 
     session: Message[]
+}
+
+export type OrchestratorSSE = {
+    taskCompleted: string,
+    status: "failed" |  "success",
+    summary: string,
+    errors: Error | null
+}
+export type OrchestratorResponse = {
+    design: Screen,
+    todos?: PlannerTodo[]
+    projectUrl: string,
+    r2Location: string,
+    summary: string
 }

@@ -38,9 +38,10 @@ Rules:
 Respond only in the structured format provided. Do not include reasoning outside 
 the content field.
 `
-
+export const MAIN_AGENT_SUMMARY_PROMPT = ``
 export const SUBAGENT_SYSTEM_PROMPT = ``
 export const COMPLEXITY_SYSTEM_PROMPT = ``
+export const ORCHESTRATOR_SUMMARY_PROMPT = ``
 
 export const PLAN_TASK_SYSTEM_PROMPT = ``
 export const ORECHESTRATOR_AGENT_PROMPT = `

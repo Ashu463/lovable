@@ -31,7 +31,7 @@ export type DebuggerTaskInput = BaseTaskInput & {
     toolResult: ToolResult
 }
 
-export type TesterTaskInput = BaseTaskInput
+export type TesterTaskInput = {}
 
 export type ResearchTaskInput = BaseTaskInput 
 
@@ -85,3 +85,8 @@ export type CoderSession = BaseSession
 export type TesterSession = BaseSession
 export type ResearcherSession = BaseSession
 export type UIExpertSession = BaseSession
+
+export type SubAgentResponse = {
+    success: boolean,
+    summary: string
+}

@@ -197,3 +197,14 @@ class SubAgentsContexts{
     uiExpert UIExpertContext
 }
 type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext
+
+function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
+
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{summaries}}
+
+        {{ctx.output_format}}
+    "#
+}

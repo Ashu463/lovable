@@ -39,3 +39,8 @@ export interface SSEBody{
 
 export type Agent = CoderAgent | DebuggerAgent | TesterAgent | UIExpert | Researcher
 export type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+
+export type MainAgentResponse = {
+    success: boolean, 
+    summary: string
+}

@@ -1,8 +1,8 @@
-import { b, type CoderContext, type DebuggerContext, type Message, type SubAgentsContext, type TaskSummary, type PlannerTodo, type UIExpertContext } from "../baml_client";
+import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary, type PlannerTodo, type UIExpertContext, type ErrorResponse } from "../baml_client";
 import { CoderAgent } from "./subagents/coder";
 import { DebuggerAgent } from "./subagents/debugger";
 import { Researcher } from "./subagents/researcher";
-import { TesterAgent } from "./subagents/tester";
+import { TesterAgent, type TesterResponse } from "./subagents/tester";
 
 import type { BaseAgent } from "./subagents/baseAgent";
 import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig";
@@ -11,7 +11,7 @@ import { CoderContextManager, ContextManager, DebuggerContextManager } from "./u
 import { SUBAGENT_SUMMARY_PROPMT, SUBAGENT_SYSTEM_PROMPT, UI_DESIGNER_PROMPT } from "./config/sysPrompts";
 import type { SSEBody } from "../types/mainAgentTypes";
 import axios from "axios";
-import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, SubAgentType, ContextMap, CoderSession, Role, Status } from "../types/subAgentsTypes";
+import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, SubAgentType, ContextMap, CoderSession, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 
@@ -56,7 +56,7 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
 
-    async runLoop(): Promise<string> {
+    async runLoop(): Promise<SubAgentResponse> {
         this.context = await this.BuildInitialContext()
 
         while (true) {
@@ -90,7 +90,14 @@ export class SubAgent<T extends keyof ContextMap> {
             if (this.iteration++ > this.maxIterations()) break
         }
 
-        return this.BuildSummary()
+        return {
+            success: true,
+            summary: await this.BuildSummary()
+        }
+    }
+    async Test(): Promise<TesterResponse>{
+        const tester = new TesterAgent(this.userId, this.projectId, this.sandboxId)
+        return await tester.testCodebase()
     }
     pushSession(role: Role, status: Status, content?: any, rawTranscript?: any){
         const entry = {
@@ -154,7 +161,7 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async BuildSummary(): Promise<string> {
         try {
-            return await b.GenerateSummary(SUBAGENT_SUMMARY_PROPMT, this.context as unknown as SubAgentsContext)
+            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROPMT, this.context as unknown as SubAgentsContext)
         } catch (e) {
             console.error("Error occurred while generating summary")
             throw e

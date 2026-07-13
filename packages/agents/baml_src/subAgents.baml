@@ -1,5 +1,5 @@
 class AgentContext{}
-function GenerateSummary(systemPrompt: string, context: SubAgentsContext) -> string{
+function GenerateSubagentSummary(systemPrompt: string, context: SubAgentsContext) -> string{
 
     client OpenAIGeneric
     prompt #"

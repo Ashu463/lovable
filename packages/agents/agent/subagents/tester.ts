@@ -6,7 +6,11 @@ import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse
-type TesterResponse = ""
+export type TesterResponse = {
+    success: boolean,
+    errorRes?: ErrorResponse
+}
+
 export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLMResponse, TesterResponse>{
     
     constructor(
@@ -17,8 +21,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         super(userId, projectId, sandboxId)
     }
 
-    async testCodebase() : Promise<ErrorResponse>{
-        let error!: ErrorResponse
+    async testCodebase() : Promise<TesterResponse>{
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandboxId)
@@ -34,16 +37,22 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             const response = await fetch(sandbox.getHost(PORT))
             const started = await this.pollUntilUp(sandbox)
             if(started){
-                // trigger the deploy pipeline 
+                return{
+                    success: true
+                }
             }
             await handle.kill()
-            return await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`)
+            const error = await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`)
+            return {
+                success: false,
+                errorRes: error
+            }
         }
         catch(e){
             console.error(e)
             throw e
         }
-        return error
+        
     }
 
     async pollUntilUp(sandbox: Sandbox): Promise<boolean> {

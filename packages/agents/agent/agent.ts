@@ -1,10 +1,10 @@
 import { PrismaClient } from "../generated/prisma/client"
-import type { Project, User } from "../types/agentTypes"
+import type { OrchestratorResponse, OrchestratorSSE, Project, User } from "../types/agentTypes"
 import { SubAgentStatus, type AgentRole, type Answers, type BootstrapResponse } from "../types/types"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Error, type Message, type Question, type TaskComplexity, type TaskSummary, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
+import { CODER_PROMPT, COMPLEXITY_CHECKER_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import type { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
@@ -12,7 +12,9 @@ import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-import type { InputMap, SubAgentsTodo, SubAgentType } from "../types/subAgentsTypes"
+import type { InputMap, SubAgentResponse, SubAgentsTodo, SubAgentType } from "../types/subAgentsTypes"
+import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
+import type { TesterResponse } from "./subagents/tester"
 
 
 type InputBuilder<T extends SubAgentType> = (
@@ -22,13 +24,12 @@ type InputBuilder<T extends SubAgentType> = (
 ) => InputMap[T]
 
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
-type Agent = "coder" | "debugger" | "tester" | "uiExpert" | "researcher"
 interface OrchestratorContext{
     taskId: number,
     task: string, 
-    agentAssigned: Agent, 
+    agentAssigned: SubAgentType, 
     success: boolean, 
-    summary: string
+    summary: string,
 }
 type OrchestratorState = {
   screenId: string | null                       // current/most-recent screen context, if relevant
@@ -102,7 +103,7 @@ export class OrchestratorAgent{
         return data
     }
 
-    async Orchestrate(userPrompt: string, answers?: Answers[]): Promise<string>{
+    async Orchestrate(userPrompt: string, answers?: Answers[]): Promise<OrchestratorResponse>{
 
         const data: BootstrapResponse = await this.Bootstrap(userPrompt, answers);
 
@@ -112,12 +113,13 @@ export class OrchestratorAgent{
 
         const project = await axios.get<Project>(`${BACKEND_URL}/get/projects/${this.userId}/${this.projectId}`)
         
+        let orchestratorSummary: string = ""
         if(!data.isComplex){
             // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, sessionId, user.data.semanticMem, project.data.sessions, project.data.context, sandboxId)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandboxId)
 
-            mainAgent.runLoop()
-
+            const mainResult = await mainAgent.runLoop()
+            orchestratorSummary = mainResult.summary
             // trigger evals
             // trigger deploy pipeline.
             // and then epilouge.
@@ -127,6 +129,7 @@ export class OrchestratorAgent{
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+            let summaries: string[] = []
 
             const inputBuilders: InputBuilders = {
                 coder: (todo, ctx, state) => ({
@@ -203,19 +206,6 @@ export class OrchestratorAgent{
                 }),
                 }
     
-            let intialCoderCall = true;
-            let iteration: number = 0;
-            /* Discussion: 
-            - I mean this totally makes sense that we should always run that tester <-> debugger loop after every coder task
-            - 
-    
-            Updated loop according to me: 
-            - received tasks from planner
-            - spawn that subagent and complete it's task 
-            - if that agent is coder then run the tester and debugger loop. 
-            - Rest the subagent's runLoop() method is handling everything
-    
-            */
             for(let i = 0 ; i < sequentialTodos.length; i++){
                 // guardrail for the todo to ne not null
                 const todo = sequentialTodos[i];
@@ -225,11 +215,10 @@ export class OrchestratorAgent{
                 
                 const input = inputBuilders[agentType](todo, this.context, this.state)
                 
-                
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
 
                 const result = await subagent.runLoop()
-                
+                summaries.push(result.summary)
                 let testsPassing: boolean | null = null;
                 let lastErrors = null
 
@@ -238,64 +227,76 @@ export class OrchestratorAgent{
                     let loopCount = 0;
 
                     while (loopCount < DEBUGGERR_MAX_ITERATIONS && !testsPassing) {
-                        
-                    }
-                    loopCount++;
+                        const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandboxId, user.data.semanticMem )
+
+                        const testerRes: TesterResponse = await tester.Test()
+                        if(testerRes.success === true){
+                            testsPassing = true
+                        }
+                        else{
+                            const error: Error = {
+                                fileName: testerRes.errorRes!.file,
+                                error: testerRes.errorRes!.error + testerRes.errorRes!.line
+                            }
+                            this.state.lastTestErrors.push(error)
+
+                            const debugTodo: PlannerTodo = {
+                                task: "",
+                                id: Math.floor(Math.random() * 1000), // debugger task starting from 1000 id number.
+                                dependency: [],
+                                agent: 'debuggerr',
+                                status: 'pending'
+                            }
+                            const debuggerInput = inputBuilders['debuggerr'](debugTodo, this.context, this.state)
+                            const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
+                            const debuggerResult = await debuggerAgent.runLoop()
+                            this.state.lastToolResult = {
+                                success: debuggerResult.success,                                
+                            }
+                            summaries.push(debuggerResult.summary)
+                            lastErrors = error
+                        }
+                        loopCount++;
                     }
                 }
+
                 this.context.push({
                     taskId: todo.id,
-                    task: todo,
+                    task: todo.task,
                     agentAssigned: agentType,
                     summary: result.summary,
-                    status: testsPassing === false ? "failed_after_max_iterations" : "success",
+                    success: true
                 });
 
-                this.emitSSE({
+                this.emitSSEUpdate({
+                    taskCompleted: `Task ${todo.task} completed`,
                     status: testsPassing === false ? "failed" : "success",
-                    detailSummary: result.summary,
+                    summary: result.summary,
                     errors: testsPassing === false ? lastErrors : null,
                 });
+                }
+                orchestratorSummary = await this.GenerateSubagentSummary(summaries)
+                
             }
-            // spawn tester here
-            // runloop of tester to fetch the errors
-            // parse those errors to debugger
-            // runloop of debugger
-            // loop this thing for MAX_TESTING_TIMES
-            // subagent spawning
-            // context making for various subagents i.e. that taskId
-            
-            // calling subagent
-            // waiting for it's completion
-            // generating summary and pushing into orchestrator context[], {taskId, task, agentAssigned, summary, status}
-            // reseponse/state formation for orchestrator iself {status, detailSummary, errors (if any)}
-            // emit sse udpates after completion of each step
-            // 
-            
+            // trigger deploy pipeline
             
         }
-    }
+    
 
     // -------------Everything below is for subagents ----------------
-    
-    async GenerateSummary(): Promise<string>{
-
+    shouldBatchTest(completedTaskIds: number[], dagState: DAG): boolean {
+        // TODO: implement DAG-based batching — test after independent task groups complete,
+        // not after every single coder task. Stubbed for now, always returns true (test every time).
+        return true
+    }
+    async emitSSEUpdate(event: OrchestratorSSE){
+        await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/events`, event)
+    }
+    async GenerateSubagentSummary(summaries: string[]): Promise<string>{
+        return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
     }
     // that tester <-> debugger loop
-    async TesterAndDebuggerLoop(): Promise<string>{
-
-
-        while(true){
-            const sandboxRes = await this.sandbox.Execute(this.sandboxId, {action: "runCommand", command: "npm run dev"})
-
-            if(sandboxRes.success === false){
-                //call debugger with the error: 
-                const error = sandboxRes.stderr || sandboxRes.stdout
-
-            }
-
-        }
-    }
+    
 }
 // This one would be triggered when there will be no sub agents
 
