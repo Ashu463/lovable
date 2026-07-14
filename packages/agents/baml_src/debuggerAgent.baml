@@ -1,6 +1,7 @@
 class Error{
     fileName string
     error string
+    source "tester" | "build" | "deploy"?
 }
 class DebuggingDone{
     action "done"

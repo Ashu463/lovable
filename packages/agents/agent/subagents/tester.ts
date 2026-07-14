@@ -25,7 +25,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandboxId)
-        
+        // #TEST: replace with appropriate path of project directory
         const handle = await sandbox.commands.run(`cd /home/usr/${this.userId}/projects/${this.projectId} && npm run dev`, {
             background: true,
             onStdout: (data: string) => {stdOutBuf += data},

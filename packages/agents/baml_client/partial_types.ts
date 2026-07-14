@@ -122,6 +122,7 @@ export namespace partial_types {
     export interface Error {
       fileName?: string | null
       error?: string | null
+      source?: "tester" | "build" | "deploy" | null
     }
     export interface ErrorResponse {
       error?: string | null

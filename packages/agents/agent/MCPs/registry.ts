@@ -33,6 +33,11 @@ const SERVER_CONFIGS: Record<string, ServerConfig> = {
     apify:{
         command: "npx",
         args: ["-y", "@apify/actors-mcp-server"]
+    },
+    vercel: {
+        command: "npx",
+        args: ["-y", "vercel-mcp-server"],
+        env: process.env.VERCEL_TOKEN
     }
 }
 const clients : Map<string, Client> = new Map()

@@ -12,9 +12,9 @@ import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
-import type { InputMap, SubAgentResponse, SubAgentsTodo, SubAgentType } from "../types/subAgentsTypes"
-import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
+import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { TesterResponse } from "./subagents/tester"
+import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
 
 
 type InputBuilder<T extends SubAgentType> = (
@@ -39,6 +39,7 @@ type OrchestratorState = {
   lastError: Error | null
   errorsByTaskId: Map<number, Error[]>           // taskId (tester) -> errors, if debugger needs a specific tester's output
 }
+
 
 export class OrchestratorAgent{
     private uiExpert: UIExpert
@@ -65,9 +66,82 @@ export class OrchestratorAgent{
 
     
     generateScreenId(todo: PlannerTodo): string {
-    return `screen_${todo.id}_${Date.now()}`
+        return `screen_${todo.id}_${Date.now()}`
     }
+    inputBuilders: InputBuilders = {
+        coder: (todo, ctx, state) => ({
+            task: {
+                taskId: todo.id,
+                task: todo.task,
+                dependentTasks: todo.dependency,
+                agentType: 'coder',
+                agentSpecificData: {
+                    relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined,
+                },
+            },
+            agentType: 'coder',
+        }),
 
+        uiExpert: (todo, ctx, state) => ({
+            task: {
+            taskId: todo.id,
+            task: todo.task,
+            dependentTasks: todo.dependency,
+            agentType: 'uiExpert',
+            agentSpecificData: {
+                screenId: state.screenId ?? this.generateScreenId(todo),
+                mode: state.screenId ? 'update' : 'create',
+                referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
+            },
+            },
+            query: "",
+            agentType: 'uiExpert',
+        }),
+
+        tester: (todo, ctx, state) => ({
+            task: {
+                taskId: todo.id,
+                task: todo.task,
+                dependentTasks: todo.dependency,
+                agentType: 'tester',
+                agentSpecificData: {},
+            },
+            agentType: 'tester',
+        }),
+
+        debuggerr: (todo, ctx, state) => {
+            if(!this.state.lastToolResult){
+                throw new Error(`debuggerr builder called without last tool result`)
+            }
+            const toolResult = this.state.lastToolResult
+            return {
+                task: {
+                    taskId: todo.id,
+                    task: todo.task,
+                    dependentTasks: todo.dependency,
+                    agentType: 'debuggerr',
+                    agentSpecificData: {},
+                },
+                agentType: 'debuggerr',
+                errors: state.lastTestErrors,
+                toolResult: toolResult,
+            }
+        },
+
+        researcher: (todo, ctx, state) => ({
+            task: {
+                taskId: todo.id,
+                task: todo.task,
+                dependentTasks: todo.dependency,
+                agentType: 'researcher',
+                agentSpecificData: {
+                    query: todo.task,
+                    maxResults: 5,
+                },
+            },
+            agentType: 'researcher',
+        }),
+    }
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
         // I've to store the state somewhere. Probably in backend/db? What say? Just fetch from the backend normally
         const isComplex: ComplexityLevel = await b.CheckComplexity(userPrompt, COMPLEXITY_CHECKER_PROMPT)
@@ -114,6 +188,7 @@ export class OrchestratorAgent{
         const project = await axios.get<Project>(`${BACKEND_URL}/get/projects/${this.userId}/${this.projectId}`)
         
         let orchestratorSummary: string = ""
+        let tasks: PlannerTodo[] = []
         if(!data.isComplex){
             // do planning stuff in main agent system prompt itself.
             const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandboxId)
@@ -125,140 +200,42 @@ export class OrchestratorAgent{
             // and then epilouge.
         }
         else{
-            const tasks: PlannerTodo[] = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
+            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
             let summaries: string[] = []
 
-            const inputBuilders: InputBuilders = {
-                coder: (todo, ctx, state) => ({
-                    task: {
-                        taskId: todo.id,
-                        task: todo.task,
-                        dependentTasks: todo.dependency,
-                        agentType: 'coder',
-                        agentSpecificData: {
-                            relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined,
-                        },
-                    },
-                    agentType: 'coder',
-                }),
-
-                uiExpert: (todo, ctx, state) => ({
-                    task: {
-                    taskId: todo.id,
-                    task: todo.task,
-                    dependentTasks: todo.dependency,
-                    agentType: 'uiExpert',
-                    agentSpecificData: {
-                        screenId: state.screenId ?? this.generateScreenId(todo),
-                        mode: state.screenId ? 'update' : 'create',
-                        referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
-                    },
-                    },
-                    query: "",
-                    agentType: 'uiExpert',
-                }),
-
-                tester: (todo, ctx, state) => ({
-                    task: {
-                        taskId: todo.id,
-                        task: todo.task,
-                        dependentTasks: todo.dependency,
-                        agentType: 'tester',
-                        agentSpecificData: {},
-                    },
-                    agentType: 'tester',
-                }),
-
-                debuggerr: (todo, ctx, state) => {
-                    if(!this.state.lastToolResult){
-                        throw new Error(`debuggerr builder called without last tool result`)
-                    }
-                    const toolResult = this.state.lastToolResult
-                    return {
-                        task: {
-                            taskId: todo.id,
-                            task: todo.task,
-                            dependentTasks: todo.dependency,
-                            agentType: 'debuggerr',
-                            agentSpecificData: {},
-                        },
-                        agentType: 'debuggerr',
-                        errors: state.lastTestErrors,
-                        toolResult: toolResult,
-                    }
-                },
-
-                researcher: (todo, ctx, state) => ({
-                    task: {
-                        taskId: todo.id,
-                        task: todo.task,
-                        dependentTasks: todo.dependency,
-                        agentType: 'researcher',
-                        agentSpecificData: {
-                            query: todo.task,
-                            maxResults: 5,
-                        },
-                    },
-                    agentType: 'researcher',
-                }),
-                }
+            
     
             for(let i = 0 ; i < sequentialTodos.length; i++){
                 // guardrail for the todo to ne not null
                 const todo = sequentialTodos[i];
-                if (!todo?.agent) continue;
+                // #TODO: Failure handling of planner
+                if (!todo?.agent){
+                    console.warn(`This ${todo} is not assigned with any agent.`)
+                    break;
+                }
 
                 const agentType = todo?.agent
                 
-                const input = inputBuilders[agentType](todo, this.context, this.state)
+                const input = this.inputBuilders[agentType](todo, this.context, this.state)
                 
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
+
                 let testsPassing: boolean | null = null;
                 let lastErrors = null
+                let testResults
 
-                if (agentType === "coder") {
+                if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
                     testsPassing = false;
-                    let loopCount = 0;
-
-                    while (loopCount < DEBUGGERR_MAX_ITERATIONS && !testsPassing) {
-                        const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandboxId, user.data.semanticMem )
-
-                        const testerRes: TesterResponse = await tester.Test()
-                        if(testerRes.success === true){
-                            testsPassing = true
-                        }
-                        else{
-                            const error: Error = {
-                                fileName: testerRes.errorRes!.file,
-                                error: testerRes.errorRes!.error + testerRes.errorRes!.line
-                            }
-                            this.state.lastTestErrors.push(error)
-
-                            const debugTodo: PlannerTodo = {
-                                task: "",
-                                id: Math.floor(Math.random() * 1000), // debugger task starting from 1000 id number.
-                                dependency: [],
-                                agent: 'debuggerr',
-                                status: 'pending'
-                            }
-                            const debuggerInput = inputBuilders['debuggerr'](debugTodo, this.context, this.state)
-                            const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
-                            const debuggerResult = await debuggerAgent.runLoop()
-                            this.state.lastToolResult = {
-                                success: debuggerResult.success,                                
-                            }
-                            summaries.push(debuggerResult.summary)
-                            lastErrors = error
-                        }
-                        loopCount++;
-                    }
+                    testResults = await this.TesterDebuggerLoop(user.data.semanticMem)
+                    if(testResults.success) testsPassing = true
                 }
+                // this.shouldBatchTest()
 
                 this.context.push({
                     taskId: todo.id,
@@ -274,13 +251,33 @@ export class OrchestratorAgent{
                     summary: result.summary,
                     errors: testsPassing === false ? lastErrors : null,
                 });
-                }
-                orchestratorSummary = await this.GenerateSubagentSummary(summaries)
-                
             }
-            // trigger deploy pipeline
-            
+            orchestratorSummary = await this.GenerateSubagentSummary(summaries)
+                
         }
+        // const path = this.sandbox
+        // #TEST: replace with appropriate path of project directory
+        const deployResult: DeploymentResult = await this.Deploy(`/home/usr/${this.userId}/projects/${this.projectId}`)
+        if(deployResult.success){
+            return {
+                success: 'pass',
+                design: data.design,
+                todos: data.isComplex ? tasks : [],
+                projectUrl: deployResult.url,
+                summary: orchestratorSummary
+            }
+        }
+        this.emitSSEUpdate({
+            status: 'failed',
+            summary: `Deployment failed`,
+            errors: deployResult.error
+        })            
+        return{
+            design: data.design,
+            success: 'failed',
+            summary: orchestratorSummary
+        }
+    }
     
 
     // -------------Everything below is for subagents ----------------
@@ -296,7 +293,93 @@ export class OrchestratorAgent{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
     }
     // that tester <-> debugger loop
+    async TesterDebuggerLoop(semanticMem: string, ): Promise<{success: true | false, summaries: string[], lastError?: Error}>{
+        let loopCount = 0;
+        let summaries: string[] = []
+        let lastError
+
+        let deployReady = await this.preDeployCheck()
+
+        try{
+            let previousErrorSignature: string | null = null
+            while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
+                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandboxId, semanticMem )
     
+                const testerRes: TesterResponse = await tester.Test()
+                const error: Error = {
+                    fileName: testerRes.errorRes!.file,
+                    error: testerRes.errorRes!.error + testerRes.errorRes!.line
+                }
+                // #CRITICAL: trying to avoid those iterations where debugger shows no progress.
+                const currentErrorSignature = `${error.fileName}:${error.error}`
+                if(currentErrorSignature === previousErrorSignature){
+                    return {
+                        success: false,
+                        summaries: summaries,
+                        lastError: error
+                    }
+                }
+                previousErrorSignature = currentErrorSignature
+                this.state.lastTestErrors.push(error)
+    
+                const debugTodo: PlannerTodo = {
+                    task: "",
+                    id: Math.floor(Math.random() * 1000), // debugger task starting from 1000 id number.
+                    dependency: [],
+                    agent: 'debuggerr',
+                    status: 'pending'
+                }
+                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandboxId, semanticMem)
+                const debuggerResult = await debuggerAgent.runLoop()
+                this.state.lastToolResult = {
+                    success: debuggerResult.success,                                
+                }
+                summaries.push(debuggerResult.summary)
+                lastError = error
+                // if(testerRes.success === true){
+                //     testsPassing = true
+                // }
+                // else{
+                // }
+                deployReady = await this.preDeployCheck()
+                loopCount++;
+            }
+            return {
+                success: true,
+                summaries: summaries, 
+                lastError: lastError
+            }
+        }
+        catch(e){
+            console.error(e)
+            return{
+                success: false,
+                summaries,
+            }
+        }
+    }
+
+    async preDeployCheck(): Promise<boolean> {
+        const buildResult = await this.sandbox.Execute(this.sandboxId, {action: 'runCommand', command: 'npm run build'})
+
+        if (buildResult.success === false) {
+            this.state.lastTestErrors.push({
+                fileName: "BUILD_CHECKER_ERROR",
+                error: buildResult.stderr ?? `Unknown build error`
+            })
+            this.state.lastToolResult = {success: false}
+            return false
+        }
+        return true
+    }
+
+    async Deploy(path: string): Promise<DeploymentResult>{
+        const result = await deployReactApp(path)
+        if(result.success) return result
+        // #TODO: failure handling and pushing into the tester debugger loop.
+        return result
+    }
 }
 // This one would be triggered when there will be no sub agents
 

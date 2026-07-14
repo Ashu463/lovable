@@ -67,15 +67,15 @@ interface Session{
 }
 
 export type OrchestratorSSE = {
-    taskCompleted: string,
+    taskCompleted?: string,
     status: "failed" |  "success",
     summary: string,
-    errors: Error | null
+    errors: Error | null | string
 }
 export type OrchestratorResponse = {
+    success: 'failed' | 'pass'
     design: Screen,
     todos?: PlannerTodo[]
-    projectUrl: string,
-    r2Location: string,
+    projectUrl?: string,
     summary: string
 }
