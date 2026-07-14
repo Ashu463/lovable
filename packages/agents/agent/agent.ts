@@ -167,7 +167,7 @@ export class OrchestratorAgent{
             // return {data: designs}
             // return for now wait for any one of the screen.
         }
-        const screen: Screen = await axios.get(`${BACKEND_URL}/db/getSelectedScreen`)
+        const screen: Screen = await axios.get(`${BACKEND_URL}/db/getSelectedDesign`)
         
         const data: BootstrapResponse = {
             userPrompt: userPrompt,
@@ -195,9 +195,7 @@ export class OrchestratorAgent{
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
-            // trigger evals
-            // trigger deploy pipeline.
-            // and then epilouge.
+            
         }
         else{
             tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)

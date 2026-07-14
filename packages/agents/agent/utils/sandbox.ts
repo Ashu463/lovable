@@ -176,7 +176,7 @@ export class E2BSandbox{
             await this.SyncR2(sandbox, userId, projectId)
         }
 
-        const tree = await sandbox.commands.run(`tree`)
+        // const tree = await sandbox.commands.run(`tree`)
         return sandbox.sandboxId
     }
     async SyncR2(sandbox: Sandbox, userId: string, projectId: string){

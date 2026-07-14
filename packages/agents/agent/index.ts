@@ -1,118 +1,39 @@
-import dotenv from 'dotenv'
-dotenv.config()
-import type { AgentRequest, LLMResponse, PlannerTodo } from "../types/types";
-import { events } from "./events";
+import type { TaskSummary } from "../baml_client"
+import type { OrchestratorResponse } from "../types/agentTypes"
+import type { Answers } from "../types/types"
+import { OrchestratorAgent } from "./agent"
+import { E2BSandbox } from "./utils/sandbox"
+// #CRITCIAL - All written by AI - Check it once on your side
+// inside sandbox: AgentCall
+export async function AgentCall(
+  userId: string,
+  projectId: string,
+  userPrompt: string,
+  emitter: EventEmitter,   // <- backendClient-backed emitter, POSTs to /internal/sessions/:projectId/events
+  answers?: Answers[]
+): Promise<void> {
+  const sandbox: E2BSandbox = new E2BSandbox()
+  const sandboxId = await sandbox.StartSandbox(userId, projectId)
 
-import { fetchContext } from './utils/memory';
-import { streamLLM } from './llm';
-import { Agent } from './agent';
+  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandboxId, emitter)
 
-
-export async function AgentCall(prompt: string, report: (status: string) => void){
-    events.emit("whatever the response be", "kitna bhi", "response bhj skte ho")
-
-    /*Steps: 
-    - Refactor the prompt: user message + system prompt(could be dynamic) + context(out of available memory and given user query)
-    - Decide whether the task is simple or complex
-        - if yes, then make todos for that
-        - else leave it
-
-    - StreamLLM, and this time both streaming as well as complete onetime response
-    - spawn sub agents if needed else main agent is fine
-    - execute tool calls via MCP this time, that qna tool
-    - let sub agent use some skills
-    - then generate the response
-    - Push back into memory
-    - RAG where? 
-    
-    - Iterate back to evaluate those responses, 
-    */
-
-    const context = fetchContext(prompt)
-
-    
-    let response: LLMResponse
-
-    /* Phase-2 
-
-    - Post it to the vercel or netlify, figure that out. 
-    - fetch their endpoints and display it to the user. 
-
-    */
-   // TODO: implement BAML.
-    const taskComplexity: Promise<PlannerTodo[]> = await checkComplexityAndBuildTodo(payload.prompt)
-    let spawnSubagent = false;
-    if(taskComplexity!.length > 0) spawnSubagent = true;
-
-    let agent: Agent = new Agent("asdf", "asdf")
-    agent.execute(prompt)
-
-    if((await taskComplexity!).length > 0){
-        // use sub agents way
-    }
-    else{
-        // use simple agent loop
-        response = MainAgentLoop({
-            model: "deepseek-v4-flash",
-            provider: "deepseek",
-            key: process.env.DEEPSEEK_API_KEY | "",
-            prompt: prompt
-        })
-    }
-    
-
-
+  try {
+    await orchestrator.Orchestrate(userPrompt, answers)  // emits events internally as each agent finishes, doesn't return a final payload to await on
+  } catch (err) {
+    await emitter.emit({ type: "run_failed", error: String(err) })
+  } finally {
+    await sandbox.Release()   // sandbox torn down only after the run actually finishes/fails
+  }
 }
-async function MainAgentLoop(payload: AgentRequest){
-    /*Steps; 
+// shared package: events.ts
+export type OrchestratorEvent =
+  | { type: "agent_started"; agent: string; taskId: string }
+  | { type: "agent_progress"; agent: string; taskId: string; data: unknown }
+  | { type: "agent_completed"; agent: string; taskId: string; summary: TaskSummary }
+  | { type: "clarification_needed"; question: string }
+  | { type: "run_completed"; result: OrchestratorResponse }
+  | { type: "run_failed"; error: string };
 
-    - standard agent loop, construct prompt setup the right context -> 
-    spawn sub agent (if needed) -> make the LLM call -> execute the 
-    tool calls/skills/MCP calls -> store results into session and 
-    write LLM responses to the file storage (probably S3 or what) -> loop continues
-
-    - spin a new sandbox, into the agent call itself and let tool call write in that storage
-    - expose it's build files and return back as LLMResponse
-
-    */
-    
-
-    let hasMoreToolCalls = true;
-    let firstTurn = true;
-    while(hasMoreToolCalls){
-        if(firstTurn){
-
-        }
-        else{
-
-        }
-        const response: LLMResponse = await streamLLM(payload)
-
-        if(response.toolCalls.length > 0){
-
-        }
-
-    }
-    
-}
-
-async function checkComplexityAndBuildTodo(user_prompt: string): Promise<PlannerTodo>{
-    
-    let todos: PlannerTodo[] = []
-    try{
-        const response = await client.chat.completions.create({
-            model: "deepseek-v4-flash",
-            messages: [
-                {role: "system", content: COMPLEXITY_SYSTEM_PROMPT},
-                {role: "user", content: user_prompt}
-            ]
-        })
-        console.log(response.choices[0]?.message.content, " is the todo LLM response")
-        todos = response.choices[0]?.message.content // TODO: implement BAML.
-    }catch(e){
-        throw new Error("Error occurred while checking and generating complexity and todo")
-    }
-
-    return todos!.length > 0 ? todos : []
-    
+export interface EventEmitter {
+  emit(event: OrchestratorEvent): Promise<void>;
 }

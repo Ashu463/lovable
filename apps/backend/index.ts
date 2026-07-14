@@ -14,6 +14,30 @@ TODOs:
 - chat/new
 - chat/:id
 
+Design: 
+- General: 
+    - Auth routes: 
+        - /login, /logout
+        - /login with google
+    - User profile storing
+        - /user/:userId
+    - Projects: 
+        - /projects/:projectId
+        - /project/listAll 
+
+- Agent specific
+    - POST: /chat/:userId/:projectId which will essentially call the orchestrator and trigger whole agent pipeline.
+
+- DB ops specific
+    - GET: /db/getQuestions
+    - GET: /db/getDesigns
+    - GET: /db/getSelectedDesign
+    - GET: /db/fetchPriorDesigns
+    - GET: /db/user/:userId
+    - GET: /db/getProjects/:userId/:projectId
+    - POST: /internal/sessions/:projectId/events
+    - POST: /internal/sessions/:projectId/state
+    - GET: /db/fetchSummaries ~ for all task summaries
 */
 app.post('/chat/:id', (req, res) =>{
     res.setHeader("content-type", "text/event-stream")
@@ -56,7 +80,7 @@ app.post('/chat/:id', (req, res) =>{
 
     */
 
-    AgentCall(id, prompt, report)
+    // AgentCall(id, prompt, report)
 
     /* Key thing when LLM have some pending work but crosses the context window.
     let cancelled = false;
