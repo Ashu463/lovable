@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary, type PlannerTodo, type UIExpertContext, type ErrorResponse } from "../baml_client";
+import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary,  type UIExpertContext } from "../baml_client";
 import { CoderAgent } from "./subagents/coder";
 import { DebuggerAgent } from "./subagents/debugger";
 import { Researcher } from "./subagents/researcher";
@@ -8,10 +8,10 @@ import type { BaseAgent } from "./subagents/baseAgent";
 import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
-import { SUBAGENT_SUMMARY_PROPMT, SUBAGENT_SYSTEM_PROMPT, UI_DESIGNER_PROMPT } from "./config/sysPrompts";
+import { SUBAGENT_SUMMARY_PROPMT } from "./config/sysPrompts";
 import type { SSEBody } from "../types/mainAgentTypes";
 import axios from "axios";
-import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, SubAgentType, ContextMap, CoderSession, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
+import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 

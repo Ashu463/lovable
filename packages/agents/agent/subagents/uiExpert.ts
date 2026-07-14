@@ -1,5 +1,5 @@
 import type { Screen } from "@google/stitch-sdk"
-import { makeOneScreen } from "../services/stitch"
+import { makeOneScreen } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
 import { b } from "../../baml_client"
 import { makeBoilerPlate } from "../MCPs/figma"

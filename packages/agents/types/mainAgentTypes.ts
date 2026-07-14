@@ -6,16 +6,6 @@ import type { TesterAgent } from "../agent/subagents/tester"
 import type { UIExpert } from "../agent/subagents/uiExpert"
 import type { Researcher } from "../agent/subagents/researcher"
 
-export interface MainLLMResponse{
-    status: "toolCall" | "completed"
-}
-
-export interface Message{
-    role: "user" | "assistant" | "toolCall",
-    content: string, 
-    timestamp: Date
-}
-
 // export interface ContextStruct{
 //     systemPrompt: string, 
 //     originalTask: string, 

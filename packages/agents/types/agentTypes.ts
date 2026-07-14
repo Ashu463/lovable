@@ -1,54 +1,7 @@
 import type { Screen } from "@google/stitch-sdk"
 import type { Error, Message, PlannerTodo } from "../baml_client"
 
-export interface AgentResponse{
-    
-}
-export interface ResearcherResponse{
-    query: string
-    results: BraveRes | ApifyRes
-}
-interface BraveRes{
-    type: string
-    result: Result[]
-}
-interface Result{
-    title: string
-    url: string
-    description: string
-    pageAge?: Date // mandatory in case of brave result
-}
-interface ApifyRes{
-    status: string
-    itemCount: number
-    scrapedRes: Result[]
-}
-export interface CoderRequest{
-    prompt: string // this could be user prompt or task description
-    figmaBoilerPlate: string
-}
-export interface CoderResponse{
-    status: string
-    editedFiles: FileEdit[]
-}
-interface FileEdit{
-    fileName: string
-    summary: string
-}
-export interface DebuggerRequest{
-    errors: Map<string, string> // map<errors, filename> 
-}
-export interface DebuggerResponse{
-    status: string
-    editedFile: FileEdit[]
-}
-export interface TesterResponse{
 
-}
-
-export interface SandboxRes{
-    
-}
 // -----Updated types, Jul 7 2026 -------
 
 export interface User{
@@ -60,10 +13,6 @@ export interface Project{
     projectId: string, 
     sessions: Message[],
     context: Message[]
-}
-interface Session{
-    sessionId: string, 
-    session: Message[]
 }
 
 export type OrchestratorSSE = {
@@ -78,4 +27,26 @@ export type OrchestratorResponse = {
     todos?: PlannerTodo[]
     projectUrl?: string,
     summary: string
+}
+
+export interface AgentRequest{
+    provider: string,
+    model: string
+    key: string
+    prompt: string
+}
+export interface AgentResult {
+    summary: string;
+    artifacts: string[];
+    confidence: number;
+}
+
+export interface BootstrapResponse{
+    userPrompt: string, 
+    isComplex: boolean,
+    design: Screen
+}
+export interface Answers{
+    question: string, 
+    answer: string
 }

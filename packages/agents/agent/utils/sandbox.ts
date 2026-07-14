@@ -1,7 +1,6 @@
 import { Sandbox } from 'e2b'
 import type { DeleteFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import path from 'path'
 /*
 Steps/flow I thought for sandboxes
 Case - 1: Starting a new project from very scratch. 
