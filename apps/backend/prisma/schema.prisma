@@ -58,7 +58,7 @@ model Run {
 
   todos         Todo[]
   events        RunEvent[]
-  answers Answers[] 
+  answers       Answers[]
 
   startedAt     DateTime   @default(now())
   endedAt       DateTime?
