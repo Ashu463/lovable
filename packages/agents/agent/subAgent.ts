@@ -22,28 +22,26 @@ export class SubAgent<T extends keyof ContextMap> {
     private iteration: number = 0
     private contextManager?: ContextManager<ContextMap[T]>
     private taskId: number
-    private sandbox: E2BSandbox
     private repoTree: string = ""
     constructor(
         public agentType: T,
         public input: InputMap[T],
         public userId: string,
         public projectId: string,
-        public sandboxId: string,
+        public sandbox: E2BSandbox,
         public semanticMem: string,
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
         this.taskId = (this.input as BaseTaskInput).task.taskId
-        this.sandbox = new E2BSandbox()
     }
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandboxId) as any
-        case 'researcher': return new Researcher(this.userId, this.projectId, this.sandboxId) as any
-        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandboxId) as any
-        case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandboxId) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
+        case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox.sandboxId) as any
+        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
+        case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
         case 'uiExpert': return new UIExpert(this.userId) as any
         default: throw new Error(`${agentType} doesn't exist`) 
         }
@@ -96,7 +94,7 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
     async Test(): Promise<TesterResponse>{
-        const tester = new TesterAgent(this.userId, this.projectId, this.sandboxId)
+        const tester = new TesterAgent(this.userId, this.projectId, this.sandbox.sandboxId)
         return await tester.testCodebase()
     }
     pushSession(role: Role, status: Status, content?: any, rawTranscript?: any){
@@ -123,9 +121,9 @@ export class SubAgent<T extends keyof ContextMap> {
     async BuildCoderContext(): Promise<CoderContext>{
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
-            const cwd = await this.sandbox.Execute(this.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
+            const cwd = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
             let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")
-            this.repoTree = (await this.sandbox.Execute(this.sandboxId, {action: 'runCommand', command: `cd ${cwd} && tree -I 'node_modules|.git|dist|build'`})).content
+            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${cwd} && tree -I 'node_modules|.git|dist|build'`})).content
         }
         const res = await axios.get(`${BACKEND_URL}/db/fetchSummaries`, {
             params: {dependentTaskIds}

@@ -19,7 +19,6 @@ export class MainAgent{
     public lastCompactedIndex: number
     public K: number
 
-    public sandbox: E2BSandbox
     public r2: R2
     constructor(
         public userPrompt: string,
@@ -29,14 +28,13 @@ export class MainAgent{
         public semanticMem: string, // any semantic data about the user. 
         public session: Message[],
         public context: Message[],
-        public sandboxId: string,
+        public sandbox: E2BSandbox,
     ){ 
         this.iterations = 0
         this.masterContext = ""
         this.lastCompactedIndex = 0
         this.K = COMPACTION_PARAMETER
         this.r2 = new R2()
-        this.sandbox = new E2BSandbox()
     }
     async spawnMainAgent(){
         this.runLoop()
@@ -215,7 +213,7 @@ export class MainAgent{
     }
 
     async executeTool(toolCall: ToolCall): Promise<string | Screen> {
-
+        
         switch (toolCall.type) {
             case ToolType.Apify:
                 if (!toolCall.apify) throw new Error("Apify tool call missing params")
@@ -236,23 +234,23 @@ export class MainAgent{
 
             case ToolType.ReadFile:
                 if (!toolCall.readFile) throw new Error("ReadFile tool call missing params")
-                return (await this.sandbox.Execute(this.sandboxId, {action: "read", path: toolCall.readFile.path})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "read", path: toolCall.readFile.path})).content
 
             case ToolType.WriteFile:
                 if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
-                return (await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})).content
 
             case ToolType.EditFile:
                 if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
-                return (await this.sandbox.Execute(this.sandboxId, {action: "writeFile", path: toolCall.editFile.fileName, content: toolCall.editFile.content})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.editFile.fileName, content: toolCall.editFile.content})).content
 
             case ToolType.DeleteFile:
                 if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
-                return (await this.sandbox.Execute(this.sandboxId, {action: "delete", path: toolCall.deleteFile.path})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "delete", path: toolCall.deleteFile.path})).content
 
             case ToolType.RunCommand:
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
-                return (await this.sandbox.Execute(this.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
 
             default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
         }

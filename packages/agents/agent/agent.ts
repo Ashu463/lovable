@@ -44,11 +44,10 @@ export class OrchestratorAgent{
     private uiExpert: UIExpert
     private context: OrchestratorContext[]
     private state: OrchestratorState
-    private sandbox: E2BSandbox = new E2BSandbox()
     constructor(
         public userId: string, 
         public projectId: string,
-        public sandboxId: string, // initially pass this as empty string, here after connecting it would have some value
+        public sandbox: E2BSandbox, // initially pass this as empty string, here after connecting it would have some value
         public runId: string,
     ){
         this.uiExpert = new UIExpert(userId)
@@ -180,7 +179,7 @@ export class OrchestratorAgent{
 
         const data: BootstrapResponse = await this.Bootstrap(userPrompt, answers);
 
-        await this.sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
+        // await this.sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
 
         const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
 
@@ -190,7 +189,7 @@ export class OrchestratorAgent{
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
             // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandboxId)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandbox)
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
@@ -218,7 +217,7 @@ export class OrchestratorAgent{
                 
                 const input = this.inputBuilders[agentType](todo, this.context, this.state)
                 
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandboxId, user.data.semanticMem)
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, user.data.semanticMem)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
@@ -298,7 +297,7 @@ export class OrchestratorAgent{
         try{
             let previousErrorSignature: string | null = null
             while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
-                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandboxId, semanticMem )
+                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, semanticMem )
     
                 const testerRes: TesterResponse = await tester.Test()
                 const error: Error = {
@@ -325,7 +324,7 @@ export class OrchestratorAgent{
                     status: 'pending'
                 }
                 const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandboxId, semanticMem)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, semanticMem)
                 const debuggerResult = await debuggerAgent.runLoop()
                 this.state.lastToolResult = {
                     success: debuggerResult.success,                                
@@ -356,7 +355,7 @@ export class OrchestratorAgent{
     }
 
     async preDeployCheck(): Promise<boolean> {
-        const buildResult = await this.sandbox.Execute(this.sandboxId, {action: 'runCommand', command: 'npm run build'})
+        const buildResult = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: 'npm run build'})
 
         if (buildResult.success === false) {
             this.state.lastTestErrors.push({

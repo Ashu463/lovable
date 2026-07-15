@@ -4,31 +4,31 @@ import { OrchestratorAgent } from "./agent"
 import { createBackendEmitter, type EventEmitter } from "./events";
 import { E2BSandbox } from "./utils/sandbox"
 
-export async function SpinUpSandbox(userId: string, projectId: string): Promise<string>{
+// export async function SpinUpSandbox(userId: string, projectId: string): Promise<string>{
 
-    const sandbox: E2BSandbox = new E2BSandbox();
-    const sandboxId = await sandbox.StartSandbox(userId, projectId)
+//     const sandbox: E2BSandbox = new E2BSandbox();
+//     const sandboxId = await sandbox.StartSandbox(userId, projectId)
     
-    return sandboxId
-}
+//     return sandboxId
+// }
 export async function AgentCall(
   userId: string,
   projectId: string,
   userPrompt: string,
   runId: string,
+  existingSandboxId?: string,
   answers?: Answers[]
 ): Promise<void> {
-  const sandbox: E2BSandbox = new E2BSandbox()
-  const sandboxId = await sandbox.StartSandbox(userId, projectId)
+  const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
 
-  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandboxId, runId)
+  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId)
 
   try {
     await orchestrator.Orchestrate(userPrompt, answers)  // emits events internally as each agent finishes, doesn't return a final payload to await on
   } catch (err) {
     await createBackendEmitter(runId).emit({ type: "run_failed", error: String(err) })
   } finally {
-    // await sandbox.Release()   // sandbox torn down only after the run actually finishes/fails
+    sandbox.Release()   // sandbox torn down only after the run actually finishes/fails
   }
 }
 

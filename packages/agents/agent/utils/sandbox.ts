@@ -53,14 +53,60 @@ export interface ExecuteRes{
     stderr?: string
 }
 export class E2BSandbox{
-
-    constructor(){}
-
+    private userId: string
+    private projectId: string
+    private sandbox: Sandbox
     r2 = new R2()
+    private constructor(sandbox: Sandbox, userId: string, projectId: string){
+        this.sandbox = sandbox
+        this.userId = userId
+        this.projectId = projectId
+    }
+    get sandboxId(): string{
+        return this.sandbox.sandboxId
+    }
+
     async Connect(id: string){
         const sandbox = await Sandbox.connect(id)
         // await sandbox.setTimeout(60*60*1000)
         return sandbox
+    }
+    static async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<E2BSandbox> {
+        let sandbox: Sandbox | null = null
+        let isFresh = false
+        // r2 -> sandbox.
+        if (sandboxId) {
+            try {
+                sandbox = await Sandbox.connect(sandboxId)
+                await sandbox.setTimeout(60 * 60 * 1000)
+            } catch (e) {
+                sandbox = null
+            }
+        }
+        
+        if (!sandbox) {
+            sandbox = await Sandbox.create()
+            isFresh = true
+        }
+
+        const instance = new E2BSandbox(sandbox, userId, projectId)
+        await instance.restoreOrBootstrap()
+        return instance
+    }
+    private async restoreOrBootstrap(): Promise<void> {
+        const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
+
+        if (files.length > 0) {
+        for (const key of files) {
+            const content = await this.r2.getFile(key)
+            const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
+            await this.sandbox.files.write(relativePath, content)
+        }
+        } else {
+        await this.sandbox.commands.run('npm create vite@latest . -- --template react-ts --yes')
+        await this.sandbox.commands.run('npm install')
+        await this.SyncR2()
+        }
     }
     // implement to increase the TTL of sandbox by one hour whenever any of these 
     // functions get called.
@@ -140,54 +186,16 @@ export class E2BSandbox{
             then load the code from the s3's that directory itself.
         - else run npm create-vite@latest and return the current tree of the code. 
         */
-    async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<string> {
-        let sandbox
-        let isFresh = false
-        // r2 -> sandbox.
-        if (sandboxId) {
-            try {
-                sandbox = await Sandbox.connect(sandboxId)
-                await sandbox.setTimeout(60 * 60 * 1000)
-            } catch (e) {
-                sandbox = null  // dead, fall through to create
-            }
-        }
-        
-        if (!sandbox) {
-            sandbox = await Sandbox.create()
-            isFresh = true
-        }
-
-        const files = await this.r2.listFiles(this.r2.filesPrefix(userId, projectId))
-        
-
-        if (files.length > 0) {
-            // restore path — pull each file, write into sandbox
-            for (const key of files) {
-                const content = await this.r2.getFile(key)
-                const relativePath = key.replace(this.r2.filesPrefix(userId, projectId), '')
-                await sandbox.files.write(relativePath, content)
-            }
-        } else {
-            // fresh project path
-            await sandbox.commands.run('npm create vite@latest . -- --template react-ts --yes')
-            await sandbox.commands.run('npm install')
-            await this.SyncR2(sandbox, userId, projectId)
-        }
-
-        // const tree = await sandbox.commands.run(`tree`)
-        return sandbox.sandboxId
-    }
-    async SyncR2(sandbox: Sandbox, userId: string, projectId: string){
+    
+    async SyncR2(){
         /*Steps: sandbox -> r2
         - create the new path for all such files. 
         - putfile with that key for each of the file.
         copy whole directory of sandbox /home/usr  to the R2.
         */
-        const cwd = await sandbox.commands.run("pwd")
-
-        const prefix = this.r2.filesPrefix(userId, projectId)
-        const result = await sandbox.commands.run(`
+        const cwd = (await this.sandbox.commands.run("pwd")).stdout.trim()
+        const prefix = this.r2.filesPrefix(this.userId, this.projectId)
+        const result = await this.sandbox.commands.run(`
             find ${cwd} -f \
             -not -path '*/node_modules/*' \
             -not -path '*/dist/*' \ 
@@ -204,19 +212,13 @@ export class E2BSandbox{
             const batch = absolutePaths.slice(i, i + 10)
             await Promise.all(batch.map(async (absPath) =>{
                 const relPath = absPath.replace(`${cwd}`, "")
-                const content = await sandbox.files.read(absPath)
+                const content = await this.sandbox.files.read(absPath)
                 await this.r2.putFile(prefix + relPath, content)
             }))
         }
     }
-    async SandboxHealth(sandbox: Sandbox){
-        try{
-            await sandbox.connect()
-            return true;
-        }
-        catch(e){
-            return false;
-        }
+    Release(){
+        this.sandbox.kill
     }
 }
 
