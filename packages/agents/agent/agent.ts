@@ -264,7 +264,7 @@ export class OrchestratorAgent{
         }
         this.emitSSEUpdate({
             type: 'orchestrator_completed',
-            summary: orchestratorSummary
+            summary: orchestratorSummary,
         })            
         return{
             design: data.design,

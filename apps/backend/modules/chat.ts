@@ -1,18 +1,32 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { auth } from "./middleware";
-import { AgentCall, SpinUpSandbox, type EventEmitter, type OrchestratorEvent } from "../../../packages/agents";
+import { AgentCall, type EventEmitter, type OrchestratorEvent } from "../../../packages/agents";
 import { randomUUIDv7 } from "bun";
 import { prisma } from "../src/prisma";
-import { EventStream } from "openai/lib/EventStream.js";
 import { getBus } from "./events";
+import { E2BSandbox } from "../../../packages/agents/agent/utils/sandbox";
 
 const chatRouter = Router()
+/*
+POST   /chat                       → new project + new run (no projectId given)
+POST   /chat/:projectId            → new run under existing project
+GET    /chat/:runId/stream         → SSE for that run
+POST   /chat/:runId/stop           → halt run, release sandbox
+POST   /chat/:runId/clarifications → answer + resume
 
-chatRouter.post('/:projectId', auth, async (req: Request, res: Response) =>{
-    const userId = req.headers.userId
+GET    /chat/:projectId/history    → all past runs' events, for reload
+
+*/
+
+chatRouter.post('/', auth, createRun)
+chatRouter.post('/:projectId', auth, createRun)
+
+async function createRun(req: Request, res: Response){
+    const userId = req.headers.userid
     let projectId = req.params?.projectId
     const userPrompt = req.body.userPrompt
+    const existingSandboxId = req.body.sandboxId
     if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
         return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
     }
@@ -26,28 +40,29 @@ chatRouter.post('/:projectId', auth, async (req: Request, res: Response) =>{
     if(typeof projectId !== 'string'){
         return res.status(400).json({})
     }
-    const sandboxId = await SpinUpSandbox(userId, projectId)
-
+    
+    const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
+    
     const run = await prisma.run.create({data:{
         id: randomUUIDv7(),
         projectId: projectId, 
-        sandboxId: sandboxId,
+        sandboxId: sandbox.sandboxId,
         userPrompt: userPrompt,
     }})
-    AgentCall(userId, projectId, userPrompt, run.id)
+    AgentCall(userId, projectId, userPrompt, run.id, sandbox)
 
     return res.status(200).json({
         success: true,
         runId: run.id,
         projectId: projectId
     })
-})
-
+}
 chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Response) =>{
 
-    const userId = req.headers.userId
+    const userId = req.headers.userid
     const {projectId} = req.params
-    const { previousRunId, answers} = req.body
+    const { previousRunId, answers } = req.body
+    const existingSandboxId = req.body?.sandboxId
 
     if(typeof userId !== 'string' || typeof projectId !== 'string'){
         return res.status(400).json({message: `Invalid request`})
@@ -57,17 +72,17 @@ chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Re
         return res.status(404).json({message: `Run with ${previousRunId} not found or clarification not needed for this runid`})
     }
 
-    const sandboxId = await SpinUpSandbox(userId, projectId)
+    const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId)
 
     const run = await prisma.run.create({data: {
         id: randomUUIDv7(),
         projectId: projectId,
-        sandboxId,
+        sandboxId: sandbox.sandboxId,
         userPrompt: previousRun.userPrompt,
         parentRunId: previousRun.id
     }})
 
-    AgentCall(userId, projectId, run.userPrompt, run.id, answers)
+    AgentCall(userId, projectId, run.userPrompt, run.id, sandbox, answers)
 
     return res.status(200).json({
         success: true,
@@ -132,6 +147,17 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
           
 })
 
+chatRouter.get('/:projectId/history', auth, async (req: Request, res: Response) =>{
 
+    const {projectId} = req.params
+    if(typeof projectId !== 'string'){
+        return res.send(400).json({message: `Invalid projectId type`})
+    }
+    const runs = await prisma.run.findMany({where: {projectId: projectId}})
+    return res.status(200).send({
+        success: true,
+        data: runs
+    })
+})
 
 export default chatRouter

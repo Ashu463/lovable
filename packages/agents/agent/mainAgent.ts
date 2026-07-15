@@ -143,7 +143,7 @@ export class MainAgent{
                     this.context.push(log)
                 })
     
-                await this.saveSessionState(this.iterations)   // write to Postgres — failure recovery
+                await this.saveSessionState()   // write to Postgres — failure recovery
                 this.iterations++
             }
         }
@@ -203,9 +203,8 @@ export class MainAgent{
     async emitSSEUpdate(event: SSEBody){
         await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/events`, event)
     }
-    async saveSessionState(currentStep: number){
+    async saveSessionState(){
         await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
-            current_step: currentStep,
             context_snapshot: this.context,
             session_snapshot: this.session,
             iteration: this.iterations,

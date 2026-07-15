@@ -174,9 +174,15 @@ model RunEvent {
   agent     AgentType?
   content   String?  @db.Text
   toolType  String?
-  iteration Int
 
   createdAt DateTime @default(now())
 
   @@index([runId, createdAt])
+}
+
+model Session{
+  id      String @id @default(uuid())
+  session   Json[]
+  context   Json[]
+  iteration Int
 }

@@ -75,6 +75,7 @@ export class E2BSandbox{
         let sandbox: Sandbox | null = null
         let isFresh = false
         // r2 -> sandbox.
+        
         if (sandboxId) {
             try {
                 sandbox = await Sandbox.connect(sandboxId)
@@ -112,11 +113,10 @@ export class E2BSandbox{
     // functions get called.
     
     async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
-        const sandbox = await this.Connect(id)
         // const homeDir = 
         if(payload.action === 'read'){
             try{
-                const result: string = await sandbox.files.read(payload.path)
+                const result: string = await this.sandbox.files.read(payload.path)
                 return {
                     success: true,
                     content: result
@@ -128,7 +128,7 @@ export class E2BSandbox{
         }
         else if(payload.action === 'writeFile'){
             try{
-                const writeRes = await sandbox.files.write(payload.path, payload.content)
+                const writeRes = await this.sandbox.files.write(payload.path, payload.content)
                 
                 return {
                     success: true,
@@ -141,7 +141,7 @@ export class E2BSandbox{
         }
         else if(payload.action === 'delete'){
             try{
-                const deleteRes = await sandbox.files.remove(payload.path)
+                const deleteRes = await this.sandbox.files.remove(payload.path)
                 
                 return {
                     success: true,
@@ -154,7 +154,7 @@ export class E2BSandbox{
         }
         else if(payload.action === 'runCommand'){
             try{
-                const cmdRes = await sandbox.commands.run(payload.command, {
+                const cmdRes = await this.sandbox.commands.run(payload.command, {
                     timeoutMs: 60000
                 })
 
@@ -196,11 +196,11 @@ export class E2BSandbox{
         const cwd = (await this.sandbox.commands.run("pwd")).stdout.trim()
         const prefix = this.r2.filesPrefix(this.userId, this.projectId)
         const result = await this.sandbox.commands.run(`
-            find ${cwd} -f \
+            find ${cwd} -type f \
             -not -path '*/node_modules/*' \
             -not -path '*/dist/*' \ 
             -not -path '*/build/*' \
-            -not -path '.env' 
+            -not -path '.env' \
         `)
        // I've to trust the LLM that he'll send me the right folder directory while writing any file
 

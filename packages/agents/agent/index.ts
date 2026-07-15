@@ -16,10 +16,9 @@ export async function AgentCall(
   projectId: string,
   userPrompt: string,
   runId: string,
-  existingSandboxId?: string,
+  sandbox: E2BSandbox,
   answers?: Answers[]
 ): Promise<void> {
-  const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
 
   const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId)
 
