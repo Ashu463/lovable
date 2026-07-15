@@ -29,7 +29,7 @@ model Project {
   id         String    @id @default(uuid())
   userId     String
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name       String
+  name       String?
   repoTree   String?   @db.Text
 
   runs       Run[]
@@ -55,6 +55,10 @@ model Run {
   currentStep     String? 
   contextSnapshot String? @db.Text
   sessionSnapshot String? @db.Text
+  
+  parentRunId     String?
+  parentRun       Run?     @relation("RunChain", fields: [parentRunId], references: [id])
+  childRun        Run[]   @relation("RunChain")
 
   todos         Todo[]
   events        RunEvent[]

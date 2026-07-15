@@ -12,6 +12,7 @@ import { R2 } from "./services/file-storage/fileStorage"
 import axios from "axios"
 
 import { E2BSandbox } from "./utils/sandbox"
+import { createBackendEmitter } from "./events"
 export class MainAgent{
     public iterations: number
     public masterContext: string
@@ -24,6 +25,7 @@ export class MainAgent{
         public userPrompt: string,
         public userId: string,
         public projectId: string,
+        public runId: string,
         public semanticMem: string, // any semantic data about the user. 
         public session: Message[],
         public context: Message[],
@@ -73,10 +75,9 @@ export class MainAgent{
                 
                 const response: LLMResponse = await this.callLLM(this.userPrompt);
                 
-                await this.emitSSEUpdate({
-                    type: 'llm_response',
-                    content: response.content,
-                    iteration: this.iterations
+                await createBackendEmitter(this.runId).emit({
+                    type: 'main_agent_progress',
+                    step: 'llm_completed'
                 })
                 iterationLog.push({
                     role: "assistant",
@@ -106,6 +107,10 @@ export class MainAgent{
                         type: 'clarification_needed',
                         content: JSON.stringify(questions),
                         iteration: this.iterations
+                    })
+                    await createBackendEmitter(this.runId).emit({
+                        type:'clarification_needed',
+                        questions: questions.map((m) => m.question)
                     })
                     // render these questions to frontend
                 }

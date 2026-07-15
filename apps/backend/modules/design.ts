@@ -3,7 +3,7 @@ import { prisma } from "../src/prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
 
-const router = Router();
+const designRouter = Router();
 
 /*Routes: 
 GET    /projects/:projectId/designs               → list Design rows
@@ -13,7 +13,7 @@ POST   /projects/:projectId/assets                → upload reference files/ima
 
 */
 
-router.get("/:projectId/designs", auth, async (req: Request, res: Response) => {
+designRouter.get("/:projectId/designs", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -43,7 +43,7 @@ router.get("/:projectId/designs", auth, async (req: Request, res: Response) => {
 });
 
 
-router.get("/:projectId/designs/selected", auth, async (req: Request, res: Response) => {
+designRouter.get("/:projectId/designs/selected", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -81,7 +81,7 @@ router.get("/:projectId/designs/selected", auth, async (req: Request, res: Respo
 });
 
 
-router.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Response) => {
+designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Response) => {
     const { projectId, designId } = req.params;
 
     if (
@@ -141,7 +141,7 @@ router.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Re
 });
 
 
-// router.post("/:projectId/assets", auth, async (req: Request, res: Response) => {
+// designRouter.post("/:projectId/assets", auth, async (req: Request, res: Response) => {
 //     const projectId = req.params.projectId;
 
 //     const {
@@ -194,4 +194,4 @@ router.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Re
 //     }
 // });
 
-export default router;
+export default designRouter;

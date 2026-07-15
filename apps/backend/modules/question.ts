@@ -6,9 +6,9 @@ import { prisma } from "../src/prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
 
-const router = Router();
+const questionRouter = Router();
 
-router.get('/:projectId/questions', auth, async (req: Request, res: Response) =>{
+questionRouter.get('/:projectId/questions', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
     if(typeof projectId !== 'string'){
         return res.status(400).json({

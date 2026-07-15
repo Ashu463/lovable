@@ -10,9 +10,9 @@ GET    /projects/:projectId                       → project metadata
 PATCH  /projects/:projectId                       → rename/archive
 DELETE /projects/:projectId
 */
-const router = Router();
+const projectRouter = Router();
 
-router.get("/", auth, async (req: AuthRequest, res: Response) => {
+projectRouter.get("/", auth, async (req: AuthRequest, res: Response) => {
     const userId = req.user.id
     if(!userId){
         
@@ -26,7 +26,7 @@ router.get("/", auth, async (req: AuthRequest, res: Response) => {
     res.status(200).json({success: true, data: projects})
 });
 
-router.post("/", async (req: Request, res: Response) => {
+projectRouter.post("/", async (req: Request, res: Response) => {
     
     const userId = req.body.userId
     // I could give it a name but another LLM call happens, 
@@ -51,7 +51,7 @@ router.post("/", async (req: Request, res: Response) => {
         return res.json(500).json({message: `Internal server error`})
     }
 })
-router.get("/:projectId", auth, async (req: Request, res: Response) => {
+projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId
     if(!projectId){
         
@@ -67,7 +67,7 @@ router.get("/:projectId", auth, async (req: Request, res: Response) => {
 
     res.status(200).json({success: true, data: projects})
 });
-router.patch('/:projectId', auth, async (req: Request, res: Response) =>{
+projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
     const { name, archived } = req.body;
 
@@ -106,7 +106,7 @@ router.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     }
 })
 
-router.delete('/:projectId', auth, async (req: Request, res: Response) =>{
+projectRouter.delete('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
     if(!projectId){
         
@@ -124,3 +124,5 @@ router.delete('/:projectId', auth, async (req: Request, res: Response) =>{
     }
     res.status(200).json({success: true})
 });
+
+export default projectRouter

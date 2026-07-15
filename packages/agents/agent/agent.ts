@@ -13,6 +13,7 @@ import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
+import { createBackendEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
 
 
 type InputBuilder<T extends SubAgentType> = (
@@ -30,12 +31,12 @@ interface OrchestratorContext{
     summary: string,
 }
 type OrchestratorState = {
-  screenId: string | null                       // current/most-recent screen context, if relevant
-  screenIdByTaskId: Map<number, string>          // taskId (uiExpert) -> screenId, for dependency-specific lookups
-  lastTestErrors: Error[]
-  lastToolResult: ToolResult | null
-  lastError: Error | null
-  errorsByTaskId: Map<number, Error[]>           // taskId (tester) -> errors, if debugger needs a specific tester's output
+    screenId: string | null // last most scrreen
+    screenIdByTaskId: Map<number, string> // taskId (uiExpert) -> screenId, for dependency-specific lookups
+    lastTestErrors: Error[]
+    lastToolResult: ToolResult | null
+    lastError: Error | null
+    errorsByTaskId: Map<number, Error[]> // taskId (tester) -> errors, if debugger needs a specific tester's output
 }
 
 
@@ -48,7 +49,7 @@ export class OrchestratorAgent{
         public userId: string, 
         public projectId: string,
         public sandboxId: string, // initially pass this as empty string, here after connecting it would have some value
-        
+        public runId: string,
     ){
         this.uiExpert = new UIExpert(userId)
         this.context = []
@@ -179,7 +180,7 @@ export class OrchestratorAgent{
 
         const data: BootstrapResponse = await this.Bootstrap(userPrompt, answers);
 
-        this.sandboxId = await this.sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
+        await this.sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
 
         const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
 
@@ -189,7 +190,7 @@ export class OrchestratorAgent{
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
             // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandboxId)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandboxId)
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
@@ -240,13 +241,12 @@ export class OrchestratorAgent{
                     summary: result.summary,
                     success: true
                 });
-
-                this.emitSSEUpdate({
-                    taskCompleted: `Task ${todo.task} completed`,
-                    status: testsPassing === false ? "failed" : "success",
-                    summary: result.summary,
-                    errors: testsPassing === false ? lastErrors : null,
-                });
+                // await createBackendEmitter(this.runId).emit({
+                //     type: '',
+                //     agent: agentType,
+                //     taskId: todo.id,
+                //     agentSummary: result.summary
+                // })
             }
             orchestratorSummary = await this.GenerateSubagentSummary(summaries)
                 
@@ -264,9 +264,8 @@ export class OrchestratorAgent{
             }
         }
         this.emitSSEUpdate({
-            status: 'failed',
-            summary: `Deployment failed`,
-            errors: deployResult.error
+            type: 'orchestrator_completed',
+            summary: orchestratorSummary
         })            
         return{
             design: data.design,
@@ -282,8 +281,8 @@ export class OrchestratorAgent{
         // not after every single coder task. Stubbed for now, always returns true (test every time).
         return true
     }
-    async emitSSEUpdate(event: OrchestratorSSE){
-        await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/events`, event)
+    async emitSSEUpdate(event: OrchestratorEvent){
+        await createBackendEmitter(this.runId).emit(event)
     }
     async GenerateSubagentSummary(summaries: string[]): Promise<string>{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)

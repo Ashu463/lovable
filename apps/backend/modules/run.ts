@@ -3,7 +3,7 @@ import { prisma } from "../src/prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
 
-const router = Router();
+const runRouter = Router();
 /*
 Routes:
 GET    /projects/:projectId/runs                  → list runs for a project (id, status, startedAt/endedAt)
@@ -13,7 +13,7 @@ GET    /projects/:projectId/runs/:runId/summaries → just the TaskSummary ledge
 
 */
 
-router.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -52,7 +52,7 @@ router.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
 });
 
 
-router.get("/:projectId/runs/:runId", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Response) => {
     const { projectId, runId } = req.params;
 
     if (
@@ -93,7 +93,7 @@ router.get("/:projectId/runs/:runId", auth, async (req: Request, res: Response) 
 });
 
 
-router.get("/:projectId/runs/:runId/todos", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs/:runId/todos", auth, async (req: Request, res: Response) => {
     const { projectId, runId } = req.params;
 
     if (
@@ -146,7 +146,7 @@ router.get("/:projectId/runs/:runId/todos", auth, async (req: Request, res: Resp
 });
 
 
-router.get("/:projectId/runs/:runId/summaries", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs/:runId/summaries", auth, async (req: Request, res: Response) => {
     const { projectId, runId } = req.params;
 
     if (
@@ -207,4 +207,4 @@ router.get("/:projectId/runs/:runId/summaries", auth, async (req: Request, res: 
     }
 });
 
-export default router;
+export default runRouter;
