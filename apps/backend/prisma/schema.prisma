@@ -10,10 +10,169 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // url = env("DATABASE_URL")
 }
-model User{
-  userId String
+
+
+model User {
+  id         String    @id @default(uuid())
+  email      String    @unique
+  name       String?
+  semanticMem String?  @db.Text
+
+  projects   Project[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
-model Project{
-  use
+
+model Project {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  repoTree   String?   @db.Text
+
+  runs       Run[]
+  designs    Design[]
+  questions  Question[]
+  isArchived  Boolean  @default(false)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Run {
+  id            String     @id @default(uuid())
+  projectId     String
+  project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sandboxId     String?   
+  status        RunStatus  @default(IN_PROGRESS)
+  userPrompt    String  @db.Text
+
+  currentStep     String? 
+  contextSnapshot String? @db.Text
+  sessionSnapshot String? @db.Text
+
+  todos         Todo[]
+  events        RunEvent[]
+  answers Answers[] 
+
+  startedAt     DateTime   @default(now())
+  endedAt       DateTime?
+
+  @@index([projectId])
+}
+
+enum RunStatus {
+  IN_PROGRESS
+  CLARIFICATION_NEEDED
+  COMPLETED
+  FAILED
+  STOPPED
+}
+
+
+model Todo {
+  id            String    @id @default(uuid())
+  runId         String
+  run           Run       @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  taskId        Int
+  task          String   @db.Text
+  agent         AgentType
+  status        TodoStatus @default(PENDING)
+  dependency    Int[]                     
+  agentSpecificData Json?                 
+
+  summary       TaskSummary?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([runId, taskId])
+  @@index([runId])
+}
+
+enum AgentType {
+  coder
+  debuggerr
+  tester
+  researcher
+  uiExpert
+}
+
+enum TodoStatus {
+  PENDING
+  COMPLETED
+}
+
+model TaskSummary {
+  id        String   @id @default(uuid())
+  todoId    String   @unique
+  todo      Todo     @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  summary   String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model Design {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  screenId    String 
+  summary     String  @db.Text
+  htmlContent String? @db.Text
+  isSelected  Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([projectId])
+  @@index([projectId, isSelected])
+}
+
+model Question {
+  id         String   @id @default(uuid())
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  clarification Answers?
+
+  createdAt  DateTime @default(now())
+}
+
+model Answers {
+  id          String   @id @default(uuid())
+  runId       String
+  run         Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  questionId  String   @unique
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  questionText String  @db.Text
+  options      String[]
+  answer       String? @db.Text
+
+  createdAt   DateTime @default(now())
+  answeredAt  DateTime?
+
+  @@index([runId])
+}
+
+model RunEvent {
+  id        String   @id @default(uuid())
+  runId     String
+  run       Run      @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  type      String             
+  agent     AgentType?
+  content   String?  @db.Text
+  toolType  String?
+  iteration Int
+
+  createdAt DateTime @default(now())
+
+  @@index([runId, createdAt])
 }

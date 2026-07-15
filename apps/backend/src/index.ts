@@ -3,7 +3,7 @@ dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import { randomUUIDv7 } from 'bun';
-import { AgentCall, events, type AgentRequest } from '../../packages/agents';
+import { AgentCall, events, type AgentRequest } from '../../../packages/agents';
 
 const app = express();
 app.use(cors())
@@ -100,5 +100,9 @@ app.post('/chat/:id', (req, res) =>{
     res.end()
 
 })
+
+app.use("/projects", projectRouter);
+app.use("/runs", runRouter);
+app.use("/users", userRouter);
 
 app.listen(3000)
