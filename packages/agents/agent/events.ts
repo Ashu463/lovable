@@ -2,7 +2,7 @@ import type { OrchestratorResponse } from '../types/agentTypes';
 import axios from 'axios';
 import { BACKEND_URL } from './config/systemConfig';
 
-export type OrchestratorEvent =
+export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
     | { type: "clarification_needed"; questions: string[] }
     | { type: "main_agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
@@ -12,6 +12,9 @@ export type OrchestratorEvent =
     | { type: "run_failed"; taskId?: string, error: string }
     | { type: "orchestrator_completed"; summary: string};
 
+type MainAgentEvents = 
+    | {type : 'main_agent_success'}
+    | {type: 'main_agent_tool_call', step: number, toolName: string}
 export interface EventEmitter {
   emit(event: OrchestratorEvent): Promise<void>;
 }

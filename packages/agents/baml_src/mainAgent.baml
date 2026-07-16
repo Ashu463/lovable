@@ -43,7 +43,7 @@ class Tavily {
   maxResults int
 }
 class LLMResponse{
-    stopReason "completed" | "aborted" | "toolCall" | "QnA"
+    stopReason "completed" | "aborted" | "toolCall"
     content string
     toolCall ToolCall?
     questions Question[]?

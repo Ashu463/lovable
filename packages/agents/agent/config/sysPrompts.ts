@@ -159,6 +159,17 @@ export const QUESTION_GENERATOR_PROMPT = `
     ask relevant question along with options in given format.
 `
 
+export const COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT = `
+    You are a task complexity checker. You are given with user prompt and you have to 
+    check whether the given command is complex and needs multiple subagents to finish
+    the task efficiently and quickly. And tell whether is it self explanatory or need
+    to ask any questions from the end user, basically judge whether the user prompt is
+    self explanatory or not?
+    You are a question generator expert and you are given with less self explanatory user prompt
+    and to elaborate task in order to let agents and subagents work efficiently you need to 
+    ask relevant question along with options in given format.
+`
+
 export const EPISODIC_MEMORY_GENERATOR_PROMPT = `
 You are an episodic memory compressor.
 

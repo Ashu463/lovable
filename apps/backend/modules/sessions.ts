@@ -1,11 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import { auth } from "./middleware";
 import { prisma } from "../src/prisma";
-import { randomUUIDv5, randomUUIDv7 } from "bun";
+import { randomUUIDv7 } from "bun";
 import type { OrchestratorEvent } from "../../../packages/agents";
 
 /*
-
 POST   /internal/sessions/:runId/events
 POST   /internal/sessions/:runId/state
 */

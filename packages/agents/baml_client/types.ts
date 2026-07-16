@@ -117,9 +117,9 @@ export interface CoderContext {
   
 }
 
-export interface ComplexityLevel {
-  complex: boolean
-  qnaNeeded: boolean
+export interface ComplexComplexity {
+  complex: true
+  questions: Question[]
   
 }
 
@@ -176,7 +176,7 @@ export interface Done {
 
 export interface EditFile {
   action: "edit"
-  fileName: string
+  path: string
   content: string
   
 }
@@ -243,7 +243,7 @@ export interface ItemRes {
 }
 
 export interface LLMResponse {
-  stopReason: "completed" | "aborted" | "toolCall" | "QnA"
+  stopReason: "completed" | "aborted" | "toolCall"
   content: string
   toolCall?: ToolCall | null
   questions?: Question[] | null
@@ -298,6 +298,11 @@ export interface ResearcherResponse {
 export interface RunCommand {
   action: "runCommand"
   command: string
+  
+}
+
+export interface SimpleComplexity {
+  complex: false
   
 }
 
@@ -388,5 +393,7 @@ export interface WriteFile {
   content: string
   
 }
+
+export type ComplexityLevel = SimpleComplexity | ComplexComplexity
 
 export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext

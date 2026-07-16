@@ -1,5 +1,5 @@
 import type { Screen } from "@google/stitch-sdk"
-import type { Error, Message, PlannerTodo } from "../baml_client"
+import type { Design, Error, Message, PlannerTodo, Question } from "../baml_client"
 
 
 // -----Updated types, Jul 7 2026 -------
@@ -21,31 +21,38 @@ export type OrchestratorSSE = {
     summary: string,
     errors: Error | null | string
 }
-export type OrchestratorResponse = {
-    success: 'failed' | 'pass'
-    design: Screen,
-    todos?: PlannerTodo[]
-    projectUrl?: string,
-    summary: string
+// export type OrchestratorResponse = {
+//     success: 'failed' | 'pass' | 'in_progress'
+//     design: Screen,
+//     todos?: PlannerTodo[],
+//     projectUrl?: string,
+//     summary: string
+// }
+// clarification_needed, select_design, 
+export type OrchestratorResponse = 
+      clarification_needed 
+    | design_needed 
+    | {status: 'error', reason: string, data?: any}
+export type clarification_needed = {
+    status: 'clarification_needed',
+    questions: Question[]
 }
+export type design_needed = {
+    status: 'select_design',
+    designs: Screen[]
+}
+// export interface BootstrapResponse{
+//     status: 'ready_to_act' | 'select_design' | 'clarification_needed' | 'error'
+//     isComplex: boolean,
+//     designs?: Screen[],
+//     selectedDesign?: Screen,
+//     questions?: Question[]
+//     error?: string
+// }
+export type BootstrapResponse = clarification_needed | design_needed 
+    | {status: 'error', error: string} 
+    | {status: 'pass', isComplex: boolean, updatedPrompt: string, questions?: Question[], selectedDesign?: Screen}
 
-export interface AgentRequest{
-    provider: string,
-    model: string
-    key: string
-    prompt: string
-}
-export interface AgentResult {
-    summary: string;
-    artifacts: string[];
-    confidence: number;
-}
-
-export interface BootstrapResponse{
-    userPrompt: string, 
-    isComplex: boolean,
-    design: Screen
-}
 export interface Answers{
     question: string, 
     answer: string

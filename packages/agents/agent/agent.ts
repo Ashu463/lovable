@@ -2,9 +2,9 @@ import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, Boo
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
+import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, COMPLEXITY_CHECKER_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
-import type { Screen } from "@google/stitch-sdk"
+import { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
 import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS } from "./config/systemConfig"
@@ -142,61 +142,94 @@ export class OrchestratorAgent{
     }
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
         // I've to store the state somewhere. Probably in backend/db? What say? Just fetch from the backend normally
-        const isComplex: ComplexityLevel = await b.CheckComplexity(userPrompt, COMPLEXITY_CHECKER_PROMPT)
+        // const isComplex: ComplexityLevel = await b.CheckComplexity(userPrompt, COMPLEXITY_CHECKER_PROMPT)
+        let isComplex
+        let complexity: boolean = false
+        // const {data: questions } = await 
 
-        let questions: Question[] = await axios.get(`${BACKEND_URL}/db/getQuestions`);
-        if(questions.length === 0){
-            if(isComplex.qnaNeeded){
-                // qna tool call and complexity checker
-                questions = await b.GenerateQuestion(userPrompt, QUESTION_GENERATOR_PROMPT)
-                // render these questions to backend and wait for answer
-                // tell backend to store the state 
-                // return {data: questions}
+        let [questionRes, designRes] = await Promise.all([
+            axios.get<Question[]>(`${BACKEND_URL}/db/${this.runId}/getQuestions`),
+            axios.get<Screen[]>(`${BACKEND_URL}/db/${this.runId}/getDesigns`)
+        ])
+        if(answers){
+            userPrompt += `Answers for these ${questionRes.data} are: ${answers}`
+            answers.map((ans) => userPrompt += ans)
+            complexity = true
+        }
+        else{
+            isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
+            complexity = isComplex.complex
+            if(!isComplex){
+                return {
+                    status: 'error',
+                    error: `Error occurred while generating `
+                }
+            }
+            if(isComplex.complex){
+                // db request should hit isnt't it to save the questions 
+                return {
+                    status: 'clarification_needed',
+                    questions: isComplex.questions
+                }
             }
         }
-        if(answers){
-            userPrompt += `Answers for these questions ${questions} are:`
-            answers.map((ans) => userPrompt += ans)
-        }
-        let designs: Screen[] = await axios.get(`${BACKEND_URL}/db/getDesigns`)
-        if(designs.length === 0){
-            // 
+        
+        let designs
+        if(designRes.data.length === 0){
             designs = await this.uiExpert.generateDesigns(userPrompt)
-            // return {data: designs}
-            // return for now wait for any one of the screen.
+            return {
+                status: 'select_design',
+                designs: designs
+            }
         }
         const screen: Screen = await axios.get(`${BACKEND_URL}/db/getSelectedDesign`)
         
-        const data: BootstrapResponse = {
-            userPrompt: userPrompt,
-            isComplex: isComplex.complex,
-            design: screen
+        return {
+            status: 'pass',
+            isComplex: complexity,
+            updatedPrompt: userPrompt,
+            questions: questionRes.data.length > 0 ? questionRes.data : [],
+            selectedDesign: screen
         }
-        return data
     }
 
     async Orchestrate(userPrompt: string, answers?: Answers[]): Promise<OrchestratorResponse>{
 
-        const data: BootstrapResponse = await this.Bootstrap(userPrompt, answers);
+        const data = await this.Bootstrap(userPrompt, answers);
 
-        // await this.sandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
-
+        if(data.status === 'clarification_needed'){
+            // or save questions to db here? 
+            return {
+                status: 'clarification_needed',
+                questions: data.questions
+            }
+        }
+        else if(data.status === 'select_design'){
+            // save design to the db 
+            return {
+                status: 'select_design',
+                designs: data.designs
+            }
+        }
+        else if(data.status === 'error'){
+            return {
+                status: 'error',
+                reason: data.error
+            }
+        }
         const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
 
-        const project = await axios.get<Project>(`${BACKEND_URL}/get/projects/${this.userId}/${this.projectId}`)
-        
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
-            // do planning stuff in main agent system prompt itself.
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, project.data.sessions, project.data.context, this.sandbox)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, this.sandbox)
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
             
         }
         else{
-            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.userPrompt)
+            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt)
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()

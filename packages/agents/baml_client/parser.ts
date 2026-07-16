@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexityLevel, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSeach, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -53,24 +53,24 @@ export class LlmResponseParser {
     }
   }
   
-  CheckComplexity(
+  CheckComplexityAndGenerateQuestions(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.ComplexityLevel {
+  ): types.SimpleComplexity | types.ComplexComplexity {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexity",
+        "CheckComplexityAndGenerateQuestions",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.ComplexityLevel
+      ) as types.SimpleComplexity | types.ComplexComplexity
     } catch (error) {
       throw toBamlError(error);
     }
@@ -255,29 +255,6 @@ export class LlmResponseParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as string
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  GenerateQuestion(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.Question[] {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "GenerateQuestion",
-        llmResponse,
-        false,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as types.Question[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -680,24 +657,24 @@ export class LlmStreamParser {
     }
   }
   
-  CheckComplexity(
+  CheckComplexityAndGenerateQuestions(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.ComplexityLevel {
+  ): partial_types.SimpleComplexity | partial_types.ComplexComplexity {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexity",
+        "CheckComplexityAndGenerateQuestions",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.ComplexityLevel
+      ) as partial_types.SimpleComplexity | partial_types.ComplexComplexity
     } catch (error) {
       throw toBamlError(error);
     }
@@ -882,29 +859,6 @@ export class LlmStreamParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as string
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  GenerateQuestion(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.Question[] {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "GenerateQuestion",
-        llmResponse,
-        true,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as partial_types.Question[]
     } catch (error) {
       throw toBamlError(error);
     }

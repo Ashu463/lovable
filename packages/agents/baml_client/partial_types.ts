@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexityLevel,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSeach,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  SimpleComplexity,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -63,9 +63,9 @@ export namespace partial_types {
       dependentSummary: TaskSummary[]
       repoTree?: string | null
     }
-    export interface ComplexityLevel {
-      complex?: boolean | null
-      qnaNeeded?: boolean | null
+    export interface ComplexComplexity {
+      complex?: true | null
+      questions: Question[]
     }
     export interface Context7 {
       library?: string | null
@@ -104,7 +104,7 @@ export namespace partial_types {
     }
     export interface EditFile {
       action?: "edit" | null
-      fileName?: string | null
+      path?: string | null
       content?: string | null
     }
     export interface EpisodicMemory {
@@ -153,7 +153,7 @@ export namespace partial_types {
       url?: string | null
     }
     export interface LLMResponse {
-      stopReason?: "completed" | "aborted" | "toolCall" | "QnA" | null
+      stopReason?: "completed" | "aborted" | "toolCall" | null
       content?: string | null
       toolCall?: ToolCall | null
       questions?: Question[] | null
@@ -192,6 +192,9 @@ export namespace partial_types {
     export interface RunCommand {
       action?: "runCommand" | null
       command?: string | null
+    }
+    export interface SimpleComplexity {
+      complex?: false | null
     }
     export interface StitchTool {
       prompt?: string | null
@@ -255,6 +258,8 @@ export namespace partial_types {
       path?: string | null
       content?: string | null
     }
+export type ComplexityLevel = SimpleComplexity | ComplexComplexity | null
+
 export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext | null
 
 }

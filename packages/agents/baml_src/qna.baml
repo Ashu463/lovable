@@ -2,11 +2,15 @@ class Question{
     question string
     option string[]
 }
-class ComplexityLevel{
-    complex bool
-    qnaNeeded bool
+class SimpleComplexity{
+    complex false
 }
-function CheckComplexity(userPrompt: string, systemPrompt: string) -> ComplexityLevel{
+class ComplexComplexity{
+    complex true
+    questions Question[]
+}
+type ComplexityLevel = SimpleComplexity | ComplexComplexity
+function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: string) -> SimpleComplexity | ComplexComplexity {
 
     client OpenAIGeneric
     prompt #"
@@ -16,13 +20,28 @@ function CheckComplexity(userPrompt: string, systemPrompt: string) -> Complexity
         {{ctx.output_format}}
     "#
 }
-function GenerateQuestion(userPrompt: string, systemPrompt: string) -> Question[]{
+// class ComplexityLevel{
+//     complex bool
+//     qnaNeeded bool
+// }
+// function CheckComplexity(userPrompt: string, systemPrompt: string) -> ComplexityLevel{
 
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{userPrompt}}
+//     client OpenAIGeneric
+//     prompt #"
+//         {{systemPrompt}}
+//         {{userPrompt}}
 
-        {{ctx.output_format}}
-    "#
-}
+//         {{ctx.output_format}}
+//     "#
+// }
+
+// function GenerateQuestion(userPrompt: string, systemPrompt: string) -> Question[]{
+
+//     client OpenAIGeneric
+//     prompt #"
+//         {{systemPrompt}}
+//         {{userPrompt}}
+
+//         {{ctx.output_format}}
+//     "#
+// }

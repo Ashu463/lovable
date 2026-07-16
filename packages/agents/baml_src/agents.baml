@@ -165,7 +165,7 @@ class RunCommand{
 }
 class EditFile{
     action "edit"
-    fileName string
+    path string
     content string
 }
 class ToolResult{

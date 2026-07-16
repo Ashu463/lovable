@@ -23,11 +23,11 @@ export async function AgentCall(
   const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId)
 
   try {
-    await orchestrator.Orchestrate(userPrompt, answers)  // emits events internally as each agent finishes, doesn't return a final payload to await on
+    await orchestrator.Orchestrate(userPrompt, answers)
   } catch (err) {
     await createBackendEmitter(runId).emit({ type: "run_failed", error: String(err) })
   } finally {
-    sandbox.Release()   // sandbox torn down only after the run actually finishes/fails
+    sandbox.Release()
   }
 }
 

@@ -41,7 +41,7 @@ export default class TypeBuilder {
     
     CoderContext: ClassViewer<'CoderContext', "dependentSummary" | "repoTree">;
     
-    ComplexityLevel: ClassViewer<'ComplexityLevel', "complex" | "qnaNeeded">;
+    ComplexComplexity: ClassViewer<'ComplexComplexity', "complex" | "questions">;
     
     Context7: ClassViewer<'Context7', "library" | "query">;
     
@@ -59,7 +59,7 @@ export default class TypeBuilder {
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
     
-    EditFile: ClassViewer<'EditFile', "action" | "fileName" | "content">;
+    EditFile: ClassViewer<'EditFile', "action" | "path" | "content">;
     
     EpisodicMemory: ClassViewer<'EpisodicMemory', "sessionGoal" | "userRequests" | "impFacts" | "decisions" | "toolResults" | "generatedArtifacts" | "openTasks" | "preferences" | "entities" | "summary">;
     
@@ -94,6 +94,8 @@ export default class TypeBuilder {
     ResearcherResponse: ClassViewer<'ResearcherResponse', "query" | "result">;
     
     RunCommand: ClassViewer<'RunCommand', "action" | "command">;
+    
+    SimpleComplexity: ClassViewer<'SimpleComplexity', "complex">;
     
     StitchTool: ClassViewer<'StitchTool', "prompt" | "userId">;
     
@@ -132,7 +134,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexityLevel","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","RunCommand","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
+            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexComplexity","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSeach","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","RunCommand","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
@@ -168,8 +170,8 @@ export default class TypeBuilder {
           "dependentSummary","repoTree",
         ]);
         
-        this.ComplexityLevel = this.tb.classViewer("ComplexityLevel", [
-          "complex","qnaNeeded",
+        this.ComplexComplexity = this.tb.classViewer("ComplexComplexity", [
+          "complex","questions",
         ]);
         
         this.Context7 = this.tb.classViewer("Context7", [
@@ -205,7 +207,7 @@ export default class TypeBuilder {
         ]);
         
         this.EditFile = this.tb.classViewer("EditFile", [
-          "action","fileName","content",
+          "action","path","content",
         ]);
         
         this.EpisodicMemory = this.tb.classViewer("EpisodicMemory", [
@@ -274,6 +276,10 @@ export default class TypeBuilder {
         
         this.RunCommand = this.tb.classViewer("RunCommand", [
           "action","command",
+        ]);
+        
+        this.SimpleComplexity = this.tb.classViewer("SimpleComplexity", [
+          "complex",
         ]);
         
         this.StitchTool = this.tb.classViewer("StitchTool", [
