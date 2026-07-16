@@ -33,6 +33,7 @@ export type OrchestratorResponse =
       clarification_needed 
     | design_needed 
     | {status: 'error', reason: string, data?: any}
+    | {status: 'completed', design: Screen, todos: PlannerTodo[], previewUrl: string, summary: string}
 export type clarification_needed = {
     status: 'clarification_needed',
     questions: Question[]

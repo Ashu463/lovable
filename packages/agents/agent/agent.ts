@@ -61,11 +61,11 @@ export class OrchestratorAgent{
             errorsByTaskId: new Map(),
         }
     }
-
     
     generateScreenId(todo: PlannerTodo): string {
         return `screen_${todo.id}_${Date.now()}`
     }
+
     inputBuilders: InputBuilders = {
         coder: (todo, ctx, state) => ({
             task: {
@@ -140,6 +140,7 @@ export class OrchestratorAgent{
             agentType: 'researcher',
         }),
     }
+
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
         // I've to store the state somewhere. Probably in backend/db? What say? Just fetch from the backend normally
         // const isComplex: ComplexityLevel = await b.CheckComplexity(userPrompt, COMPLEXITY_CHECKER_PROMPT)
@@ -157,7 +158,17 @@ export class OrchestratorAgent{
             complexity = true
         }
         else{
-            isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
+            try{
+                isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
+
+            }
+            catch(e){
+                console.error(e)
+                return {
+                    status: 'error',
+                    error: `Error occurred while checking complexity: ${e instanceof Error ? e.message : String(e)}`
+                }
+            }
             complexity = isComplex.complex
             if(!isComplex){
                 return {
@@ -182,8 +193,8 @@ export class OrchestratorAgent{
                 designs: designs
             }
         }
-        const screen: Screen = await axios.get(`${BACKEND_URL}/db/getSelectedDesign`)
-        
+        const { data: screen } = await axios.get<Screen>(`${BACKEND_URL}/db/${this.runId}/getSelectedDesign`)
+
         return {
             status: 'pass',
             isComplex: complexity,
@@ -193,7 +204,7 @@ export class OrchestratorAgent{
         }
     }
 
-    async Orchestrate(userPrompt: string, answers?: Answers[]): Promise<OrchestratorResponse>{
+    async Orchestrate(userPrompt: string, answers?: Answers[], design?: Screen): Promise<OrchestratorResponse>{
 
         const data = await this.Bootstrap(userPrompt, answers);
 
@@ -217,6 +228,10 @@ export class OrchestratorAgent{
                 reason: data.error
             }
         }
+        if(!design){
+            const { data: fetchedDesign } = await axios.get<Screen>(`${BACKEND_URL}/${this.projectId}/designs/selected`)
+            design = fetchedDesign
+        }
         const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
 
         let orchestratorSummary: string = ""
@@ -235,10 +250,7 @@ export class OrchestratorAgent{
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
             let summaries: string[] = []
 
-            
-    
             for(let i = 0 ; i < sequentialTodos.length; i++){
-                // guardrail for the todo to ne not null
                 const todo = sequentialTodos[i];
                 // #TODO: Failure handling of planner
                 if (!todo?.agent){
@@ -247,7 +259,6 @@ export class OrchestratorAgent{
                 }
 
                 const agentType = todo?.agent
-                
                 const input = this.inputBuilders[agentType](todo, this.context, this.state)
                 
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, user.data.semanticMem)
@@ -273,12 +284,6 @@ export class OrchestratorAgent{
                     summary: result.summary,
                     success: true
                 });
-                // await createBackendEmitter(this.runId).emit({
-                //     type: '',
-                //     agent: agentType,
-                //     taskId: todo.id,
-                //     agentSummary: result.summary
-                // })
             }
             orchestratorSummary = await this.GenerateSubagentSummary(summaries)
                 
@@ -288,21 +293,16 @@ export class OrchestratorAgent{
         const deployResult: DeploymentResult = await this.Deploy(`/home/usr/${this.userId}/projects/${this.projectId}`)
         if(deployResult.success){
             return {
-                success: 'pass',
-                design: data.design,
+                status: 'completed',
+                design: design,
                 todos: data.isComplex ? tasks : [],
-                projectUrl: deployResult.url,
+                previewUrl: deployResult.url,
                 summary: orchestratorSummary
             }
         }
-        this.emitSSEUpdate({
-            type: 'orchestrator_completed',
-            summary: orchestratorSummary,
-        })            
         return{
-            design: data.design,
-            success: 'failed',
-            summary: orchestratorSummary
+            status: 'error',
+            reason: `Deployment failed`
         }
     }
     
