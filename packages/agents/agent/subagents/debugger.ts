@@ -5,6 +5,7 @@ import { DEBUGGER_PROMPT } from "../config/sysPrompts";
 import { Researcher } from "./researcher";
 import { fetchDocs } from "../MCPs/context7";
 import { webScrape } from "../MCPs/apify";
+import type { E2BSandbox } from "../utils/sandbox";
 
 export interface DebuggerAgentResponse{
     success: Boolean,
@@ -26,10 +27,10 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
     constructor(
         userId: string,
         projectId: string,
-        sandboxId: string
+        sandbox: E2BSandbox
 
-    ){super(userId, projectId, sandboxId)
-        this.researcher = new Researcher(this.userId, this.projectId, this.sandboxId)
+    ){super(userId, projectId, sandbox)
+        this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)
     }
 
 
@@ -48,7 +49,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
         // research agent call
 
         if(response.action === 'read' || response.action === 'writeFile' || response.action === 'runCommand'){
-            const sandboxRes = await this.sandbox.Execute(this.sandboxId, response)
+            const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
             return {
                 success: true,
                 editedFiles: sandboxRes.content

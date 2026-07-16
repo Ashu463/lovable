@@ -2,6 +2,7 @@ import { BaseAgent } from "./baseAgent";
 import { webSearch } from "../MCPs/tavily";
 import { webScrape } from "../MCPs/apify";
 import type { ResearcherContext } from "../../baml_client";
+import type { E2BSandbox } from "../utils/sandbox";
 
 /*
 what I'm thinking is that this researcher agent would use some RAG/memory things
@@ -18,8 +19,8 @@ export class Researcher extends BaseAgent<ReasercherInput, ResearcherContext, Re
         // public searchTechnique: "webSearch" | "webScrape",
         userId: string, 
         projectId: string,
-        sandboxId: string
-    ){super(userId, projectId, sandboxId)}
+        sandbox: E2BSandbox
+    ){super(userId, projectId, sandbox)}
     /* Steps: 
     - recieve the query based upon which it will decide web_scrape or web search
     - make the LLM call and return the reponse

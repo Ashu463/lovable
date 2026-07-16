@@ -3,6 +3,7 @@ import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_PROMPT } from "../config/sysPrompts"
 import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
+import type { E2BSandbox } from "../utils/sandbox"
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse
@@ -16,15 +17,15 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
     constructor(
         userId: string, 
         projectId: string, 
-        sandboxId: string)
+        sandbox: E2BSandbox)
     {
-        super(userId, projectId, sandboxId)
+        super(userId, projectId, sandbox)
     }
 
     async testCodebase() : Promise<TesterResponse>{
         let stdOutBuf = ""
         let stdErrBuf = ""
-        const sandbox = await Sandbox.connect(this.sandboxId)
+        const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
         // #TEST: replace with appropriate path of project directory
         const handle = await sandbox.commands.run(`cd /home/usr/${this.userId}/projects/${this.projectId} && npm run dev`, {
             background: true,

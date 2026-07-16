@@ -37,10 +37,10 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
     constructor(
         userId: string,
         projectId: string,
-        sandboxId: string,
+        sandbox: E2BSandbox,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
-    ){super(userId, projectId, sandboxId)
-        this.researcher = new Researcher(this.userId, this.projectId, this.sandboxId)
+    ){super(userId, projectId, sandbox)
+        this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)
     }
 
     
@@ -55,7 +55,7 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{
             if(response.action === 'read' || response.action === 'writeFile' || response.action === 'delete' || response.action === 'runCommand'){
-                const sandboxRes = await this.sandbox.Execute(this.sandboxId, response)
+                const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
                 return {
                     success: true, 
                     response: sandboxRes.content 

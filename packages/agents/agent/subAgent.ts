@@ -38,10 +38,10 @@ export class SubAgent<T extends keyof ContextMap> {
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
-        case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox.sandboxId) as any
-        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
-        case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox.sandboxId) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox) as any
+        case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
+        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox) as any
+        case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any
         case 'uiExpert': return new UIExpert(this.userId) as any
         default: throw new Error(`${agentType} doesn't exist`) 
         }
@@ -94,7 +94,7 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
     async Test(): Promise<TesterResponse>{
-        const tester = new TesterAgent(this.userId, this.projectId, this.sandbox.sandboxId)
+        const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
         return await tester.testCodebase()
     }
     pushSession(role: Role, status: Status, content?: any, rawTranscript?: any){
