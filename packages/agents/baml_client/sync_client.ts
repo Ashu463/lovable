@@ -22,7 +22,7 @@ import type { BamlRuntime, FunctionResult, BamlCtxManager, Image, Audio, Pdf, Vi
 import { toBamlError, BamlAbortError, ClientRegistry, type HTTPRequest } from "@boundaryml/baml"
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { HttpRequest, HttpStreamRequest } from "./sync_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -598,7 +598,7 @@ export class BamlSyncClient {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,subagentType: string,context: types.SessionMap,
       __baml_options__?: BamlCallOptions<never>
   ): string {
     try {
@@ -798,7 +798,7 @@ export class BamlSyncClient {
   }
   
   PlanComplexTask(
-      systemPrompt: string,userPrompt: string,design: string,context: string,
+      systemPrompt: string,userPrompt: string,context: string,
       __baml_options__?: BamlCallOptions<never>
   ): types.PlannerTodo[] {
     try {
@@ -830,7 +830,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "PlanComplexTask",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),

@@ -167,7 +167,10 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async BuildSummary(): Promise<string> {
         try {
-            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.context as unknown as SubAgentsContext)
+            // #CRITICAL: See session map of baml side and here agent side are not imported from same direction
+            // so might cause some issue here.
+            // Fix for it is store stringified version of whatever thing you want to save
+            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.agentType, this.session as unknown as SessionMap)
         } catch (e) {
             console.error("Error occurred while generating summary")
             throw e

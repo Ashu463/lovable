@@ -117,6 +117,16 @@ export interface CoderContext {
   
 }
 
+export interface CoderSession {
+  taskId: number
+  role: "user" | "assistant" | "tool"
+  status: "in_progress" | "halted" | "resolved" | "done"
+  iterationCount: number
+  timestamp: string
+  content?: string | null
+  
+}
+
 export interface ComplexComplexity {
   complex: true
   questions: Question[]
@@ -133,6 +143,17 @@ export interface DebuggerContext {
   repoTree: string
   originalError: string
   fixHistory: Fixes[]
+  
+}
+
+export interface DebuggerSession {
+  taskId: number
+  role: "user" | "assistant" | "tool"
+  status: "in_progress" | "halted" | "resolved" | "done"
+  iterationCount: number
+  timestamp: string
+  content?: string | null
+  rawTranscript?: string | null
   
 }
 
@@ -296,9 +317,28 @@ export interface ResearcherResponse {
   
 }
 
+export interface ResearcherSession {
+  taskId: number
+  role: "user" | "assistant" | "tool"
+  status: "in_progress" | "halted" | "resolved" | "done"
+  iterationCount: number
+  timestamp: string
+  content?: string | null
+  
+}
+
 export interface RunCommand {
   action: "runCommand"
   command: string
+  
+}
+
+export interface SessionMap {
+  coder: CoderSession
+  debuggerr: DebuggerSession
+  tester: TesterSession
+  researcher: ResearcherSession
+  uiExpert: UIExpertSession
   
 }
 
@@ -348,6 +388,16 @@ export interface TesterResponse {
   
 }
 
+export interface TesterSession {
+  taskId: number
+  role: "user" | "assistant" | "tool"
+  status: "in_progress" | "halted" | "resolved" | "done"
+  iterationCount: number
+  timestamp: string
+  content?: string | null
+  
+}
+
 export interface ToolCall {
   type: ToolType
   apify?: Apify | null
@@ -374,6 +424,16 @@ export interface UIExpertContext {
   
 }
 
+export interface UIExpertSession {
+  taskId: number
+  role: "user" | "assistant" | "tool"
+  status: "in_progress" | "halted" | "resolved" | "done"
+  iterationCount: number
+  timestamp: string
+  content?: string | null
+  
+}
+
 export interface WebScrape {
   type: "webScrape"
   urls: string[]
@@ -396,5 +456,9 @@ export interface WriteFile {
 }
 
 export type ComplexityLevel = SimpleComplexity | ComplexComplexity
+
+export type Role = "user" | "assistant" | "tool"
+
+export type Status = "in_progress" | "halted" | "resolved" | "done"
 
 export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext

@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  RunCommand,  SimpleComplexity,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FinalResponse,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -63,6 +63,14 @@ export namespace partial_types {
       dependentSummary: TaskSummary[]
       repoTree?: string | null
     }
+    export interface CoderSession {
+      taskId?: number | null
+      role?: "user" | "assistant" | "tool" | null
+      status?: "in_progress" | "halted" | "resolved" | "done" | null
+      iterationCount?: number | null
+      timestamp?: string | null
+      content?: string | null
+    }
     export interface ComplexComplexity {
       complex?: true | null
       questions: Question[]
@@ -75,6 +83,15 @@ export namespace partial_types {
       repoTree?: string | null
       originalError?: string | null
       fixHistory: Fixes[]
+    }
+    export interface DebuggerSession {
+      taskId?: number | null
+      role?: "user" | "assistant" | "tool" | null
+      status?: "in_progress" | "halted" | "resolved" | "done" | null
+      iterationCount?: number | null
+      timestamp?: string | null
+      content?: string | null
+      rawTranscript?: string | null
     }
     export interface DebuggingDone {
       action?: "done" | null
@@ -190,9 +207,24 @@ export namespace partial_types {
       query?: string | null
       result?: BraveRes | ApifyRes | null
     }
+    export interface ResearcherSession {
+      taskId?: number | null
+      role?: "user" | "assistant" | "tool" | null
+      status?: "in_progress" | "halted" | "resolved" | "done" | null
+      iterationCount?: number | null
+      timestamp?: string | null
+      content?: string | null
+    }
     export interface RunCommand {
       action?: "runCommand" | null
       command?: string | null
+    }
+    export interface SessionMap {
+      coder?: CoderSession | null
+      debuggerr?: DebuggerSession | null
+      tester?: TesterSession | null
+      researcher?: ResearcherSession | null
+      uiExpert?: UIExpertSession | null
     }
     export interface SimpleComplexity {
       complex?: false | null
@@ -224,6 +256,14 @@ export namespace partial_types {
     }
     export interface TesterResponse {
     }
+    export interface TesterSession {
+      taskId?: number | null
+      role?: "user" | "assistant" | "tool" | null
+      status?: "in_progress" | "halted" | "resolved" | "done" | null
+      iterationCount?: number | null
+      timestamp?: string | null
+      content?: string | null
+    }
     export interface ToolCall {
       type?: types.ToolType | null
       apify?: Apify | null
@@ -244,6 +284,14 @@ export namespace partial_types {
       userPrompt?: string | null
       priorDesigns: Design[]
     }
+    export interface UIExpertSession {
+      taskId?: number | null
+      role?: "user" | "assistant" | "tool" | null
+      status?: "in_progress" | "halted" | "resolved" | "done" | null
+      iterationCount?: number | null
+      timestamp?: string | null
+      content?: string | null
+    }
     export interface WebScrape {
       type?: "webScrape" | null
       urls: string[]
@@ -260,6 +308,10 @@ export namespace partial_types {
       content?: string | null
     }
 export type ComplexityLevel = SimpleComplexity | ComplexComplexity | null
+
+export type Role = "user" | "assistant" | "tool" | null
+
+export type Status = "in_progress" | "halted" | "resolved" | "done" | null
 
 export type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext | null
 

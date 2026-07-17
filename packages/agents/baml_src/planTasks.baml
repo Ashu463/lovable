@@ -6,7 +6,7 @@ enum Agent {
   UIExpertAgent
   ResearcherAgent
 }
-function PlanComplexTask(systemPrompt: string, userPrompt: string, design: string, context: string) -> PlannerTodo[]{
+function PlanComplexTask(systemPrompt: string, userPrompt: string, context: string) -> PlannerTodo[]{
 // context here is the orchestrator context sended with main agent, subagent, and planner task
     client OpenAIGeneric
     prompt #"

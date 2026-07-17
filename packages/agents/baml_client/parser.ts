@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {

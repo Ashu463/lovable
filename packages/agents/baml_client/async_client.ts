@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -658,7 +658,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async GenerateSubagentSummary(
-        systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+        systemPrompt: string,subagentType: string,context: types.SessionMap,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<string> {
           try {
@@ -882,7 +882,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async PlanComplexTask(
-        systemPrompt: string,userPrompt: string,design: string,context: string,
+        systemPrompt: string,userPrompt: string,context: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.PlannerTodo[]> {
           try {
@@ -896,7 +896,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.PlanComplexTask(
-          systemPrompt,userPrompt,design,context,
+          systemPrompt,userPrompt,context,
           __baml_options__
           );
 
@@ -920,7 +920,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "PlanComplexTask",
             {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -2196,7 +2196,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             GenerateSubagentSummary(
-            systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+            systemPrompt: string,subagentType: string,context: types.SessionMap,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<string, string>
               {
@@ -2492,7 +2492,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             PlanComplexTask(
-            systemPrompt: string,userPrompt: string,design: string,context: string,
+            systemPrompt: string,userPrompt: string,context: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.PlannerTodo[], types.PlannerTodo[]>
               {
@@ -2541,7 +2541,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "PlanComplexTask",
                 {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),

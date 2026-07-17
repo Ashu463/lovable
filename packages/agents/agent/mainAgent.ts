@@ -250,7 +250,7 @@ export class MainAgent{
 
     async BuildSummary(): Promise<string> {
         try {
-            return await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.context)
+            return await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.session)
         } catch (e) {
             console.error("Error occurred while generating summary")
             throw e

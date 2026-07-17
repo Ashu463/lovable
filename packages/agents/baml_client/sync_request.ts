@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, RunCommand, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, ToolCall, ToolResult, ToolType, UIExpertContext, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -369,7 +369,7 @@ export class HttpRequest {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,subagentType: string,context: types.SessionMap,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -501,7 +501,7 @@ export class HttpRequest {
   }
   
   PlanComplexTask(
-      systemPrompt: string,userPrompt: string,design: string,context: string,
+      systemPrompt: string,userPrompt: string,context: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -520,7 +520,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "PlanComplexTask",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1167,7 +1167,7 @@ export class HttpStreamRequest {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,subagentType: string,context: types.SessionMap,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1299,7 +1299,7 @@ export class HttpStreamRequest {
   }
   
   PlanComplexTask(
-      systemPrompt: string,userPrompt: string,design: string,context: string,
+      systemPrompt: string,userPrompt: string,context: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1318,7 +1318,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "PlanComplexTask",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

@@ -41,11 +41,15 @@ export default class TypeBuilder {
     
     CoderContext: ClassViewer<'CoderContext', "dependentSummary" | "repoTree">;
     
+    CoderSession: ClassViewer<'CoderSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
+    
     ComplexComplexity: ClassViewer<'ComplexComplexity', "complex" | "questions">;
     
     Context7: ClassViewer<'Context7', "library" | "query">;
     
     DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory">;
+    
+    DebuggerSession: ClassViewer<'DebuggerSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content" | "rawTranscript">;
     
     DebuggingDone: ClassViewer<'DebuggingDone', "action" | "editedFile" | "errors">;
     
@@ -93,7 +97,11 @@ export default class TypeBuilder {
     
     ResearcherResponse: ClassViewer<'ResearcherResponse', "query" | "result">;
     
+    ResearcherSession: ClassViewer<'ResearcherSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
+    
     RunCommand: ClassViewer<'RunCommand', "action" | "command">;
+    
+    SessionMap: ClassViewer<'SessionMap', "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert">;
     
     SimpleComplexity: ClassViewer<'SimpleComplexity', "complex">;
     
@@ -111,11 +119,15 @@ export default class TypeBuilder {
     
     TesterResponse: ClassViewer<'TesterResponse'>;
     
+    TesterSession: ClassViewer<'TesterSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
+    
     ToolCall: ClassViewer<'ToolCall', "type" | "apify" | "context7" | "tavily" | "stitch" | "readFile" | "writeFile" | "editFile" | "runCommand" | "deleteFile">;
     
     ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
     UIExpertContext: ClassViewer<'UIExpertContext', "userPrompt" | "priorDesigns">;
+    
+    UIExpertSession: ClassViewer<'UIExpertSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
     
     WebScrape: ClassViewer<'WebScrape', "type" | "urls" | "maxPages">;
     
@@ -134,7 +146,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","ComplexComplexity","Context7","DebuggerContext","DebuggingDone","Decision","DeleteFile","Design","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","RunCommand","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","ToolCall","ToolResult","UIExpertContext","WebScrape","WebSearch","WriteFile",
+            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
@@ -170,6 +182,10 @@ export default class TypeBuilder {
           "dependentSummary","repoTree",
         ]);
         
+        this.CoderSession = this.tb.classViewer("CoderSession", [
+          "taskId","role","status","iterationCount","timestamp","content",
+        ]);
+        
         this.ComplexComplexity = this.tb.classViewer("ComplexComplexity", [
           "complex","questions",
         ]);
@@ -180,6 +196,10 @@ export default class TypeBuilder {
         
         this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
           "repoTree","originalError","fixHistory",
+        ]);
+        
+        this.DebuggerSession = this.tb.classViewer("DebuggerSession", [
+          "taskId","role","status","iterationCount","timestamp","content","rawTranscript",
         ]);
         
         this.DebuggingDone = this.tb.classViewer("DebuggingDone", [
@@ -274,8 +294,16 @@ export default class TypeBuilder {
           "query","result",
         ]);
         
+        this.ResearcherSession = this.tb.classViewer("ResearcherSession", [
+          "taskId","role","status","iterationCount","timestamp","content",
+        ]);
+        
         this.RunCommand = this.tb.classViewer("RunCommand", [
           "action","command",
+        ]);
+        
+        this.SessionMap = this.tb.classViewer("SessionMap", [
+          "coder","debuggerr","tester","researcher","uiExpert",
         ]);
         
         this.SimpleComplexity = this.tb.classViewer("SimpleComplexity", [
@@ -310,6 +338,10 @@ export default class TypeBuilder {
           
         ]);
         
+        this.TesterSession = this.tb.classViewer("TesterSession", [
+          "taskId","role","status","iterationCount","timestamp","content",
+        ]);
+        
         this.ToolCall = this.tb.classViewer("ToolCall", [
           "type","apify","context7","tavily","stitch","readFile","writeFile","editFile","runCommand","deleteFile",
         ]);
@@ -320,6 +352,10 @@ export default class TypeBuilder {
         
         this.UIExpertContext = this.tb.classViewer("UIExpertContext", [
           "userPrompt","priorDesigns",
+        ]);
+        
+        this.UIExpertSession = this.tb.classViewer("UIExpertSession", [
+          "taskId","role","status","iterationCount","timestamp","content",
         ]);
         
         this.WebScrape = this.tb.classViewer("WebScrape", [

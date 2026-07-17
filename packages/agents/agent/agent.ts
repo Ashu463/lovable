@@ -247,7 +247,7 @@ export class OrchestratorAgent{
             
         }
         else{
-            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt)
+            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
