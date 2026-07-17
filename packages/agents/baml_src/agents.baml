@@ -203,7 +203,10 @@ function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> strin
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{summaries}}
+        {{summaries}} - full Run history: the original request, the
+fixed design decision, every subsequent user message with its complexity
+verdict and which path handled it, and the state of whichever delegate is
+currently active.
 
         {{ctx.output_format}}
     "#

@@ -8,7 +8,7 @@ import type { BaseAgent } from "./subagents/baseAgent";
 import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
-import { SUBAGENT_SUMMARY_PROPMT } from "./config/sysPrompts";
+import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
 import type { SSEBody } from "../types/mainAgentTypes";
 import axios from "axios";
 import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
@@ -159,7 +159,7 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async BuildSummary(): Promise<string> {
         try {
-            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROPMT, this.context as unknown as SubAgentsContext)
+            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.context as unknown as SubAgentsContext)
         } catch (e) {
             console.error("Error occurred while generating summary")
             throw e

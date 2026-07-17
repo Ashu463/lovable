@@ -8,11 +8,13 @@ class UIExpertContext{
     priorDesigns Design[]
 }
 
-function FramePrompts(systemPrompt: string, userPrompt: string) -> string{
+function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string) -> string{
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{userPrompt}}
+        {{userPrompt}} - what's being built, already past complexity and
+  clarification checks.
+    {# {{target_surfaces}} — which pages/components are in initial scope. #}
 
         {{ctx.output_format}}
     "#

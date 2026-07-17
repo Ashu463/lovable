@@ -1,7 +1,7 @@
 import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
-import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
+import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
 import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
@@ -147,7 +147,7 @@ export class MainAgent{
 
     async callLLM(userPrompt: string): Promise<LLMResponse>{
         try{
-            const response: LLMResponse = await b.MainLLMCall(MAIN_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem)
+            const response: LLMResponse = await b.MainLLMCall(MAIN_AGENT_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem)
             return response
         }
         catch(e){

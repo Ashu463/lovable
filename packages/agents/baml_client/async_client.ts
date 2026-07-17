@@ -546,7 +546,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async FramePrompts(
-        systemPrompt: string,userPrompt: string,
+        systemPrompt: string,userPrompt: string,semanticMem: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<string> {
           try {
@@ -560,7 +560,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.FramePrompts(
-          systemPrompt,userPrompt,
+          systemPrompt,userPrompt,semanticMem,
           __baml_options__
           );
 
@@ -584,7 +584,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "FramePrompts",
             {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -658,7 +658,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async GenerateSubagentSummary(
-        systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+        systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<string> {
           try {
@@ -672,7 +672,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.GenerateSubagentSummary(
-          systemPrompt,context,
+          systemPrompt,subagentType,context,
           __baml_options__
           );
 
@@ -696,7 +696,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "GenerateSubagentSummary",
             {
-            "systemPrompt": systemPrompt,"context": context
+            "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -770,7 +770,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async MainLLMCall(
-        systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,
+        systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.LLMResponse> {
           try {
@@ -784,7 +784,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.MainLLMCall(
-          systemPrompt,userPrompt,context,semanticMem,
+          systemPrompt,design,userPrompt,context,semanticMem,
           __baml_options__
           );
 
@@ -808,7 +808,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "MainLLMCall",
             {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+            "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -938,7 +938,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async PlanComplexTask(
-        systemPrompt: string,userPrompt: string,
+        systemPrompt: string,userPrompt: string,design: string,context: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.PlannerTodo[]> {
           try {
@@ -952,7 +952,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.PlanComplexTask(
-          systemPrompt,userPrompt,
+          systemPrompt,userPrompt,design,context,
           __baml_options__
           );
 
@@ -976,7 +976,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "PlanComplexTask",
             {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -988,62 +988,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __options__.watchers,
             )
             return __raw__.parsed(false) as types.PlannerTodo[]
-            } catch (error) {
-            throw toBamlError(error);
-            }
-            }
-            
-        async PlanSimpleTask(
-        systemPrompt: string,userPrompt: string,
-        __baml_options__?: BamlCallOptions<never>
-        ): Promise<string> {
-          try {
-          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-          const __signal__ = __options__.signal;
-
-          if (__signal__?.aborted) {
-          throw new BamlAbortError('Operation was aborted', __signal__.reason);
-          }
-
-          // Check if onTick is provided - route through streaming if so
-          if (__options__.onTick) {
-          const __stream__ = this.stream.PlanSimpleTask(
-          systemPrompt,userPrompt,
-          __baml_options__
-          );
-
-          return await __stream__.getFinalResponse();
-          }
-
-          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-          [__options__.collector]) : [];
-          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-          const __env__: Record<string, string> = Object.fromEntries(
-            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-            );
-
-            // Resolve client option to clientRegistry (client takes precedence)
-            let __clientRegistry__ = __options__.clientRegistry;
-            if (__options__.client) {
-              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-              __clientRegistry__.setPrimary(__options__.client);
-            }
-
-            const __raw__ = await this.runtime.callFunction(
-            "PlanSimpleTask",
-            {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt
-            },
-            this.ctxManager.cloneContext(),
-            __options__.tb?.__tb(),
-            __clientRegistry__,
-            __collector__,
-            __options__.tags || {},
-            __env__,
-            __signal__,
-            __options__.watchers,
-            )
-            return __raw__.parsed(false) as string
             } catch (error) {
             throw toBamlError(error);
             }
@@ -2160,7 +2104,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             FramePrompts(
-            systemPrompt: string,userPrompt: string,
+            systemPrompt: string,userPrompt: string,semanticMem: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<string, string>
               {
@@ -2209,7 +2153,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "FramePrompts",
                 {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -2308,7 +2252,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             GenerateSubagentSummary(
-            systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+            systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<string, string>
               {
@@ -2357,7 +2301,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "GenerateSubagentSummary",
                 {
-                "systemPrompt": systemPrompt,"context": context
+                "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -2456,7 +2400,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             MainLLMCall(
-            systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,
+            systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.LLMResponse, types.LLMResponse>
               {
@@ -2505,7 +2449,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "MainLLMCall",
                 {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+                "systemPrompt": systemPrompt,"design": design ?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -2678,7 +2622,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             PlanComplexTask(
-            systemPrompt: string,userPrompt: string,
+            systemPrompt: string,userPrompt: string,design: string,context: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.PlannerTodo[], types.PlannerTodo[]>
               {
@@ -2727,7 +2671,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "PlanComplexTask",
                 {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -2743,80 +2687,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   __raw__,
                   (a): partial_types.PlannerTodo[] => a,
                   (a): types.PlannerTodo[] => a,
-                  this.ctxManager.cloneContext(),
-                  __options__.signal,
-                  )
-                  } catch (error) {
-                  throw toBamlError(error);
-                  }
-                  }
-                  
-            PlanSimpleTask(
-            systemPrompt: string,userPrompt: string,
-            __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<string, string>
-              {
-              try {
-              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-              const __signal__ = __options__.signal;
-
-              if (__signal__?.aborted) {
-              throw new BamlAbortError('Operation was aborted', __signal__.reason);
-              }
-
-              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-              [__options__.collector]) : [];
-
-              let __onTickWrapper__: (() => void) | undefined;
-
-              // Create collector and wrap onTick if provided
-              if (__options__.onTick) {
-              const __tickCollector__ = new Collector("on-tick-collector");
-              __collector__ = [...__collector__, __tickCollector__];
-
-              __onTickWrapper__ = () => {
-              const __log__ = __tickCollector__.last;
-              if (__log__) {
-              try {
-              __options__.onTick!("Unknown", __log__);
-              } catch (error) {
-              console.error("Error in onTick callback for PlanSimpleTask", error);
-              }
-              }
-              };
-              }
-
-              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-              const __env__: Record<string, string> = Object.fromEntries(
-                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-                );
-
-                // Resolve client option to clientRegistry (client takes precedence)
-                let __clientRegistry__ = __options__.clientRegistry;
-                if (__options__.client) {
-                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-                  __clientRegistry__.setPrimary(__options__.client);
-                }
-
-                const __raw__ = this.runtime.streamFunction(
-                "PlanSimpleTask",
-                {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt
-                },
-                undefined,
-                this.ctxManager.cloneContext(),
-                __options__.tb?.__tb(),
-                __clientRegistry__,
-                __collector__,
-                __options__.tags || {},
-                __env__,
-                __signal__,
-                __onTickWrapper__,
-                )
-                return new BamlStream<string, string>(
-                  __raw__,
-                  (a): string => a,
-                  (a): string => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

@@ -1,7 +1,7 @@
 import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
-import { TESTER_PROMPT } from "../config/sysPrompts"
+import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/sysPrompts"
 import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 
@@ -73,7 +73,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
     override async callLLM(error: string): Promise<ErrorResponse> {
         let errorReFramed: ErrorResponse
         try {
-            errorReFramed = await b.ReframeError(TESTER_PROMPT, error)
+            errorReFramed = await b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error)
 
         } catch (error) {
             console.error(error)

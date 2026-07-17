@@ -15,7 +15,12 @@ function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: s
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{userPrompt}}
+        {{userPrompt}} - the message to assess.
+        {# {{app_context}} — current app state. #}
+        {# {{run_stage}} — whether this is the Run's first message (design not yet
+  chosen) or a follow-up (design already fixed — never ask design-related
+  questions on a follow-up, and don't factor design selection into this
+  message's complexity judgment). #}
 
         {{ctx.output_format}}
     "#

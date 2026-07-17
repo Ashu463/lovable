@@ -14,7 +14,9 @@ function ReframeError(systemPrompt: string, error: string) -> ErrorResponse{
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{error}}
+        {{error}} - unstructured stdout/stderr from a failed
+build/lint/test command.
+
 
         {{ctx.output_format}}
     "#

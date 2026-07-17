@@ -59,7 +59,7 @@ function SummarizeContext(systemPrompt: string, context: Message[]) -> Message[]
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{context}}
+        {{context}} - the full context object, already past compaction.
 
         {{ctx.output_format}}
     "#
@@ -70,7 +70,7 @@ function CompactCoderContext(systemPrompt: string, context: CoderContext) -> Cod
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{context}}
+        {{context}} - the full context object, segmented.
 
         {{ctx.output_format}}
     "#
@@ -80,7 +80,7 @@ function CompactDebuggerContext(systemPrompt: string, context: DebuggerContext) 
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{context}}
+        {{context}} - the full context object, segmented.
 
         {{ctx.output_format}}
     "#
@@ -90,7 +90,7 @@ function SummarizeCoderContext(systemPrompt: string, context: CoderContext) -> C
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{context}}
+        {{context}} - the full context, already past compaction.
 
         {{ctx.output_format}}
     "#
@@ -100,7 +100,7 @@ function SummarizeDebuggerContext(systemPrompt: string, context: DebuggerContext
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{context}}
+        {{context}} - the full context, already past compaction.
 
         {{ctx.output_format}}
     "#

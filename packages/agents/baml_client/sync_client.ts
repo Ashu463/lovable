@@ -498,7 +498,7 @@ export class BamlSyncClient {
   }
   
   FramePrompts(
-      systemPrompt: string,userPrompt: string,
+      systemPrompt: string,userPrompt: string,semanticMem: string,
       __baml_options__?: BamlCallOptions<never>
   ): string {
     try {
@@ -530,7 +530,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "FramePrompts",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -598,7 +598,7 @@ export class BamlSyncClient {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
+      systemPrompt: string,subagentType: string,context: types.CoderContext | types.DebuggerContext | types.TesterContext | types.ResearcherContext | types.UIExpertContext,
       __baml_options__?: BamlCallOptions<never>
   ): string {
     try {
@@ -630,7 +630,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "GenerateSubagentSummary",
         {
-          "systemPrompt": systemPrompt,"context": context
+          "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -698,7 +698,7 @@ export class BamlSyncClient {
   }
   
   MainLLMCall(
-      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,
+      systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
       __baml_options__?: BamlCallOptions<never>
   ): types.LLMResponse {
     try {
@@ -730,7 +730,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "MainLLMCall",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -848,7 +848,7 @@ export class BamlSyncClient {
   }
   
   PlanComplexTask(
-      systemPrompt: string,userPrompt: string,
+      systemPrompt: string,userPrompt: string,design: string,context: string,
       __baml_options__?: BamlCallOptions<never>
   ): types.PlannerTodo[] {
     try {
@@ -880,7 +880,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "PlanComplexTask",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"design": design,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -892,56 +892,6 @@ export class BamlSyncClient {
         __options__.watchers,
       )
       return __raw__.parsed(false) as types.PlannerTodo[]
-    } catch (error: any) {
-      throw toBamlError(error);
-    }
-  }
-  
-  PlanSimpleTask(
-      systemPrompt: string,userPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): string {
-    try {
-      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-      const __signal__ = __options__.signal;
-
-      if (__signal__?.aborted) {
-        throw new BamlAbortError('Operation was aborted', __signal__.reason);
-      }
-
-      // Check if onTick is provided and reject for sync operations
-      if (__options__.onTick) {
-        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
-      }
-
-      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __options__.clientRegistry;
-      if (__options__.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__options__.client);
-      }
-
-      const __raw__ = this.runtime.callFunctionSync(
-        "PlanSimpleTask",
-        {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __options__.tb?.__tb(),
-        __clientRegistry__,
-        __collector__,
-        __options__.tags || {},
-        __env__,
-        __signal__,
-        __options__.watchers,
-      )
-      return __raw__.parsed(false) as string
     } catch (error: any) {
       throw toBamlError(error);
     }

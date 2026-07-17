@@ -2,7 +2,7 @@ import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, Boo
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, COMPLEXITY_CHECKER_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT, QUESTION_GENERATOR_PROMPT} from "./config/sysPrompts"
+import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
@@ -160,7 +160,6 @@ export class OrchestratorAgent{
         else{
             try{
                 isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
-
             }
             catch(e){
                 console.error(e)
@@ -173,7 +172,7 @@ export class OrchestratorAgent{
             if(!isComplex){
                 return {
                     status: 'error',
-                    error: `Error occurred while generating `
+                    error: `Error occurred while generating`
                 }
             }
             if(isComplex.complex){
@@ -285,7 +284,8 @@ export class OrchestratorAgent{
                     success: true
                 });
             }
-            orchestratorSummary = await this.GenerateSubagentSummary(summaries)
+            // FIX: this.state/context in place of summaries.
+            orchestratorSummary = await this.GenerateOrchestratorSummary(summaries)
                 
         }
         // const path = this.sandbox
@@ -316,7 +316,7 @@ export class OrchestratorAgent{
     async emitSSEUpdate(event: OrchestratorEvent){
         await createBackendEmitter(this.runId).emit(event)
     }
-    async GenerateSubagentSummary(summaries: string[]): Promise<string>{
+    async GenerateOrchestratorSummary(summaries: string[]): Promise<string>{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
     }
     // that tester <-> debugger loop
@@ -483,4 +483,21 @@ And the second way to store into the context would get compressed heavily
 hit only when at least 5 to 6 calls have been happened), 
 the third way is to make boiler plate mandatory field which would burst out the context window. 
 I'm geniunely interested in your true opinion. Think deeply and carefully.
+
+
+do you think that I restricted the creativity of subagents by limiting it's response to certain form of outputs? since I was seeing this as coder wants to return some other type response format but I'm saying no you have to explicitly return in this form. Secondly, am I assuming the right set of output schema, that coder would need to do only these actions, listed everything below: 
+
+Coder -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+
+Debugger -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone
+
+Main agent -> type ToolType, apify Apify?, context7 Context7?, tavily Tavily?, stitch StitchTool?, readFile ReadFile?, writeFile WriteFile?, editFile EditFile?, runCommand RunCommand?, deleteFile DeleteFile? Also I was thinking that should subagent's (coder and debugger) system prompt include MCP tools and the normal tools? 
+
+To your questions: You're right with your initial thought of main agent correcting and verifying itself with the available tools and MCPs, not through separate tester/debugger agent.  
+
+yeah three design step happens for the very first time of initiating the chat; once the design is chosen by user then no matter in how many follow ups by user, it will be fixed and will never call to re design again. 
+
+I mean that's what I want to decide right now, should I run complexity checker every time? I think I should coz it totally make sense to me to check complexity of whatever the user have been prompted, the only thing I have to maintain context for orchestrator itself; and inject that context into respective main agent or subagents right? 
+
+Right now research is having very limited scope, web searching or web scraping; but later I thought to add RAG in this that's why did it like this. That's why FetchDocs is made as separated thing to call simple context7 MCP. 
 */

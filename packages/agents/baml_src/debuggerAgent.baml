@@ -27,9 +27,15 @@ function DebuggerAgent(
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{errors}} 
+        {{errors}} - what failed: the command that failed and its output,
+  possibly already structured into error type, location, message, and candidate causes.
+
         {% if toolResult %}ToolResult: {{toolResult}}{%endif%}
 
+        {# {{prior_fix_attempts}} — if this is not your first attempt at this item,
+  what was tried before and what happened as a result. A non-empty list
+  here means your previous approach did not resolve the issue — read what
+  was already tried before proposing another fix. #}
         {{ctx.output_format}}
     "#
 }
