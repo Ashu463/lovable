@@ -30,7 +30,6 @@ export class SubAgent<T extends keyof ContextMap> {
         private userId: string,
         private projectId: string,
         private sandbox: E2BSandbox,
-        private semanticMem: string,
         private selectedDesign: string
     ) {
         this.agentInstance = this.createAgent(agentType)

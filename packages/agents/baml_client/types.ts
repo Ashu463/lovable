@@ -285,6 +285,7 @@ export interface PlannerTodo {
   agent: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert"
   status: "pending" | "completed"
   dependency: number[]
+  designNeeded: boolean
   
 }
 

@@ -19,7 +19,8 @@ import { createBackendEmitter, type EventEmitter, type OrchestratorEvent } from 
 type InputBuilder<T extends SubAgentType> = (
     todo: PlannerTodo, 
     ctx: OrchestratorContext[],
-    orchestratorState: OrchestratorState
+    orchestratorState: OrchestratorState,
+    semanticMem: string
 ) => InputMap[T]
 
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
@@ -70,7 +71,7 @@ export class OrchestratorAgent{
     }
 
     inputBuilders: InputBuilders = {
-        coder: (todo, ctx, state) => ({
+        coder: (todo, ctx, state, semanticMem) => ({
             task: {
                 taskId: todo.id,
                 task: todo.task,
@@ -79,22 +80,28 @@ export class OrchestratorAgent{
                 agentSpecificData: {
                     relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined,
                 },
+                designNeeded: todo.designNeeded
             },
+            orchestratorContext: ctx,
+            semanticMem: semanticMem,
             agentType: 'coder',
         }),
 
-        uiExpert: (todo, ctx, state) => ({
+        uiExpert: (todo, ctx, state, semanticMem) => ({
             task: {
-            taskId: todo.id,
-            task: todo.task,
-            dependentTasks: todo.dependency,
-            agentType: 'uiExpert',
-            agentSpecificData: {
-                screenId: state.screenId ?? this.generateScreenId(todo),
-                mode: state.screenId ? 'update' : 'create',
-                referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
+                taskId: todo.id,
+                task: todo.task,
+                dependentTasks: todo.dependency,
+                agentType: 'uiExpert',
+                agentSpecificData: {
+                    screenId: state.screenId ?? this.generateScreenId(todo),
+                    mode: state.screenId ? 'update' : 'create',
+                    referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
+                },
+                designNeeded: todo.designNeeded
             },
-            },
+            orchestratorContext: ctx,
+            semanticMem: semanticMem,
             query: "",
             agentType: 'uiExpert',
         }),
@@ -110,7 +117,7 @@ export class OrchestratorAgent{
             agentType: 'tester',
         }),
 
-        debuggerr: (todo, ctx, state) => {
+        debuggerr: (todo, ctx, state, semanticMem) => {
             if(!this.state.lastToolResult){
                 throw new Error(`debuggerr builder called without last tool result`)
             }
@@ -124,6 +131,9 @@ export class OrchestratorAgent{
                     agentSpecificData: {},
                 },
                 agentType: 'debuggerr',
+                orchestratorContext: ctx,
+                semanticMem: semanticMem,
+                designNeeded: todo.designNeeded,
                 errors: state.lastTestErrors,
                 toolResult: toolResult,
             }
@@ -240,7 +250,7 @@ export class OrchestratorAgent{
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, this.context)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
@@ -262,9 +272,9 @@ export class OrchestratorAgent{
                 }
 
                 const agentType = todo?.agent
-                const input = this.inputBuilders[agentType](todo, this.context, this.state)
+                const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
                 
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.semanticMem, this.selectedDesign)
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.selectedDesign)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
@@ -334,7 +344,7 @@ export class OrchestratorAgent{
         try{
             let previousErrorSignature: string | null = null
             while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
-                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, semanticMem, this.selectedDesign)
+                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, this.selectedDesign)
     
                 const testerRes: TesterResponse = await tester.Test()
                 const error: Error = {
@@ -358,10 +368,11 @@ export class OrchestratorAgent{
                     id: Math.floor(Math.random() * 1000), // debugger task starting from 1000 id number.
                     dependency: [],
                     agent: 'debuggerr',
-                    status: 'pending'
+                    status: 'pending',
+                    designNeeded: false
                 }
-                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, semanticMem, this.selectedDesign)
+                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, this.selectedDesign)
                 const debuggerResult = await debuggerAgent.runLoop()
                 this.state.lastToolResult = {
                     success: debuggerResult.success,                                

@@ -187,6 +187,7 @@ export namespace partial_types {
       agent?: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert" | null
       status?: "pending" | "completed" | null
       dependency: number[]
+      designNeeded?: boolean | null
     }
     export interface Question {
       question?: string | null

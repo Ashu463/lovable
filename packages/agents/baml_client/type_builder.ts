@@ -85,7 +85,7 @@ export default class TypeBuilder {
     
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
-    PlannerTodo: ClassViewer<'PlannerTodo', "id" | "task" | "agent" | "status" | "dependency">;
+    PlannerTodo: ClassViewer<'PlannerTodo', "id" | "task" | "agent" | "status" | "dependency" | "designNeeded">;
     
     Question: ClassViewer<'Question', "question" | "option">;
     
@@ -271,7 +271,7 @@ export default class TypeBuilder {
         ]);
         
         this.PlannerTodo = this.tb.classViewer("PlannerTodo", [
-          "id","task","agent","status","dependency",
+          "id","task","agent","status","dependency","designNeeded",
         ]);
         
         this.Question = this.tb.classViewer("Question", [

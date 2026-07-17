@@ -13,7 +13,6 @@ function PlanComplexTask(systemPrompt: string, userPrompt: string, context: stri
         {{systemPrompt}}
         {{userPrompt}} - the request to plan for, already past complexity and
   clarification checks.
-        {{design}} - the design system already chosen for this Run.
         {{context}} - current app state and prior decisions.
 
         {{ctx.output_format}}

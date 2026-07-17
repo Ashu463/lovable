@@ -214,6 +214,7 @@ answer. When genuinely unsure whether to keep or drop something, keep it.
 // ============================================================================
 
 export const PLAN_TASK_SYSTEM_PROMPT = `
+------Update: Add design needed field information here---------
 # ROLE
 
 You are the planner, invoked when the orchestrator has judged a request
