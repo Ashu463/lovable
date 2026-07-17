@@ -298,8 +298,8 @@ export class OrchestratorAgent{
                     success: true
                 });
             }
-            // FIX: this.state/context in place of summaries.
-            orchestratorSummary = await this.GenerateOrchestratorSummary(summaries)
+            // FIX: this.state/context in place of summaries. => done, kept subagents summary short and avoided LLM call.
+            orchestratorSummary = JSON.stringify(summaries)
                 
         }
         // const path = this.sandbox

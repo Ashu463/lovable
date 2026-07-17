@@ -49,7 +49,9 @@ async function createRun(req: Request, res: Response){
         sandboxId: sandbox.sandboxId,
         userPrompt: userPrompt,
     }})
-    AgentCall(userId, projectId, userPrompt, run.id, sandbox)
+    const user = await prisma.user.findUnique({where: {id: userId}})
+
+    AgentCall(userId, projectId, userPrompt, run.id, sandbox, user.semanticMem)
 
     return res.status(200).json({
         success: true,

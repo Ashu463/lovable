@@ -127,6 +127,7 @@ call depends on what an earlier one returns.
 // ============================================================================
 
 export const MAIN_AGENT_SUMMARY_PROMPT = `
+-------------Update: Keep this really short-----------
 # ROLE
 
 You compact the tool-call transcript of a single in-progress Main agent
@@ -599,6 +600,7 @@ this pass, its detail should survive with it, not just its existence.
 // ============================================================================
 
 export const SUBAGENT_SUMMARY_PROPMT = `
+----------Update: Keep this really short-------------
 # ROLE
 
 You summarize a single completed CoderAgent or DebuggerAgent run into a
