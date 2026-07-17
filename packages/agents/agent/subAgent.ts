@@ -43,7 +43,7 @@ export class SubAgent<T extends keyof ContextMap> {
         case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
         case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox) as any
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any
-        case 'uiExpert': return new UIExpert(this.userId) as any
+        case 'uiExpert': return new UIExpert(this.userId, this.projectId, this.sandbox) as any
         default: throw new Error(`${agentType} doesn't exist`) 
         }
     }

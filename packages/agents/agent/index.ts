@@ -17,10 +17,11 @@ export async function AgentCall(
   userPrompt: string,
   runId: string,
   sandbox: E2BSandbox,
+  semanticMem: string,
   answers?: Answers[]
 ): Promise<void> {
 
-  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId)
+  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem)
 
   try {
     await orchestrator.Orchestrate(userPrompt, answers)

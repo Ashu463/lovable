@@ -1,27 +1,37 @@
 import type { Screen } from "@google/stitch-sdk"
 import { makeOneScreen } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
-import { b } from "../../baml_client"
+import { b, type UIExpertContext } from "../../baml_client"
 import { makeBoilerPlate } from "../MCPs/figma"
 import { UI_VARIANTS_PROMPT } from "../config/sysPrompts"
+import type { E2BSandbox } from "../utils/sandbox"
 
 interface Design {
     designId: string,
     htmlCode: string,
     figmaUrl: string // url for figma
 }
-export class UIExpert{
+type UIExpertRequest = {userPrompt: string, semanticMem: string}
+type UIExpertLLMResponse = {}
+type UIExpertAgentResponse = {}
 
-    constructor(public userId: string){}
+export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpertLLMResponse, UIExpertAgentResponse>{
 
-    async craftDesignVariants(userPrompt: string): Promise<string[]> {
+    constructor(
+        userId: string,
+        projectId: string,
+        sandbox: E2BSandbox,
+    ){super(userId, projectId, sandbox)}
 
-        const raw = await this.callLLM(UI_VARIANTS_PROMPT, userPrompt)
+
+    async craftDesignVariants(request: UIExpertRequest): Promise<string[]> {
+
+        const raw = await this.callLLM(request)
         const parsed = JSON.parse(raw)
         return parsed.prompts
     }
-    async generateDesigns(userPrompt: string): Promise<Screen[]> {
-        const variantPrompts: string[] = await this.craftDesignVariants(userPrompt)
+    async generateDesigns(userPrompt: string, semanticMem: string): Promise<Screen[]> {
+        const variantPrompts: string[] = await this.craftDesignVariants({userPrompt, semanticMem})
         const designs = await Promise.all(
             variantPrompts.map((p) => makeOneScreen(p, this.userId))
         )
@@ -31,10 +41,10 @@ export class UIExpert{
         return await makeBoilerPlate(design.figmaUrl)
     }
     
-    async callLLM(systemPrompt: string, userPrompt: string): Promise<string> {
+    override async callLLM(request: UIExpertRequest): Promise<string> {
         let res : string = ""
         try{
-            res = await b.FramePrompts(systemPrompt, userPrompt)
+            res = await b.FramePrompts(UI_VARIANTS_PROMPT, request.userPrompt, request.semanticMem)
             console.log(res, " is the bunch of prompts")
         }
         catch(e){
@@ -42,5 +52,9 @@ export class UIExpert{
             throw e
         }
         return res
+    }
+
+    override async executeFunction(content: UIExpertLLMResponse): Promise<UIExpertAgentResponse | null> {
+        return null;
     }
 }

@@ -49,8 +49,9 @@ export class OrchestratorAgent{
         public projectId: string,
         public sandbox: E2BSandbox, // initially pass this as empty string, here after connecting it would have some value
         public runId: string,
+        public semanticMem: string
     ){
-        this.uiExpert = new UIExpert(userId)
+        this.uiExpert = new UIExpert(userId, projectId, sandbox)
         this.context = []
         this.state = {
             screenId: null,
@@ -61,6 +62,7 @@ export class OrchestratorAgent{
             errorsByTaskId: new Map(),
         }
     }
+
     
     generateScreenId(todo: PlannerTodo): string {
         return `screen_${todo.id}_${Date.now()}`
@@ -186,7 +188,7 @@ export class OrchestratorAgent{
         
         let designs
         if(designRes.data.length === 0){
-            designs = await this.uiExpert.generateDesigns(userPrompt)
+            designs = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
             return {
                 status: 'select_design',
                 designs: designs
@@ -231,12 +233,11 @@ export class OrchestratorAgent{
             const { data: fetchedDesign } = await axios.get<Screen>(`${BACKEND_URL}/${this.projectId}/designs/selected`)
             design = fetchedDesign
         }
-        const user = await axios.get<User>(`${BACKEND_URL}/get/user/${this.userId}`)
 
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, user.data.semanticMem, this.sandbox)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.sandbox)
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
@@ -260,7 +261,7 @@ export class OrchestratorAgent{
                 const agentType = todo?.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state)
                 
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, user.data.semanticMem)
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.semanticMem)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
@@ -271,7 +272,7 @@ export class OrchestratorAgent{
 
                 if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
                     testsPassing = false;
-                    testResults = await this.TesterDebuggerLoop(user.data.semanticMem)
+                    testResults = await this.TesterDebuggerLoop(this.semanticMem)
                     if(testResults.success) testsPassing = true
                 }
                 // this.shouldBatchTest()
