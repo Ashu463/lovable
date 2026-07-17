@@ -13,6 +13,7 @@ class Fixes{
     fixSummary string
 }
 class DebuggerContext{
+    repoTree string
     originalError string
     fixHistory Fixes[]
 }
@@ -22,7 +23,7 @@ function DebuggerAgent(
     errors: Error[],
     context: DebuggerContext,
     toolResult: ToolResult?
-) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone{
+) -> ReadFile | RunCommand | WriteFile | EditFile | Research | DebuggingDone{
     
     client OpenAIGeneric
     prompt #"

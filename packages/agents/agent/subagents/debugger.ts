@@ -1,4 +1,4 @@
-import type { WriteFile, ReadFile, RunCommand, DeleteFile, FetchDocs, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext } from "../../baml_client";
+import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/sysPrompts";
@@ -18,7 +18,7 @@ type DebuggerRequest = {
   toolResult?: ToolResult;
 };
 // TODO: implement line by line edit feature, instead writing complete file 
-type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | DebuggingDone | Research
+type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | EditFile | DebuggingDone | Research
 
 // type DebuggerToolResponse = 
 export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, DebuggerLLMResponse, DebuggerAgentResponse>{
@@ -47,8 +47,12 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
     }
     override async executeFunction(response: DebuggerLLMResponse): Promise<DebuggerAgentResponse | null> {
         // research agent call
-
-        if(response.action === 'read' || response.action === 'writeFile' || response.action === 'runCommand'){
+        
+        if(response.action === 'read' || 
+            response.action === 'writeFile' || 
+            response.action === 'runCommand'
+            // response.action === 'editFile' #TODO: Edit file in sandbox.
+        ){
             const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
             return {
                 success: true,

@@ -1,5 +1,5 @@
 import { CODER_PROMPT } from "../config/sysPrompts";
-import {b, type CoderContext, type DeleteFile, type Done, type FetchDocs, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
+import {b, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
@@ -25,7 +25,7 @@ interface CoderRequest{
     boilerPlate?: string,
     relatedDesignRef?: {screenId: string}
 } 
-type CoderLLMResponse = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
 type CoderAgentResponse = {
     success: boolean, 
     response: string,
@@ -54,7 +54,13 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{
-            if(response.action === 'read' || response.action === 'writeFile' || response.action === 'delete' || response.action === 'runCommand'){
+            if(
+                response.action === 'read' 
+                || response.action === 'writeFile' 
+                || response.action === 'delete' 
+                || response.action === 'runCommand'
+                // || response.action === 'editFile' #TODO: EDIT FILE
+            ){
                 const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
                 return {
                     success: true, 

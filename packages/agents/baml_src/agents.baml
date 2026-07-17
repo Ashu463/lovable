@@ -111,21 +111,11 @@ class TaskComplexity{
     complexity bool
     POA PlannerTodo[] | string
 }
-function GetTodos(userPrompt: string, systemPrompt: string) -> TaskComplexity{
-
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{userPrompt}}
-
-        {{ctx.output_format}}
-    "#
-}
 
 // ---New Edit 5/July/26, this file would be acting as utils for baml types
 class Research{
     action "research"
-    searchType WebSearch | WebScrape | DocsSeach
+    searchType WebSearch | WebScrape | DocsSearch
 }
 class WebScrape{
     type "webScrape"
@@ -137,7 +127,7 @@ class WebSearch{
     query string
     maxResults int
 }
-class DocsSeach{
+class DocsSearch{
     type "docsSearch"
     library string
     query string
@@ -164,7 +154,7 @@ class RunCommand{
     command string
 }
 class EditFile{
-    action "edit"
+    action "editFile"
     path string
     content string
 }

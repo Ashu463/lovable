@@ -1,5 +1,5 @@
 import { Sandbox } from 'e2b'
-import type { DeleteFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
+import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
 /*
 Steps/flow I thought for sandboxes
@@ -112,7 +112,7 @@ export class E2BSandbox{
     // implement to increase the TTL of sandbox by one hour whenever any of these 
     // functions get called.
     
-    async Execute(id: string, payload: ReadFile | WriteFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
+    async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
         // const homeDir = 
         if(payload.action === 'read'){
             try{
@@ -138,6 +138,9 @@ export class E2BSandbox{
             catch(e){
                 throw new Error("Error occurred while executing write sandbox file")
             }
+        }
+        else if(payload.action === 'editFile'){
+            throw new Error(`To be implemented don't call this please`)
         }
         else if(payload.action === 'delete'){
             try{

@@ -23,6 +23,7 @@ export class SubAgent<T extends keyof ContextMap> {
     private contextManager?: ContextManager<ContextMap[T]>
     private taskId: number
     private repoTree: string = ""
+    
     constructor(
         public agentType: T,
         public input: InputMap[T],
@@ -33,7 +34,7 @@ export class SubAgent<T extends keyof ContextMap> {
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
-        this.taskId = (this.input as BaseTaskInput).task.taskId
+        this.taskId = (this.input as BaseTaskInput).task.taskId        
     }
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
@@ -123,7 +124,7 @@ export class SubAgent<T extends keyof ContextMap> {
         if(this.repoTree === ""){
             const cwd = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
             let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")
-            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${cwd} && tree -I 'node_modules|.git|dist|build'`})).content
+            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${root} && tree -I 'node_modules|.git|dist|build'`})).content
         }
         const res = await axios.get(`${BACKEND_URL}/db/fetchSummaries`, {
             params: {dependentTaskIds}
@@ -132,7 +133,13 @@ export class SubAgent<T extends keyof ContextMap> {
         return { dependentSummary: summaries, repoTree: this.repoTree }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
+        if(this.repoTree === ""){
+            const cwd = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
+            let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")
+            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${root} && tree -I 'node_modules|.git|dist|build'`})).content
+        }
         return {
+            repoTree: this.repoTree,
             originalError: (this.input as BaseTaskInput).task.task,
             fixHistory: []
         }

@@ -130,6 +130,7 @@ export interface Context7 {
 }
 
 export interface DebuggerContext {
+  repoTree: string
   originalError: string
   fixHistory: Fixes[]
   
@@ -161,7 +162,7 @@ export interface Design {
   
 }
 
-export interface DocsSeach {
+export interface DocsSearch {
   type: "docsSearch"
   library: string
   query: string
@@ -175,7 +176,7 @@ export interface Done {
 }
 
 export interface EditFile {
-  action: "edit"
+  action: "editFile"
   path: string
   content: string
   
@@ -280,7 +281,7 @@ export interface ReadFile {
 
 export interface Research {
   action: "research"
-  searchType: WebSearch | WebScrape | DocsSeach
+  searchType: WebSearch | WebScrape | DocsSearch
   
 }
 
