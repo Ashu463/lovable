@@ -19,12 +19,13 @@ export async function AgentCall(
   sandbox: E2BSandbox,
   semanticMem: string,
   answers?: Answers[]
-): Promise<void> {
+): Promise<any> {
 
   const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem)
 
   try {
-    await orchestrator.Orchestrate(userPrompt, answers)
+    const result = await orchestrator.Orchestrate(userPrompt, answers)
+    return result
   } catch (err) {
     await createBackendEmitter(runId).emit({ type: "run_failed", error: String(err) })
   } finally {

@@ -648,7 +648,7 @@ export class BamlSyncClient {
   }
   
   MainLLMCall(
-      systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
       __baml_options__?: BamlCallOptions<never>
   ): types.LLMResponse {
     try {
@@ -680,7 +680,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "MainLLMCall",
         {
-          "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),

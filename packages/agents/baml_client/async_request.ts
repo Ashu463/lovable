@@ -406,7 +406,7 @@ env?: Record<string, string | undefined>
       }
       
   async MainLLMCall(
-  systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+  systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -425,7 +425,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "MainLLMCall",
       {
-      "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+      "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -1204,7 +1204,7 @@ env?: Record<string, string | undefined>
           }
           
       async MainLLMCall(
-      systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -1223,7 +1223,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "MainLLMCall",
           {
-          "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),

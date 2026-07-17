@@ -25,7 +25,6 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
 
 
     async craftDesignVariants(request: UIExpertRequest): Promise<string[]> {
-
         const raw = await this.callLLM(request)
         const parsed = JSON.parse(raw)
         return parsed.prompts
@@ -37,8 +36,23 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
         )
         return designs
     }
-    async generateBoilerplate(design: Design): Promise<string> {
-        return await makeBoilerPlate(design.figmaUrl)
+    // async generateBoilerplate(design: Design): Promise<string> {
+    //     return await makeBoilerPlate(design.figmaUrl)
+    // }
+    async fetchDesigns(screens: Screen[]): Promise<string[]>{
+        return Promise.all(
+            screens.map(screen => this.fetchDesignHtml(screen))
+        )
+    }
+    async fetchDesignHtml(screen: Screen): Promise<string> {
+        const htmlUrl = await screen.getHtml();
+        const res = await fetch(htmlUrl);
+
+        if (!res.ok) {
+            throw new Error(`Failed to fetch HTML for screen ${screen.screenId}: ${res.status} ${res.statusText}`);
+        }
+
+        return await res.text();
     }
     
     override async callLLM(request: UIExpertRequest): Promise<string> {

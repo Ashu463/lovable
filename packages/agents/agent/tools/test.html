@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Obsidian Focus - Today</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter & Geist Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#ffdad6",
+                    "surface-bright": "#373a3b",
+                    "on-tertiary-fixed": "#121c2a",
+                    "primary-container": "#000000",
+                    "on-secondary-container": "#e6ecff",
+                    "surface-container-high": "#282a2b",
+                    "surface-variant": "#323536",
+                    "on-tertiary": "#27313f",
+                    "on-tertiary-container": "#6c7686",
+                    "primary-fixed-dim": "#c6c6c6",
+                    "on-background": "#e1e3e4",
+                    "background": "#000000",
+                    "on-primary-fixed-variant": "#474747",
+                    "surface-container-low": "#191c1d",
+                    "surface-tint": "#c6c6c6",
+                    "secondary-container": "#0566d9",
+                    "surface-container-lowest": "#0c0f10",
+                    "outline-variant": "#4c4546",
+                    "tertiary-fixed-dim": "#bdc7d9",
+                    "error": "#ffb4ab",
+                    "on-primary-container": "#757575",
+                    "on-secondary-fixed-variant": "#004395",
+                    "secondary-fixed-dim": "#adc6ff",
+                    "surface-container-highest": "#323536",
+                    "surface-container": "#1d2021",
+                    "on-secondary": "#002e6a",
+                    "on-secondary-fixed": "#001a42",
+                    "outline": "#988e90",
+                    "inverse-primary": "#5e5e5e",
+                    "tertiary-container": "#000000",
+                    "on-tertiary-fixed-variant": "#3d4756",
+                    "on-primary": "#303030",
+                    "tertiary-fixed": "#d9e3f6",
+                    "secondary-fixed": "#d8e2ff",
+                    "tertiary": "#bdc7d9",
+                    "secondary": "#adc6ff",
+                    "primary": "#c6c6c6",
+                    "inverse-surface": "#e1e3e4",
+                    "on-surface-variant": "#cfc4c5",
+                    "on-error": "#690005",
+                    "primary-fixed": "#e2e2e2",
+                    "surface": "#111415",
+                    "surface-dim": "#111415",
+                    "error-container": "#93000a",
+                    "on-primary-fixed": "#1b1b1b",
+                    "inverse-on-surface": "#2e3132",
+                    "on-surface": "#e1e3e4"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "max-width": "800px",
+                    "md": "16px",
+                    "margin-desktop": "64px",
+                    "sm": "8px",
+                    "margin-mobile": "20px",
+                    "xl": "40px",
+                    "lg": "24px",
+                    "xs": "4px",
+                    "unit": "4px"
+            },
+            "fontFamily": {
+                    "body-lg": ["Inter", "sans-serif"],
+                    "label-md": ["Geist Mono", "monospace"],
+                    "body-md": ["Inter", "sans-serif"],
+                    "headline-lg": ["Inter", "sans-serif"],
+                    "headline-lg-mobile": ["Inter", "sans-serif"],
+                    "headline-md": ["Inter", "sans-serif"],
+                    "label-sm": ["Geist Mono", "monospace"]
+            },
+            "fontSize": {
+                    "body-lg": ["16px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-sm": ["11px", {"lineHeight": "14px", "letterSpacing": "0.03em", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #000000;
+            color: #e1e3e4;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-checkbox:checked + .checkbox-visual .check-icon {
+            opacity: 1;
+        }
+        .custom-checkbox:checked ~ .task-label {
+            opacity: 0.5;
+            text-decoration: line-through;
+        }
+        /* Custom scrollbar for focus flow */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1F2937;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="dark selection:bg-secondary-container selection:text-white">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-background dark:bg-background">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-[800px] mx-auto">
+<button class="active:opacity-80 transition-opacity text-primary dark:text-primary">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface dark:text-on-surface">Focus</h1>
+<button class="active:opacity-80 transition-opacity text-on-surface-variant dark:text-on-surface-variant hover:text-primary dark:hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-margin-mobile max-w-[800px] mx-auto min-h-screen">
+<!-- Header Section -->
+<section class="mb-xl">
+<div class="flex flex-col gap-xs">
+<h2 class="font-headline-lg text-headline-lg md:text-headline-lg-mobile text-on-surface">Today</h2>
+<p class="font-label-md text-label-md text-outline">Monday, October 23rd</p>
+</div>
+<!-- Quick Stats -->
+<div class="flex gap-lg mt-md">
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-secondary"></div>
+<span class="font-label-md text-label-md text-on-surface-variant">3 tasks remaining</span>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-outline"></div>
+<span class="font-label-md text-label-md text-outline">5 completed</span>
+</div>
+</div>
+</section>
+<!-- Task List Containers -->
+<div class="space-y-xl">
+<!-- Urgent Section -->
+<section>
+<div class="flex items-center justify-between mb-md border-b border-surface-variant pb-xs">
+<h3 class="font-label-md text-label-md uppercase tracking-widest text-secondary">Urgent</h3>
+<span class="font-label-sm text-label-sm px-sm py-xs bg-surface-container-highest rounded text-on-surface">High Priority</span>
+</div>
+<div class="space-y-xs">
+<!-- Task Item 1 -->
+<label class="group flex items-center gap-md p-md hover:bg-[#111827] transition-colors cursor-pointer border-b border-[#1F2937]">
+<div class="relative flex items-center justify-center">
+<input class="custom-checkbox sr-only" type="checkbox"/>
+<div class="checkbox-visual w-6 h-6 border-2 border-outline rounded-sm flex items-center justify-center transition-all group-hover:border-secondary">
+<span class="material-symbols-outlined check-icon opacity-0 text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<span class="task-label font-body-lg text-body-lg text-on-surface transition-all">Review quarterly financial report</span>
+<div class="ml-auto flex gap-xs items-center">
+<span class="font-label-sm text-label-sm text-outline">9:00 AM</span>
+</div>
+</label>
+<!-- Task Item 2 -->
+<label class="group flex items-center gap-md p-md hover:bg-[#111827] transition-colors cursor-pointer border-b border-[#1F2937]">
+<div class="relative flex items-center justify-center">
+<input class="custom-checkbox sr-only" type="checkbox"/>
+<div class="checkbox-visual w-6 h-6 border-2 border-outline rounded-sm flex items-center justify-center transition-all group-hover:border-secondary">
+<span class="material-symbols-outlined check-icon opacity-0 text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<span class="task-label font-body-lg text-body-lg text-on-surface transition-all">Client presentation for Project Obsidian</span>
+<div class="ml-auto">
+<span class="material-symbols-outlined text-secondary text-[20px]">priority_high</span>
+</div>
+</label>
+</div>
+</section>
+<!-- Upcoming Section -->
+<section>
+<div class="flex items-center justify-between mb-md border-b border-surface-variant pb-xs">
+<h3 class="font-label-md text-label-md uppercase tracking-widest text-outline">Upcoming</h3>
+</div>
+<div class="space-y-xs">
+<!-- Task Item 3 -->
+<label class="group flex items-center gap-md p-md hover:bg-[#111827] transition-colors cursor-pointer border-b border-[#1F2937]">
+<div class="relative flex items-center justify-center">
+<input class="custom-checkbox sr-only" type="checkbox"/>
+<div class="checkbox-visual w-6 h-6 border-2 border-outline rounded-sm flex items-center justify-center transition-all group-hover:border-secondary">
+<span class="material-symbols-outlined check-icon opacity-0 text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<span class="task-label font-body-lg text-body-lg text-on-surface transition-all">Update design system tokens</span>
+<div class="ml-auto font-label-sm text-label-sm px-sm py-0.5 bg-[#1F2937] text-on-surface-variant rounded-full">Work</div>
+</label>
+</div>
+</section>
+<!-- Done Section -->
+<section class="opacity-60">
+<div class="flex items-center justify-between mb-md border-b border-surface-variant pb-xs">
+<h3 class="font-label-md text-label-md uppercase tracking-widest text-outline">Done</h3>
+</div>
+<div class="space-y-xs">
+<!-- Task Item 4 (Done) -->
+<label class="group flex items-center gap-md p-md hover:bg-[#111827] transition-colors cursor-pointer border-b border-[#1F2937]">
+<div class="relative flex items-center justify-center">
+<input checked="" class="custom-checkbox sr-only" type="checkbox"/>
+<div class="checkbox-visual w-6 h-6 border-2 border-secondary rounded-sm flex items-center justify-center transition-all">
+<span class="material-symbols-outlined check-icon opacity-100 text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<span class="task-label font-body-lg text-body-lg text-on-surface transition-all opacity-50 line-through">Morning meditation &amp; breathing</span>
+</label>
+<!-- Task Item 5 (Done) -->
+<label class="group flex items-center gap-md p-md hover:bg-[#111827] transition-colors cursor-pointer border-b border-[#1F2937]">
+<div class="relative flex items-center justify-center">
+<input checked="" class="custom-checkbox sr-only" type="checkbox"/>
+<div class="checkbox-visual w-6 h-6 border-2 border-secondary rounded-sm flex items-center justify-center transition-all">
+<span class="material-symbols-outlined check-icon opacity-100 text-secondary text-[18px]" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</div>
+<span class="task-label font-body-lg text-body-lg text-on-surface transition-all opacity-50 line-through">Inbox zero protocol</span>
+</label>
+</div>
+</section>
+</div>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-20 right-gutter w-14 h-14 bg-secondary-container text-on-secondary-container rounded-full flex items-center justify-center shadow-2xl active:scale-95 transition-transform z-[60] group overflow-hidden">
+<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<span class="material-symbols-outlined text-[32px]" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 bg-background dark:bg-background border-t border-surface-variant dark:border-surface-variant">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary scale-95 duration-150" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+</a>
+<!-- Calendar -->
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline hover:text-on-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+</a>
+<!-- Folder -->
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline hover:text-on-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline hover:text-on-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</a>
+</nav>
+<script>
+        // Micro-interactions for task completion
+        document.querySelectorAll('.custom-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', (e) => {
+                const visual = e.target.nextElementSibling;
+                if (e.target.checked) {
+                    visual.classList.replace('border-outline', 'border-secondary');
+                    visual.querySelector('.check-icon').classList.replace('opacity-0', 'opacity-100');
+                } else {
+                    visual.classList.replace('border-secondary', 'border-outline');
+                    visual.querySelector('.check-icon').classList.replace('opacity-100', 'opacity-0');
+                }
+            });
+        });
+    </script>
+</body></html>

@@ -28,7 +28,7 @@ const SERVER_CONFIGS: Record<string, ServerConfig> = {
     stitch: {
         command: "node",
         args: ["./services/stitch-server.js"],
-        env: process.env.GOOGLE_API_KEY
+        env: process.env.STITCH_API_KEY
     },
     apify:{
         command: "npx",

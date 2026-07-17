@@ -25,12 +25,13 @@ export class SubAgent<T extends keyof ContextMap> {
     private repoTree: string = ""
     
     constructor(
-        public agentType: T,
-        public input: InputMap[T],
-        public userId: string,
-        public projectId: string,
-        public sandbox: E2BSandbox,
-        public semanticMem: string,
+        private agentType: T,
+        private input: InputMap[T],
+        private userId: string,
+        private projectId: string,
+        private sandbox: E2BSandbox,
+        private semanticMem: string,
+        private selectedDesign: string
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
@@ -39,7 +40,7 @@ export class SubAgent<T extends keyof ContextMap> {
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign) as any
         case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
         case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox) as any
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any

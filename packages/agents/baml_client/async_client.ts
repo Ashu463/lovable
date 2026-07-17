@@ -714,7 +714,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async MainLLMCall(
-        systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+        systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.LLMResponse> {
           try {
@@ -728,7 +728,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.MainLLMCall(
-          systemPrompt,design,userPrompt,context,semanticMem,
+          systemPrompt,userPrompt,context,semanticMem,design,orchestratorContext,
           __baml_options__
           );
 
@@ -752,7 +752,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "MainLLMCall",
             {
-            "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -2270,7 +2270,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             MainLLMCall(
-            systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+            systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.LLMResponse, types.LLMResponse>
               {
@@ -2319,7 +2319,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "MainLLMCall",
                 {
-                "systemPrompt": systemPrompt,"design": design ?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design ?? null,"orchestratorContext": orchestratorContext
                 },
                 undefined,
                 this.ctxManager.cloneContext(),

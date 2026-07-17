@@ -27,7 +27,9 @@ export class MainAgent{
         private projectId: string,
         private runId: string,
         private semanticMem: string,
+        private selectedDesign: string,
         private sandbox: E2BSandbox,
+        private orchestratorContext: string,
     ){ 
         this.iterations = 0
         this.K = COMPACTION_PARAMETER
@@ -147,7 +149,7 @@ export class MainAgent{
 
     async callLLM(userPrompt: string): Promise<LLMResponse>{
         try{
-            const response: LLMResponse = await b.MainLLMCall(MAIN_AGENT_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem)
+            const response: LLMResponse = await b.MainLLMCall(MAIN_AGENT_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
             return response
         }
         catch(e){

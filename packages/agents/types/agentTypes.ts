@@ -33,14 +33,14 @@ export type OrchestratorResponse =
       clarification_needed 
     | design_needed 
     | {status: 'error', reason: string, data?: any}
-    | {status: 'completed', design: Screen, todos: PlannerTodo[], previewUrl: string, summary: string}
+    | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
 export type clarification_needed = {
     status: 'clarification_needed',
     questions: Question[]
 }
 export type design_needed = {
     status: 'select_design',
-    designs: Screen[]
+    designs: string[]
 }
 // export interface BootstrapResponse{
 //     status: 'ready_to_act' | 'select_design' | 'clarification_needed' | 'error'

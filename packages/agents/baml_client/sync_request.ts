@@ -402,7 +402,7 @@ export class HttpRequest {
   }
   
   MainLLMCall(
-      systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -421,7 +421,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "MainLLMCall",
         {
-          "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1200,7 +1200,7 @@ export class HttpStreamRequest {
   }
   
   MainLLMCall(
-      systemPrompt: string,design?: string | null,userPrompt: string,context: types.Message[],semanticMem: string,
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1219,7 +1219,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "MainLLMCall",
         {
-          "systemPrompt": systemPrompt,"design": design?? null,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

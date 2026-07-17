@@ -23,7 +23,7 @@ type InputBuilder<T extends SubAgentType> = (
 ) => InputMap[T]
 
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
-interface OrchestratorContext{
+type OrchestratorContext = {
     taskId: number,
     task: string, 
     agentAssigned: SubAgentType, 
@@ -44,6 +44,7 @@ export class OrchestratorAgent{
     private uiExpert: UIExpert
     private context: OrchestratorContext[]
     private state: OrchestratorState
+    private selectedDesign: string = ""
     constructor(
         public userId: string, 
         public projectId: string,
@@ -186,12 +187,13 @@ export class OrchestratorAgent{
             }
         }
         
-        let designs
+        let designsHtml: string[] = []
         if(designRes.data.length === 0){
-            designs = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
+            const designs = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
+            designsHtml = await this.uiExpert.fetchDesigns(designs)
             return {
                 status: 'select_design',
-                designs: designs
+                designs: designsHtml
             }
         }
         const { data: screen } = await axios.get<Screen>(`${BACKEND_URL}/db/${this.runId}/getSelectedDesign`)
@@ -205,7 +207,7 @@ export class OrchestratorAgent{
         }
     }
 
-    async Orchestrate(userPrompt: string, answers?: Answers[], design?: Screen): Promise<OrchestratorResponse>{
+    async Orchestrate(userPrompt: string, answers?: Answers[], design?: string): Promise<OrchestratorResponse>{
 
         const data = await this.Bootstrap(userPrompt, answers);
 
@@ -230,14 +232,15 @@ export class OrchestratorAgent{
             }
         }
         if(!design){
-            const { data: fetchedDesign } = await axios.get<Screen>(`${BACKEND_URL}/${this.projectId}/designs/selected`)
+            const { data: fetchedDesign } = await axios.get<string>(`${BACKEND_URL}/${this.projectId}/designs/selected`)
             design = fetchedDesign
         }
+        this.selectedDesign = design
 
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.sandbox)
+            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, this.context)
 
             const mainResult = await mainAgent.runLoop()
             orchestratorSummary = mainResult.summary
@@ -261,7 +264,7 @@ export class OrchestratorAgent{
                 const agentType = todo?.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state)
                 
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.semanticMem)
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.semanticMem, this.selectedDesign)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
@@ -331,7 +334,7 @@ export class OrchestratorAgent{
         try{
             let previousErrorSignature: string | null = null
             while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
-                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, semanticMem )
+                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, semanticMem, this.selectedDesign)
     
                 const testerRes: TesterResponse = await tester.Test()
                 const error: Error = {
@@ -358,7 +361,7 @@ export class OrchestratorAgent{
                     status: 'pending'
                 }
                 const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, semanticMem)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, semanticMem, this.selectedDesign)
                 const debuggerResult = await debuggerAgent.runLoop()
                 this.state.lastToolResult = {
                     success: debuggerResult.success,                                

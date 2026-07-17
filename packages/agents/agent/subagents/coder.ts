@@ -38,6 +38,7 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
         userId: string,
         projectId: string,
         sandbox: E2BSandbox,
+        private selectedDesign: string,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
     ){super(userId, projectId, sandbox)
         this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)

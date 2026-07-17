@@ -49,7 +49,14 @@ class LLMResponse{
     questions Question[]?
 }   
 
-function MainLLMCall(systemPrompt: string, design: string?, userPrompt: string, context: Message[], semanticMem: string) -> LLMResponse{
+function MainLLMCall(
+  systemPrompt: string, 
+  userPrompt: string, 
+  context: Message[], 
+  semanticMem: string, 
+  design: string?,
+  orchestratorContext: string
+  ) -> LLMResponse{
 
     client OpenAIGeneric
     prompt #"
@@ -59,11 +66,12 @@ function MainLLMCall(systemPrompt: string, design: string?, userPrompt: string, 
         {% if design %} - the design system chosen once at the start of
   this Run (layout, visual language, conventions). Never regenerate or
   second-guess this; treat it as settled. {% endif %}
-        {{context}} - relevant current state of the app: files, prior
+        {{context}} - is the context of main agent
+        {{semanticMem}} - Relevant user context for this build, Use this to calibrate scope, defaults, and how much you ask vs decide.
+        {{orchestratorContext}} - relevant current state of the app: files, prior
   decisions, whatever the orchestrator has determined is relevant to this
   task.
-        {{semanticMem}} - Relevant user context for this build, Use this to calibrate scope, defaults, and how much you ask vs decide.
-
+  
         {{ctx.output_format}}
     "#
 }
