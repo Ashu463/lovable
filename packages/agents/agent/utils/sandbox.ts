@@ -48,60 +48,69 @@ export class E2BSandbox{
         await instance.restoreOrBootstrap()
         return instance
     }
+    private readonly APP_DIR = '/home/user/app'
+
     private async restoreOrBootstrap(): Promise<void> {
         const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
 
         if (files.length > 0) {
-            console.log("Starting previous container", files.length)
+            console.log(`Restoring ${files.length} files from R2`)
 
-const ls2 = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
-console.log(ls2, " is the whole list")
             for (const key of files) {
                 const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
                 const content = await this.r2.getFile(key)
-                // console.log(relativePath, " is the path, ", content)
-                const fileWrite = await this.Execute(this.sandboxId, {action: "writeFile", path: relativePath, content})
-                const readContent = await this.Execute(this.sandboxId, {action: "read", path: relativePath})
-                // console.log(relativePath, " is the path and ", readContent, " is the file writing response while spinning up the sandbox")
-
+                await this.Execute(this.sandboxId, {
+                    action: 'writeFile',
+                    path: `${this.APP_DIR}${relativePath}`,
+                    content
+                })
             }
+
+            console.log('Restore complete')
         } else {
-            console.log(await this.Execute(this.sandboxId, {action: 'runCommand', command: "pwd && ls"}))
-            const pwd = await this.sandbox.commands.run('pwd')
-            const home = await this.sandbox.commands.run('echo $HOME')
-            // const ls = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
-            // console.log('root+home listing:', ls.stdout)
-            console.log('pwd:', pwd.stdout)
-            console.log('HOME:', home.stdout)
+            console.log('Bootstrapping fresh sandbox')
 
-            const set = await this.sandbox.commands.run(
-                'mkdir -p /home/user/app && cd /home/user/app && curl -fsSL https://codeload.github.com/Ashu463/react-template/tar.gz/refs/heads/master -o repo.tar.gz',
-                // { cwd: '/home/user' }
-            )
-            console.log(set.error, set.stderr, set.stdout, " are set error")
-            const zip = await this.sandbox.commands.run(
-    'tar -xzf repo.tar.gz --strip-components=1 && rm repo.tar.gz',
-    { cwd: '/home/user/app' }
-)   
-const ls2 = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
-console.log('root+home listing, after code cloning:', ls2.stdout)
-// const check = await this.sandbox.commands.run('pwd && ls -la /home/user && cat /home/user/package.json')
-// console.log(check, " is the check output")
-            // console.log(await this.sandbox.commands.run(`ls -la && pwd`))
-            const install = await this.sandbox.commands.run('npm install', 
-                { cwd: '/home/user/app' }
-            )
-// console.log('exitCode:', install.exitCode)
-// console.log('stdout:', install.stdout)
-// console.log('stderr:', install.stderr)
+            await this.sandbox.commands.run(`mkdir -p ${this.APP_DIR}`)
 
-            console.log("--------------Sandbox Starting done-------------------- id is, ", this.sandboxId)
+            await this.sandbox.commands.run(
+                'curl -fsSL https://codeload.github.com/Ashu463/react-template/tar.gz/refs/heads/master -o repo.tar.gz',
+                { cwd: this.APP_DIR }
+            )
+
+            await this.sandbox.commands.run(
+                'tar -xzf repo.tar.gz --strip-components=1 && rm repo.tar.gz',
+                { cwd: this.APP_DIR }
+            )
+
+            const install = await this.sandbox.commands.run('npm install', { cwd: this.APP_DIR })
+            if (install.exitCode !== 0) {
+                console.error('npm install failed:', install.stderr)
+                throw new Error('Bootstrap failed: npm install did not succeed')
+            }
+
+            console.log('Bootstrap complete, sandboxId:', this.sandboxId)
 
             await this.SyncR2()
         }
+        
     }
     // implement to increase the TTL of sandbox by one hour whenever any of these 
     // functions get called.
+
+    async getRepoTree(): Promise<string>{
+        try{
+            const result = await this.sandbox.commands.run(
+                "find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' -not -name '.env'",
+                { cwd: '/home/user/app' }
+            )
+            return result.stdout
+
+        }
+        catch(e){
+            console.warn(e)
+            throw new Error(`Error occurred while generating repository tree`)
+        }
+    }
     
     async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
         // const homeDir = 
@@ -114,6 +123,7 @@ console.log('root+home listing, after code cloning:', ls2.stdout)
                 }
             }
             catch(e){
+                console.warn(e)
                 throw new Error("Error occured while reading from sandbox file")
             }
         }
@@ -127,6 +137,7 @@ console.log('root+home listing, after code cloning:', ls2.stdout)
                 }
             }
             catch(e){
+                console.warn(e)
                 throw new Error("Error occurred while executing write sandbox file")
             }
         }
@@ -143,6 +154,7 @@ console.log('root+home listing, after code cloning:', ls2.stdout)
                 }
             }
             catch(e){
+                console.warn(e)
                 throw new Error("Error occurred while executing deleting sandbox file")
             }
         }
@@ -166,6 +178,7 @@ console.log('root+home listing, after code cloning:', ls2.stdout)
                 }
             }
             catch(e){
+                console.warn(e)
                 throw new Error("Error occurred while executing sandbox cmd")
             }
         }

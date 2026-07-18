@@ -122,9 +122,7 @@ export class SubAgent<T extends keyof ContextMap> {
     async BuildCoderContext(): Promise<CoderContext>{
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
-            const cwd = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
-            let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")
-            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${root} && tree -I 'node_modules|.git|dist|build'`})).content
+            this.repoTree = await this.sandbox.getRepoTree()
         }
         const res = await axios.get(`${BACKEND_URL}/db/fetchSummaries`, {
             params: {dependentTaskIds}
@@ -134,9 +132,7 @@ export class SubAgent<T extends keyof ContextMap> {
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
-            const cwd = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: "find / -name package.json -not -path '*/node_modules/*' | head -1"})
-            let root = cwd.stdout?.trim().replace(/\/package\.json$/, "")
-            this.repoTree = (await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: `cd ${root} && tree -I 'node_modules|.git|dist|build'`})).content
+            this.repoTree = await this.sandbox.getRepoTree()
         }
         return {
             repoTree: this.repoTree,
