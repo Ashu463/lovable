@@ -6,6 +6,12 @@ client OpenAIGeneric {
     model "deepseek-v4-flash"
   }
 }
+client<llm> Gemini {
+  provider google-ai
+  options {
+    model "gemini-3.5-flash"
+  }
+}
 
 class AgentResponse{
     
