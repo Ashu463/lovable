@@ -52,30 +52,48 @@ export class E2BSandbox{
         const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
 
         if (files.length > 0) {
-            console.log("Startin previous container", files.length)
+            console.log("Starting previous container", files.length)
+
+const ls2 = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
+console.log(ls2, " is the whole list")
             for (const key of files) {
-                const content = await this.r2.getFile(key)
                 const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
-                await this.sandbox.files.write(relativePath, content)
+                const content = await this.r2.getFile(key)
+                // console.log(relativePath, " is the path, ", content)
+                const fileWrite = await this.Execute(this.sandboxId, {action: "writeFile", path: relativePath, content})
+                const readContent = await this.Execute(this.sandboxId, {action: "read", path: relativePath})
+                // console.log(relativePath, " is the path and ", readContent, " is the file writing response while spinning up the sandbox")
+
             }
         } else {
+            console.log(await this.Execute(this.sandboxId, {action: 'runCommand', command: "pwd && ls"}))
+            const pwd = await this.sandbox.commands.run('pwd')
+            const home = await this.sandbox.commands.run('echo $HOME')
+            // const ls = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
+            // console.log('root+home listing:', ls.stdout)
+            console.log('pwd:', pwd.stdout)
+            console.log('HOME:', home.stdout)
+
             const set = await this.sandbox.commands.run(
-                'curl -fsSL https://codeload.github.com/Ashu463/react-template/tar.gz/refs/heads/master -o repo.tar.gz',
-                { cwd: '/home/user' }
+                'mkdir -p /home/user/app && cd /home/user/app && curl -fsSL https://codeload.github.com/Ashu463/react-template/tar.gz/refs/heads/master -o repo.tar.gz',
+                // { cwd: '/home/user' }
             )
             console.log(set.error, set.stderr, set.stdout, " are set error")
             const zip = await this.sandbox.commands.run(
     'tar -xzf repo.tar.gz --strip-components=1 && rm repo.tar.gz',
-    { cwd: '/home/user' }
+    { cwd: '/home/user/app' }
 )   
-const check = await this.sandbox.commands.run('ls -la /home/user && cat /home/user/package.json && ls /home/user/node_modules | head -5', { cwd: '/home/user' })
-console.log(check.stdout)
-            console.log(await this.sandbox.commands.run(`ls && pwd`))
-            console.log(zip.error, zip.stderr, zip.stdout, " are zip error")
-            const install = await this.sandbox.commands.run('npm install', { cwd: '/home/user' })
-console.log('exitCode:', install.exitCode)
-console.log('stdout:', install.stdout)
-console.log('stderr:', install.stderr)
+const ls2 = await this.sandbox.commands.run('ls -la /home/user 2>/dev/null; ls -la / 2>/dev/null')
+console.log('root+home listing, after code cloning:', ls2.stdout)
+// const check = await this.sandbox.commands.run('pwd && ls -la /home/user && cat /home/user/package.json')
+// console.log(check, " is the check output")
+            // console.log(await this.sandbox.commands.run(`ls -la && pwd`))
+            const install = await this.sandbox.commands.run('npm install', 
+                { cwd: '/home/user/app' }
+            )
+// console.log('exitCode:', install.exitCode)
+// console.log('stdout:', install.stdout)
+// console.log('stderr:', install.stderr)
 
             console.log("--------------Sandbox Starting done-------------------- id is, ", this.sandboxId)
 
@@ -105,7 +123,7 @@ console.log('stderr:', install.stderr)
                 
                 return {
                     success: true,
-                    content: `Content written at ${writeRes}`
+                    content: `Content written at ${writeRes.path}`
                 }
             }
             catch(e){
@@ -183,6 +201,7 @@ console.log('stderr:', install.stderr)
         ].join(' ')
 
         const result = await this.sandbox.commands.run(findCmd)
+        // console.log(result, " is the find -type f command result")
        // I've to trust the LLM that he'll send me the right folder directory while writing any file
 
         const absolutePaths = result.stdout.split('\n')
