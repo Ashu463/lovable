@@ -65,24 +65,24 @@ questionRouter.post('/:projectId/:runId', auth, async (req: Request, res: Respon
     });
 })
 
-questionRouter.post('/:projectId/:questionId/answer', auth, async (req: Request, res: Response) =>{
-    const {runId, questionId} = req.params
-    const {answer} = req.body
+// questionRouter.post('/:projectId/:questionId/answer', auth, async (req: Request, res: Response) =>{
+//     const {runId, questionId} = req.params
+//     const {answer} = req.body
 
-    if(typeof questionId !== 'string' || typeof runId !== 'string'){
-        return res.status(400).json({message: `Invalid data type of questionId`})
-    }
+//     if(typeof questionId !== 'string' || typeof runId !== 'string'){
+//         return res.status(400).json({message: `Invalid data type of questionId`})
+//     }
 
-    const question = await prisma.question.findUnique({where: {id: questionId}})
-    await prisma.answers.create({data:{
-        id: randomUUIDv7(),
-        runId: runId,
-        questionId: questionId,
-        questionText: question.question,
-        answer: answer,
-        createdAt: new Date()
-    }})
-    return res.status(201).json({
-        success: true,
-    });
-})
+//     const question = await prisma.question.findUnique({where: {id: questionId}})
+//     await prisma.answers.create({data:{
+//         id: randomUUIDv7(),
+//         runId: runId,
+//         questionId: questionId,
+//         questionText: question.question,
+//         answer: answer,
+//         createdAt: new Date()
+//     }})
+//     return res.status(201).json({
+//         success: true,
+//     });
+// })

@@ -6,6 +6,7 @@ import { randomUUIDv7 } from "bun";
 import { prisma } from "../src/prisma";
 import { getBus } from "./events";
 import { E2BSandbox } from "../../../packages/agents/agent/utils/sandbox";
+import { logger } from "./utils";
 
 const chatRouter = Router()
 /*
@@ -26,7 +27,7 @@ async function createRun(req: Request, res: Response){
     const userId = req.headers.userid
     let projectId = req.params?.projectId
     const userPrompt = req.body.userPrompt
-    const existingSandboxId = req.body.sandboxId
+    const existingSandboxId = req.body?.sandboxId
     if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
         return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
     }
@@ -36,7 +37,10 @@ async function createRun(req: Request, res: Response){
             userId: userId,
         }})
         projectId = project.id
+        logger.info(`New Project created`)
     }
+    logger.info(`Project id: ${projectId}`)
+    
     if(typeof projectId !== 'string'){
         return res.status(400).json({})
     }
@@ -49,7 +53,13 @@ async function createRun(req: Request, res: Response){
         sandboxId: sandbox.sandboxId,
         userPrompt: userPrompt,
     }})
+    logger.info(`Run created, id: ${run.id}`)
     const user = await prisma.user.findUnique({where: {id: userId}})
+    
+    // activate after testing, #POST-TESTING
+    // if(!user){
+    //     return res.status(404).json({success: false, message: `User not found :(`})
+    // }
 
     AgentCall(userId, projectId, userPrompt, run.id, sandbox, user.semanticMem)
 
@@ -59,6 +69,7 @@ async function createRun(req: Request, res: Response){
         projectId: projectId
     })
 }
+
 chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Response) =>{
 
     const userId = req.headers.userid
