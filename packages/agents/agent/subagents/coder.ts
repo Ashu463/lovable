@@ -5,21 +5,6 @@ import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";
 
-/* Steps: 
-- Make connection to the db
-- if this user exists then 
-- create a new user
-- prismaService.create(), .update() and so on 
-- if this is a new user then, then spin a new sandbox and save it's userId and sessionId with mapping s3Id to it
-- else fetch the userId, and complete s3 data stored and load that in sandbox.
-
-- Coder recieved the design, sandboxId to connect with it. 
-    Note that, I've opened the fresh sandbox incase this is fresh new request. 
-    else resume the sandbox by loading all the files from s3.
-
-- Now Coder run inside sandbox and that will have some code present in it.
-
-*/
 interface CoderRequest{
     context: CoderContext
     boilerPlate?: string,
@@ -103,38 +88,20 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
             response: "Unknown Error occurred"
         }
     }
-    // async runLoop(): Promise<WriteFile | RunCommand  | Done>{
-    //     const researchAgent: Researcher = new Researcher()
-    //     let context: Message[] = []
-    //    const sandbox: E2BSandbox = new E2BSandbox(this.sandboxId)
-    //    // TODO: intially pushing to the context, make this to fetch from the memory about relevant context.
-    //     let response: WriteFile | ReadFile | DeleteFile | RunCommand | FetchDocs | Done | Research
-    //     let firstTurn = true;
-    //     if(this.s3Id){
-    //         // this is not the first turn 
-    //         firstTurn = false;
-    //     }
-    //     else{
-    //         this.s3Id = openS3Connection() //
-    //     }
-
-    //     // build context - memory lagao 
-
-    //     while(true){
-
-    //         try{
-    //             if(firstTurn){
-    //                 firstTurn = false
-    //             }
-    //             else{
-    //                 response = await b.CoderAgent(this.prompt, CODER_PROMPT, "", this.context)
-    //             }
-
-                
-    //         }
-    //         catch(e){
-    //             throw new Error("Error occurred")
-    //         }
-    //     }
-    // }
 }
+
+/* Steps: 
+- Make connection to the db
+- if this user exists then 
+- create a new user
+- prismaService.create(), .update() and so on 
+- if this is a new user then, then spin a new sandbox and save it's userId and sessionId with mapping s3Id to it
+- else fetch the userId, and complete s3 data stored and load that in sandbox.
+
+- Coder recieved the design, sandboxId to connect with it. 
+    Note that, I've opened the fresh sandbox incase this is fresh new request. 
+    else resume the sandbox by loading all the files from s3.
+
+- Now Coder run inside sandbox and that will have some code present in it.
+
+*/

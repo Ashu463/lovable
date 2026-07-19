@@ -5,8 +5,10 @@ import { Router } from "express";
 import { prisma } from "../src/prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
+import { randomUUIDv7 } from "bun";
+import type { Question } from "../../../packages/agents/baml_client";
 
-const questionRouter = Router();
+export const questionRouter = Router();
 
 questionRouter.get('/:projectId/questions', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
@@ -34,4 +36,53 @@ questionRouter.get('/:projectId/questions', auth, async (req: Request, res: Resp
         });
     }
     
+})
+
+questionRouter.post('/:projectId/:runId', auth, async (req: Request, res: Response) =>{
+    const {projectId, runId} = req.params
+
+    const {questionsObj} = req.body
+
+    if(typeof projectId !== 'string' || typeof runId !== 'string'){
+        return res.status(400).json({success: false, message: `Bad types of the params`})
+    }
+    await Promise.all(
+        questionsObj.map((question: Question) =>
+            prisma.question.create({
+            data: {
+                id: randomUUIDv7(),
+                runId,
+                projectId,
+                question: question.question,
+                options: question.option,
+                createdAt: new Date(),
+            },
+            })
+        )
+    );
+    return res.status(201).json({
+        success: true,
+    });
+})
+
+questionRouter.post('/:projectId/:questionId/answer', auth, async (req: Request, res: Response) =>{
+    const {runId, questionId} = req.params
+    const {answer} = req.body
+
+    if(typeof questionId !== 'string' || typeof runId !== 'string'){
+        return res.status(400).json({message: `Invalid data type of questionId`})
+    }
+
+    const question = await prisma.question.findUnique({where: {id: questionId}})
+    await prisma.answers.create({data:{
+        id: randomUUIDv7(),
+        runId: runId,
+        questionId: questionId,
+        questionText: question.question,
+        answer: answer,
+        createdAt: new Date()
+    }})
+    return res.status(201).json({
+        success: true,
+    });
 })

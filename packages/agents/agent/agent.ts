@@ -14,6 +14,7 @@ import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
 import { createBackendEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
+import { logger } from "./utils/logger"
 
 
 type InputBuilder<T extends SubAgentType> = (
@@ -220,9 +221,11 @@ export class OrchestratorAgent{
     async Orchestrate(userPrompt: string, answers?: Answers[], design?: string): Promise<OrchestratorResponse>{
 
         const data = await this.Bootstrap(userPrompt, answers);
+        logger.info(`Bootstrapped respose: ${data}`)
 
         if(data.status === 'clarification_needed'){
             // or save questions to db here? 
+            await axios.post(`${BACKEND_URL}/questions/${this.projectId}/${this.runId}`, data.questions)
             return {
                 status: 'clarification_needed',
                 questions: data.questions

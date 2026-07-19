@@ -5,6 +5,9 @@ import cors from 'cors'
 import projectRouter from '../modules/project';
 import runRouter from '../modules/run';
 import userRouter from '../modules/user';
+import chatRouter from '../modules/chat';
+import designRouter from '../modules/design';
+import { questionRouter } from '../modules/question';
 
 const app = express();
 app.use(cors())
@@ -13,5 +16,8 @@ app.use(express.json())
 app.use("/projects", projectRouter);
 app.use("/runs", runRouter);
 app.use("/users", userRouter);
+app.use("/chat", chatRouter)
+app.use("/design", designRouter)
+app.use("/question", questionRouter)
 
 app.listen(3000)
