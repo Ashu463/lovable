@@ -1,12 +1,13 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { auth } from "./middleware";
-import { AgentCall, type EventEmitter, type OrchestratorEvent } from "../../../packages/agents";
+import { type OrchestratorEvent } from "../../../packages/agents";
 import { randomUUIDv7 } from "bun";
 import { prisma } from "../src/prisma";
-import { getBus } from "./events";
+import { redis } from "./redis";
 import { E2BSandbox } from "../../../packages/agents/agent/utils/sandbox";
 import { logger } from "./utils";
+import { runQueue } from "./worker";
 
 const chatRouter = Router()
 /*
@@ -53,6 +54,7 @@ async function createRun(req: Request, res: Response){
         sandboxId: sandbox.sandboxId,
         userPrompt: userPrompt,
     }})
+    const runId = run.id
     logger.info(`Run created, id: ${run.id}`)
     const user = await prisma.user.findUnique({where: {id: userId}})
     
@@ -61,7 +63,19 @@ async function createRun(req: Request, res: Response){
     //     return res.status(404).json({success: false, message: `User not found :(`})
     // }
 
-    AgentCall(userId, projectId, userPrompt, run.id, sandbox, user.semanticMem)
+    try{
+        await runQueue.add("run", {
+            userId,
+            projectId,
+            prompt: userPrompt,
+            runId: run.id,
+            semanticMem: user.semanticMem,
+            sandboxId: sandbox.sandboxId,
+        })
+    } catch(e){
+        logger.error(`Failed to enqueue run ${run.id}: ${e}`)
+        return res.status(500).json({success: false, message: `Failed to start run`})
+    }
 
     return res.status(200).json({
         success: true,
@@ -94,8 +108,22 @@ chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Re
         userPrompt: previousRun.userPrompt,
         parentRunId: previousRun.id
     }})
+    const user = await prisma.user.findUnique({where: {id: userId}})
 
-    AgentCall(userId, projectId, run.userPrompt, run.id, sandbox, answers)
+    try{
+        await runQueue.add("run", {
+            userId,
+            projectId,
+            prompt: run.userPrompt,
+            runId: run.id,
+            semanticMem: user.semanticMem,
+            sandboxId: sandbox.sandboxId,
+            answers,
+        })
+    } catch(e){
+        logger.error(`Failed to enqueue run ${run.id}: ${e}`)
+        return res.status(500).json({success: false, message: `Failed to resume run`})
+    }
 
     return res.status(200).json({
         success: true,
@@ -130,12 +158,25 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
     }
 
     if(run.status !== 'IN_PROGRESS'){
-        res.end()
+        return res.end()
     }
-    
-    const bus = getBus(runId);
-    const onEvent = async (event: OrchestratorEvent) =>{
-        res.write(`data: ${JSON.stringify(event)}\n\n`)
+
+    // The agent runs in a separate worker process, so events arrive over Redis
+    // pub/sub (published by createRedisEmitter), not an in-process EventEmitter.
+    const subscriber = redis.duplicate();
+    await subscriber.subscribe(`run:${runId}`);
+
+    const onMessage = async (_channel: string, message: string) => {
+        let event: OrchestratorEvent;
+        try{
+            event = JSON.parse(message)
+        } catch(e){
+            logger.error(`Failed to parse event for run ${runId}: ${e}`)
+            return
+        }
+
+        res.write(`data: ${message}\n\n`)
+
         if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed'){
             await prisma.run.update({
                 where: {id: run.id},
@@ -147,17 +188,19 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
             res.end()
         }
     }
-    bus.on("event", onEvent)
+    subscriber.on("message", onMessage)
+    subscriber.on("error", (err) => logger.error(`Redis subscriber error for run ${runId}: ${err}`))
 
     const heartbeat = setInterval(() => {
         res.write(`: heartbeat\n\n`)
     }, 20000);
 
-    req.on("close", () =>{
-        bus.off("event", onEvent)
+    req.on("close", () => {
         clearInterval(heartbeat)
+        subscriber.off("message", onMessage)
+        subscriber.unsubscribe(`run:${runId}`).finally(() => subscriber.disconnect())
     })
-          
+
 })
 
 chatRouter.get('/:projectId/history', auth, async (req: Request, res: Response) =>{

@@ -1,7 +1,7 @@
 import type { OrchestratorResponse } from '../types/agentTypes';
 import axios from 'axios';
-import { BACKEND_URL } from './config/systemConfig';
-
+import { BACKEND_URL, REDIS_HOST, REDIS_PORT } from './config/systemConfig';
+import IORedis from "ioredis";
 export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
     | { type: "clarification_needed"; questions: string[] }
@@ -19,6 +19,7 @@ export interface EventEmitter {
   emit(event: OrchestratorEvent): Promise<void>;
 }
 
+// Persists every event to Postgres via the backend's internal API, for history/replay.
 export function createBackendEmitter(runId: string): EventEmitter{
     return {
         async emit(event: OrchestratorEvent){
@@ -35,6 +36,30 @@ export function createBackendEmitter(runId: string): EventEmitter{
     }
 }
 
-export function createStreamingEmitter(runId: string){
+const redisPublisher = new IORedis({
+    host: REDIS_HOST,
+    port: REDIS_PORT,
+    maxRetriesPerRequest: null
+});
 
+export function createRedisEmitter(runId: string): EventEmitter{
+    return {
+        async emit(event: OrchestratorEvent){
+            try{
+                await redisPublisher.publish(`run:${runId}`, JSON.stringify(event))
+            } catch(err){
+                console.error(`Failed to publish event for run ${runId}:`, err)
+            }
+        }
+    }
+}
+
+export function createRunEmitter(runId: string): EventEmitter{
+    const backend = createBackendEmitter(runId)
+    const redis = createRedisEmitter(runId)
+    return {
+        async emit(event: OrchestratorEvent){
+            await Promise.all([backend.emit(event), redis.emit(event)])
+        }
+    }
 }

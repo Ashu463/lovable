@@ -12,7 +12,7 @@ import { R2 } from "./services/file-storage/fileStorage"
 import axios from "axios"
 
 import { E2BSandbox } from "./utils/sandbox"
-import { createBackendEmitter } from "./events"
+import { createRunEmitter, type EventEmitter } from "./events"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
 export class MainAgent{
     private iterations: number
@@ -21,6 +21,7 @@ export class MainAgent{
     private context: Message[] = []
     private static encoder = encoding_for_model("gpt-4o")
     private r2: R2
+    private emitter: EventEmitter
     constructor(
         private userPrompt: string,
         private userId: string,
@@ -30,10 +31,11 @@ export class MainAgent{
         private selectedDesign: string,
         private sandbox: E2BSandbox,
         private orchestratorContext: string,
-    ){ 
+    ){
         this.iterations = 0
         this.K = COMPACTION_PARAMETER
         this.r2 = new R2()
+        this.emitter = createRunEmitter(runId)
     }
     
     async runLoop(): Promise<MainAgentResponse>{
@@ -93,7 +95,7 @@ export class MainAgent{
                         content: `LLM requested tool call for ${toolType}`,
                         timestamp: new Date().toISOString()
                     })
-                    await createBackendEmitter(this.runId).emit({
+                    await this.emitter.emit({
                         type: 'main_agent_tool_call',
                         step: this.iterations,
                         toolName: toolType

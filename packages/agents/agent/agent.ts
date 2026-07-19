@@ -13,7 +13,7 @@ import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
-import { createBackendEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
+import { createRunEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
 import { logger } from "./utils/logger"
 
 
@@ -47,14 +47,16 @@ export class OrchestratorAgent{
     private context: OrchestratorContext[]
     private state: OrchestratorState
     private selectedDesign: string = ""
+    private emitter: EventEmitter
     constructor(
-        public userId: string, 
+        public userId: string,
         public projectId: string,
         public sandbox: E2BSandbox, // initially pass this as empty string, here after connecting it would have some value
         public runId: string,
         public semanticMem: string
     ){
         this.uiExpert = new UIExpert(userId, projectId, sandbox)
+        this.emitter = createRunEmitter(runId)
         this.context = []
         this.state = {
             screenId: null,
@@ -331,7 +333,7 @@ export class OrchestratorAgent{
         return true
     }
     async emitSSEUpdate(event: OrchestratorEvent){
-        await createBackendEmitter(this.runId).emit(event)
+        await this.emitter.emit(event)
     }
     async GenerateOrchestratorSummary(summaries: string[]): Promise<string>{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
