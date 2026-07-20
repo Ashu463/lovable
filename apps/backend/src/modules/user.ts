@@ -4,6 +4,7 @@ import { prisma } from "../prisma";
 import { auth, type AuthRequest } from "./middleware";
 import {isValidEmail, isValidPassword, signUserToken,toPublicUser} from "./user.helpers";
 import { verifyGoogleIdToken } from "./google";
+import { logger } from "./utils";
 /*Routes:
 POST /users/signup                                → email/password signup
 POST /users/login                                 → email/password login
@@ -13,14 +14,17 @@ POST /users/logout                                → stateless logout ack
 */
 
 const userRouter = Router();
-
+console.log("User router initialized");
 userRouter.post("/signup", async (req: Request, res: Response) => {
+    console.log("Signup request received");
     const { email, password, name } = req.body ?? {};
 
     if (!isValidEmail(email)) {
+        console.error(`Invalid email: ${email}`);
         return res.status(400).json({ success: false, message: "Invalid email" });
     }
     if (!isValidPassword(password)) {
+        logger.error(`Password is not valid: ${password}`);
         return res.status(400).json({
             success: false,
             message: "Password must be at least 8 characters",
@@ -29,12 +33,11 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
 
     try {
         const existing = await prisma.user.findUnique({ where: { email } });
+        prisma.user.findUnique({where: {email: email}})
         if (existing) {
-            return res
-                .status(409)
-                .json({ success: false, message: "Email already registered" });
+            console.error(`Email already registered: ${email}`);
+            return res.status(409).json({ success: false, message: "Email already registered" });
         }
-
         const passwordHash = await Bun.password.hash(password);
         const user = await prisma.user.create({
             data: {
@@ -43,15 +46,12 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
                 name: typeof name === "string" ? name : null,
             },
         });
-
         const token = signUserToken(user);
-        return res
-            .status(201)
-            .json({ success: true, data: { token, user: toPublicUser(user) } });
+        
+        console.log("Token created");
+        return res.status(201).json({ success: true, data: { token, user: toPublicUser(user) } });
     } catch (e) {
-        return res
-            .status(500)
-            .json({ success: false, message: "Internal server error" });
+        return res.status(500).json({ success: false, message: `Internal server error: ${e}` });
     }
 });
 
@@ -140,7 +140,9 @@ userRouter.post("/google", async (req: Request, res: Response) => {
 });
 
 userRouter.get("/me", auth, async (req: AuthRequest, res: Response) => {
+    console.log("Getting user called");
     try {
+        console.log("Getting user");
         const user = await prisma.user.findUnique({
             where: { id: req.user!.id },
         });
@@ -149,18 +151,18 @@ userRouter.get("/me", auth, async (req: AuthRequest, res: Response) => {
                 .status(404)
                 .json({ success: false, message: "User not found" });
         }
+        console.log("User found");
+        console.log(toPublicUser(user));
         return res.status(200).json({ success: true, data: toPublicUser(user) });
     } catch (e) {
+        console.error(`Error getting user: ${e}`);
         return res
             .status(500)
             .json({ success: false, message: "Internal server error" });
     }
 });
 
-userRouter.post(
-    "/logout",
-    auth,
-    async (_req: AuthRequest, res: Response) => {
+userRouter.post( "/logout",auth, async (req: AuthRequest, res: Response) => {
         return res.status(200).json({ success: true, message: "Logged out" });
     }
 );

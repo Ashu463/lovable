@@ -13,14 +13,14 @@ import sessionRouter from './modules/sessions';
 const app = express();
 app.use(cors())
 app.use(express.json())
-
-app.use("/projects", projectRouter);
-app.use("/runs", runRouter);
-app.use("/users", userRouter);
-app.use("/chat", chatRouter)
-app.use("/design", designRouter)
-app.use("/question", questionRouter)
-app.use("/sessions", sessionRouter)
+console.log("Starting server")
+app.use("/api/projects", projectRouter);
+app.use("/api/runs", runRouter);
+app.use("/api/users", userRouter);
+app.use("/api/chat", chatRouter)
+app.use("/api/design", designRouter)
+app.use("/api/question", questionRouter)
+app.use("/api/sessions", sessionRouter)
 app.listen(3000, () =>{
     console.log("Server is running on port 3000")
 })

@@ -58,9 +58,9 @@ async function createRun(req: Request, res: Response){
     const user = await prisma.user.findUnique({where: {id: userId}})
     
     // activate after testing, #POST-TESTING
-    // if(!user){
-    //     return res.status(404).json({success: false, message: `User not found :(`})
-    // }
+    if(!user){
+        return res.status(404).json({success: false, message: `User not found :(`})
+    }
 
     try{
         await runQueue.add("run", {
@@ -71,6 +71,7 @@ async function createRun(req: Request, res: Response){
             semanticMem: user.semanticMem,
             sandboxId: existingSandboxId ? existingSandboxId : null,
         })
+        logger.info(`Added to run queue`)
     } catch(e){
         logger.error(`Failed to enqueue run ${run.id}: ${e}`)
         return res.status(500).json({success: false, message: `Failed to start run`})
