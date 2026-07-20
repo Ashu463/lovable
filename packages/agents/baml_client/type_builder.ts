@@ -39,7 +39,7 @@ export default class TypeBuilder {
     
     BraveResult: ClassViewer<'BraveResult', "title" | "url" | "description" | "pageAge">;
     
-    CoderContext: ClassViewer<'CoderContext', "dependentSummary" | "repoTree">;
+    CoderContext: ClassViewer<'CoderContext', "task" | "dependentSummary" | "repoTree">;
     
     CoderSession: ClassViewer<'CoderSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
     
@@ -179,7 +179,7 @@ export default class TypeBuilder {
         ]);
         
         this.CoderContext = this.tb.classViewer("CoderContext", [
-          "dependentSummary","repoTree",
+          "task","dependentSummary","repoTree",
         ]);
         
         this.CoderSession = this.tb.classViewer("CoderSession", [

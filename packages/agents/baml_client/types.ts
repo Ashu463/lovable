@@ -112,6 +112,7 @@ export interface BraveResult {
 }
 
 export interface CoderContext {
+  task: string
   dependentSummary: TaskSummary[]
   repoTree: string
   

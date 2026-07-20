@@ -60,18 +60,21 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async runLoop(): Promise<SubAgentResponse> {
         this.context = await this.BuildInitialContext()
+        let success = true
 
         while (true) {
             const res = await this.agentInstance.callLLM(this.input, this.context)
 
             if (res.action === 'done' || res.stopReason === 'completed') {
-                this.pushSession('assistant', 'done')
+                const toolRes = await this.agentInstance.executeFunction(res)
+                this.pushSession('assistant', 'done', toolRes)
                 await this.SaveSessionState()
                 break
             }
             if(res.stopReason === 'aborted'){
                 this.pushSession('assistant', 'halted', res)
                 await this.SaveSessionState()
+                success = false
                 break;
             }
 
@@ -85,11 +88,14 @@ export class SubAgent<T extends keyof ContextMap> {
             await this.emitSSEUpdate(toolRes)
             this.SaveSessionState().catch(err => console.error(`Failed to save session for task ${this.taskId}`, err))
 
-            if (this.iteration++ > this.maxIterations()) break
+            if (this.iteration++ > this.maxIterations()) {
+                success = false
+                break
+            }
         }
 
         return {
-            success: true,
+            success,
             summary: await this.BuildSummary()
         }
     }
@@ -97,14 +103,14 @@ export class SubAgent<T extends keyof ContextMap> {
         const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
         return await tester.testCodebase()
     }
-    pushSession(role: Role, status: Status, content?: any, rawTranscript?: any){
+    pushSession(role: Role, status: Status, data?: any){
         const entry = {
             taskId: this.taskId,
             role,
             status,
             iterationCount: this.iteration,
             timestamp: new Date().toISOString(),   // per-entry time, not "startedAt"
-            ...(this.agentType === 'debuggerr' ? { rawTranscript } : { content }),
+            ...(this.agentType === 'debuggerr' ? { rawTranscript: data } : { content: data }),
         }
         this.session.push(entry)
     }
@@ -130,7 +136,7 @@ export class SubAgent<T extends keyof ContextMap> {
         const summaries: TaskSummary[] = res.data.data
             .filter(s => dependentTaskIds.includes(s.todo.taskId))
             .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
-        return { dependentSummary: summaries, repoTree: this.repoTree }
+        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){

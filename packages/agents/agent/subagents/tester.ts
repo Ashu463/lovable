@@ -35,7 +35,6 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
 
 
         try{
-            const response = await fetch(sandbox.getHost(PORT))
             const started = await this.pollUntilUp(sandbox)
             if(started){
                 return{

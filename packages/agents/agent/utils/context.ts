@@ -87,6 +87,7 @@ export class CoderContextManager extends ContextManager<CoderContext>{
     appendTurn(context: CoderContext, toolRes: any): CoderContext {
         const treeChanged = toolRes?.action === 'WriteFile' || toolRes?.action === 'DeleteFile'
         return {
+            task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
             repoTree: treeChanged ? toolRes.updatedTree : context.repoTree
         }
@@ -98,12 +99,14 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         const recentHalf = context.dependentSummary.slice(len/2, len)
 
         const olderHalfContext: CoderContext = {
+            task: context.task,
             dependentSummary: olderHalf,
             repoTree: context.repoTree
         }
         const olderCompacted = await b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
         return {
+            task: context.task,
             dependentSummary: [...olderCompacted.dependentSummary, ...recentHalf],
             repoTree: context.repoTree
         }
@@ -123,6 +126,7 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     appendTurn(context: DebuggerContext, toolRes: any): DebuggerContext {
         return {
+            repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: [
                 ...context.fixHistory,
@@ -135,12 +139,14 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
         const len = context.fixHistory.length
 
         const olderHalfContext: DebuggerContext = {
+            repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: context.fixHistory.slice(0, len/2)
         }
         const olderCompacted = await b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
         return {
+            repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: [...olderCompacted.fixHistory, ...context.fixHistory.slice(len/2, len)]
         }

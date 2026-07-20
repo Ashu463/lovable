@@ -42,7 +42,8 @@ export class MainAgent{
         try{
             while(this.iterations < MAIN_AGENT_MAX_ITERATIONS){
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
-                
+                let shouldBreak = false
+
                 const response: LLMResponse = await this.callLLM(this.userPrompt);
                 
                 iterationLog.push({
@@ -52,22 +53,20 @@ export class MainAgent{
                 })
     
                 if(response.stopReason === 'completed') {
-                    await this.saveSessionState()
-                    this.session.push({
+                    iterationLog.push({
                         role: 'assistant',
                         content: `LLM Response completed`,
                         timestamp: new Date().toISOString()
                     })
-                    break;
+                    shouldBreak = true
                 }
                 if(response.stopReason === 'aborted'){
-                    await this.saveSessionState()
-                    this.session.push({
+                    iterationLog.push({
                         role: 'assistant',
                         content: `LLM call aborted`,
                         timestamp: new Date().toISOString()
                     })
-                    break;
+                    shouldBreak = true
                 }
     
                 // if(response.stopReason === 'QnA'){
@@ -132,6 +131,11 @@ export class MainAgent{
                 })
 
                 this.context = await this.ManageContext()
+                if(shouldBreak){
+                    await this.saveSessionState()   // write to Postgres — failure recovery
+                    this.iterations++
+                    break
+                }
                 this.saveSessionState()   // write to Postgres — failure recovery
                 this.iterations++
             }
@@ -202,7 +206,7 @@ export class MainAgent{
     
     async saveSessionState(){
         try{
-            await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
+            await axios.post(`${BACKEND_URL}/internal/sessions/${this.runId}/state`, {
                 context_snapshot: this.context,
                 session_snapshot: this.session,
                 iteration: this.iterations,

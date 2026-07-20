@@ -3,16 +3,17 @@ import { webSearch } from "../MCPs/tavily";
 import { webScrape } from "../MCPs/apify";
 import type { ResearcherContext } from "../../baml_client";
 import type { E2BSandbox } from "../utils/sandbox";
+import { logger } from "../utils/logger";
 
 /*
 what I'm thinking is that this researcher agent would use some RAG/memory things
 in future which will probably be done in future. That's why I put different function
-and class here else it doesn't make sense at all. 
+and class here else it doesn't make sense at all.
 */
-type ReasercherInput = string
+type ResearcherInput = string
 type ResearcherResponse = string
 type ResearcherResult = string
-export class Researcher extends BaseAgent<ReasercherInput, ResearcherContext, ResearcherResponse, ResearcherResult>{
+export class Researcher extends BaseAgent<ResearcherInput, ResearcherContext, ResearcherResponse, ResearcherResult>{
     
     constructor(
         // public query: string,
@@ -31,7 +32,7 @@ export class Researcher extends BaseAgent<ReasercherInput, ResearcherContext, Re
         let res = ""
         try{
             res = await webSearch(query, maxResults)
-            console.log(res, " is the web search response")
+            logger.info(`Web search response: ${res}`)
         }
         catch(e){
             console.error(e)
@@ -43,7 +44,7 @@ export class Researcher extends BaseAgent<ReasercherInput, ResearcherContext, Re
         let res = ""
         try{
             res = await webScrape(url, maxPages)
-            console.log(res, " is the web scrape response")
+            logger.info(`Web scrape response: ${res}`)
         }
         catch(e){
             console.error(e)

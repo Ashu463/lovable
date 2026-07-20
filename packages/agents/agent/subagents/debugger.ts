@@ -8,7 +8,7 @@ import { webScrape } from "../MCPs/apify";
 import type { E2BSandbox } from "../utils/sandbox";
 
 export interface DebuggerAgentResponse{
-    success: Boolean,
+    success: boolean,
     editedFiles?: FileEdit[] | string,
     toolResult?: string
     // errorsFixed: Error[]
@@ -42,7 +42,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             return response
         }
         catch(e){
-            throw new Error("Debugger call failed")
+            throw new Error(`Debugger call failed: ${e instanceof Error ? e.message : String(e)}`)
         }
     }
     override async executeFunction(response: DebuggerLLMResponse): Promise<DebuggerAgentResponse | null> {

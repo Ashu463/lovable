@@ -11,7 +11,7 @@ import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
-import type { TesterResponse } from "./subagents/tester"
+import { TesterAgent, type TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
 import { createRunEmitter, internalAuthHeader, type EventEmitter, type OrchestratorEvent } from "./events"
 import { logger } from "./utils/logger"
@@ -189,13 +189,13 @@ export class OrchestratorAgent{
                     error: `Error occurred while checking complexity: ${e instanceof Error ? e.message : String(e)}`
                 }
             }
-            complexity = isComplex.complex
             if(!isComplex){
                 return {
                     status: 'error',
                     error: `Error occurred while generating`
                 }
             }
+            complexity = isComplex.complex
             if(isComplex.complex){
                 // db request should hit isnt't it to save the questions 
                 return {
@@ -265,8 +265,14 @@ export class OrchestratorAgent{
             const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
 
             const mainResult = await mainAgent.runLoop()
+            if(!mainResult.success){
+                return {
+                    status: 'error',
+                    reason: mainResult.summary
+                }
+            }
             orchestratorSummary = mainResult.summary
-            
+
         }
         else{
             tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
@@ -307,7 +313,7 @@ export class OrchestratorAgent{
                     task: todo.task,
                     agentAssigned: agentType,
                     summary: result.summary,
-                    success: true
+                    success: result.success
                 });
             }
             // FIX: this.state/context in place of summaries. => done, kept subagents summary short and avoided LLM call.
@@ -355,22 +361,30 @@ export class OrchestratorAgent{
 
         try{
             let previousErrorSignature: string | null = null
+            let repeatCount = 0
             while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
-                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
-    
-                const testerRes: TesterResponse = await tester.Test()
+                const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
+
+                const testerRes: TesterResponse = await tester.testCodebase()
                 const error: Error = {
                     fileName: testerRes.errorRes!.file,
                     error: testerRes.errorRes!.error + testerRes.errorRes!.line
                 }
-                // #CRITICAL: trying to avoid those iterations where debugger shows no progress.
+                // #CRITICAL: halt only after the debugger has had 2 attempts at the same
+                // error signature with no progress, not on the first repeat.
                 const currentErrorSignature = `${error.fileName}:${error.error}`
                 if(currentErrorSignature === previousErrorSignature){
-                    return {
-                        success: false,
-                        summaries: summaries,
-                        lastError: error
+                    repeatCount++
+                    if(repeatCount >= 2){
+                        return {
+                            success: false,
+                            summaries: summaries,
+                            lastError: error
+                        }
                     }
+                }
+                else{
+                    repeatCount = 0
                 }
                 previousErrorSignature = currentErrorSignature
                 this.state.lastTestErrors.push(error)

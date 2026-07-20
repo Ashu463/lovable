@@ -60,6 +60,7 @@ export namespace partial_types {
       pageAge?: string | null
     }
     export interface CoderContext {
+      task?: string | null
       dependentSummary: TaskSummary[]
       repoTree?: string | null
     }

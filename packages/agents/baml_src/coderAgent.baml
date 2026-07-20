@@ -10,6 +10,7 @@ class Done{
 }
 
 class CoderContext{
+    task string
     dependentSummary TaskSummary[]
     repoTree string
 }
@@ -43,6 +44,7 @@ test TestName {
     "#
     figmaBoilerPlate ""
     context {
+        task "Add a hello world route"
         dependentSummary []
         repoTree #"
         hello world

@@ -4,19 +4,15 @@ import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";
+import type { CoderTaskInput } from "../../types/subAgentsTypes";
 
-interface CoderRequest{
-    context: CoderContext
-    boilerPlate?: string,
-    relatedDesignRef?: {screenId: string}
-} 
 type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
 type CoderAgentResponse = {
-    success: boolean, 
+    success: boolean,
     response: string,
     toolResult?: ToolResult
 }
-export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMResponse, CoderAgentResponse>{
+export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLMResponse, CoderAgentResponse>{
 
     private researcher: Researcher
     constructor(
@@ -29,14 +25,11 @@ export class CoderAgent extends BaseAgent<CoderRequest, CoderContext, CoderLLMRe
         this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)
     }
 
-    
-    override async callLLM(request: CoderRequest): Promise<CoderLLMResponse> {
-        if(request.boilerPlate){ // assuming you won't push to context initially
-            return await b.CoderAgent(CODER_PROMPT, request.boilerPlate, request.context)
-        }
-        else{
-            return await b.CoderAgent(CODER_PROMPT, "", request.context)
-        }
+
+    override async callLLM(input: CoderTaskInput, context: CoderContext): Promise<CoderLLMResponse> {
+        const relatedDesignRef = (input.task.agentSpecificData as { relatedDesignRef?: { screenId: string } }).relatedDesignRef
+        const figmaBoilerPlate = relatedDesignRef ? `Reference design screen: ${relatedDesignRef.screenId}` : undefined
+        return await b.CoderAgent(CODER_PROMPT, figmaBoilerPlate, context)
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{
