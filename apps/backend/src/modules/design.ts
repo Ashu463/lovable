@@ -2,6 +2,9 @@ import { Router } from "express";
 import { prisma } from "../prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
+import { randomUUID } from "bullmq";
+import { randomUUIDv5, randomUUIDv7 } from "bun";
+import { logger } from "./utils";
 
 const designRouter = Router();
 
@@ -13,7 +16,34 @@ POST   /projects/:projectId/assets                → upload reference files/ima
 
 */
 
-designRouter.get("/:projectId/designs", auth, async (req: Request, res: Response) => {
+designRouter.post("/:projectId", auth, async( req: Request, res: Response) =>{
+    const {projectId} = req.params;
+    const {designs} = req.body
+
+    if (typeof projectId !== "string") {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid projectId",
+        });
+    }
+    try{
+        Promise.all(designs.map((design: string) =>{
+            prisma.design.create({
+                data:{
+                    id: randomUUIDv7(),
+                    projectId,
+                    screenId: "",
+                    htmlContent: design,
+                    createdAt: new Date()
+                }
+            })
+        }))
+    } catch(e){
+        logger.error(`Error occurred while saving design ${e}`)
+        return res.status(500).json({message: `Internal server error`})
+    }
+})
+designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -43,7 +73,7 @@ designRouter.get("/:projectId/designs", auth, async (req: Request, res: Response
 });
 
 
-designRouter.get("/:projectId/designs/selected", auth, async (req: Request, res: Response) => {
+designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {

@@ -12,7 +12,7 @@ import { R2 } from "./services/file-storage/fileStorage"
 import axios from "axios"
 
 import { E2BSandbox } from "./utils/sandbox"
-import { createRunEmitter, type EventEmitter } from "./events"
+import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
 export class MainAgent{
     private iterations: number
@@ -207,7 +207,7 @@ export class MainAgent{
                 session_snapshot: this.session,
                 iteration: this.iterations,
             }, {
-                headers: { Authorization: `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}` },
+                headers: internalAuthHeader(),
                 timeout: 5000,
             })
         } catch(e){

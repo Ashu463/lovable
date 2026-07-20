@@ -19,13 +19,19 @@ export interface EventEmitter {
   emit(event: OrchestratorEvent): Promise<void>;
 }
 
+// Every call the agent/worker package makes back to the backend is a
+// service-to-service call, not a user request — this is what authenticates it.
+export function internalAuthHeader(): Record<string, string>{
+    return { Authorization: `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}` }
+}
+
 // Persists every event to Postgres via the backend's internal API, for history/replay.
 export function createBackendEmitter(runId: string): EventEmitter{
     return {
         async emit(event: OrchestratorEvent){
             try{
                 await axios.post(`${BACKEND_URL}/internal/sessions/${runId}/events`, event, {
-                    headers: { Authorization: `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}` },
+                    headers: internalAuthHeader(),
                     timeout: 5000,
                 })
             } catch(err){

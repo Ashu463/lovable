@@ -9,11 +9,11 @@ import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITE
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
-import type { SSEBody } from "../types/mainAgentTypes";
 import axios from "axios";
 import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
+import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events";
 
 export class SubAgent<T extends keyof ContextMap> {
     private agentInstance: BaseAgent<InputMap[T], ContextMap[T], any, any>
@@ -23,18 +23,21 @@ export class SubAgent<T extends keyof ContextMap> {
     private contextManager?: ContextManager<ContextMap[T]>
     private taskId: number
     private repoTree: string = ""
-    
+    private emitter: EventEmitter
+
     constructor(
         private agentType: T,
         private input: InputMap[T],
         private userId: string,
         private projectId: string,
+        private runId: string,
         private sandbox: E2BSandbox,
         private selectedDesign: string
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
-        this.taskId = (this.input as BaseTaskInput).task.taskId        
+        this.taskId = (this.input as BaseTaskInput).task.taskId
+        this.emitter = createRunEmitter(runId)
     }
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
@@ -77,13 +80,9 @@ export class SubAgent<T extends keyof ContextMap> {
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 
-            this.context = await this.ManageContext(toolRes)   
+            this.context = await this.ManageContext(toolRes)
 
-            await this.emitSSEUpdate({
-                type: 'tool_result',
-                content: JSON.stringify(toolRes),
-                iteration: this.iteration,
-            })
+            await this.emitSSEUpdate(toolRes)
             this.SaveSessionState().catch(err => console.error(`Failed to save session for task ${this.taskId}`, err))
 
             if (this.iteration++ > this.maxIterations()) break
@@ -124,10 +123,13 @@ export class SubAgent<T extends keyof ContextMap> {
         if(this.repoTree === ""){
             this.repoTree = await this.sandbox.getRepoTree()
         }
-        const res = await axios.get(`${BACKEND_URL}/db/fetchSummaries`, {
-            params: {dependentTaskIds}
-        }) 
-        const summaries: TaskSummary[] = res.data
+        const res = await axios.get<{success: boolean, data: {summary: string, todo: {taskId: number}}[]}>(
+            `${BACKEND_URL}/api/runs/${this.projectId}/runs/${this.runId}/summaries`,
+            { headers: internalAuthHeader() }
+        )
+        const summaries: TaskSummary[] = res.data.data
+            .filter(s => dependentTaskIds.includes(s.todo.taskId))
+            .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
         return { dependentSummary: summaries, repoTree: this.repoTree }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
@@ -144,12 +146,16 @@ export class SubAgent<T extends keyof ContextMap> {
         return { query: (this.input as BaseTaskInput).task.task }
     }
     async BuildUIExpertContext(): Promise<UIExpertContext>{
-        const priorDesigns = await axios.get(`${BACKEND_URL}/db/fetchPriorDesigns`, {
-            params: { projectId: this.projectId }
+        const priorDesigns = await axios.get(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, {
+            headers: internalAuthHeader()
         })
+        // #TODO: backend returns the raw Design rows (htmlContent/screenId/...), but
+        // UIExpertContext.priorDesigns expects baml's Design{taskId, summary} shape —
+        // these don't line up yet, needs a product decision on what "prior designs"
+        // should mean here before mapping it properly.
         return {
             userPrompt: (this.input as BaseTaskInput).task.task,
-            priorDesigns: priorDesigns.data
+            priorDesigns: priorDesigns.data.data
         }
     }
     private maxIterations(): number {
@@ -203,15 +209,27 @@ export class SubAgent<T extends keyof ContextMap> {
         return num
     }
 
-    async emitSSEUpdate(event: SSEBody) {
-        await axios.post(`${BACKEND_URL}/internal/tasks/${this.taskId}/events`, event)
+    async emitSSEUpdate(data: unknown) {
+        await this.emitter.emit({
+            type: 'subagent_progress',
+            agent: this.agentType,
+            taskId: this.taskId,
+            data,
+        })
     }
 
     async SaveSessionState() {
-        await axios.post(`${BACKEND_URL}/internal/tasks/${this.taskId}/state`, {
-            iteration: this.iteration,
-            context_snapshot: this.context,
-            session_snapshot: this.session
-        })
+        try{
+            await axios.post(`${BACKEND_URL}/internal/sessions/${this.runId}/state`, {
+                iteration: this.iteration,
+                context_snapshot: this.context,
+                session_snapshot: this.session
+            }, {
+                headers: internalAuthHeader(),
+                timeout: 5000,
+            })
+        } catch(e){
+            console.error(`Failed to save session state for task ${this.taskId}:`, e)
+        }
     }
 }

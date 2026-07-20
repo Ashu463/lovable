@@ -23,6 +23,12 @@ export function auth(
 
   const token = authHeader.split(" ")[1];
 
+  // The agent worker calls these same /api/* routes as a trusted system
+  // caller (no end user in context) — a shared secret instead of a JWT.
+  if (token === process.env.INTERNAL_SERVICE_TOKEN) {
+    return next();
+  }
+
   try {
     const payload = jwt.verify(
       token,

@@ -10,7 +10,7 @@ import type { Question } from "../../generated/prisma/browser";
 
 export const questionRouter = Router();
 
-questionRouter.get('/:projectId/questions', auth, async (req: Request, res: Response) =>{
+questionRouter.get('/:projectId/getQuestions', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
     if(typeof projectId !== 'string'){
         return res.status(400).json({
@@ -20,7 +20,7 @@ questionRouter.get('/:projectId/questions', auth, async (req: Request, res: Resp
     }
 
     try{
-        const questions = await prisma.project.findUnique({where: {id: projectId}, include: {questions: true}})
+        const questions = await prisma.project.findMany({where: {id: projectId}, include: {questions: true}})
         if(!questions){
             return res.status(404).json({
                 success: false,

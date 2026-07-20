@@ -13,7 +13,7 @@ import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
-import { createRunEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
+import { createRunEmitter, internalAuthHeader, type EventEmitter, type OrchestratorEvent } from "./events"
 import { logger } from "./utils/logger"
 
 
@@ -165,19 +165,24 @@ export class OrchestratorAgent{
         // const {data: questions } = await 
 
         let [questionRes, designRes] = await Promise.all([
-            axios.get<Question[]>(`${BACKEND_URL}/db/${this.runId}/getQuestions`),
-            axios.get<Screen[]>(`${BACKEND_URL}/db/${this.runId}/getDesigns`)
+            axios.get<{success: boolean, data: Question[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
+            axios.get<{success: boolean, data: Screen[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
         ])
+        const questions = questionRes.data.data
+        const designs = designRes.data.data
         if(answers){
-            userPrompt += `Answers for these ${questionRes.data} are: ${answers}`
+            logger.info(`Answer added to user prompt`)
+            userPrompt += `Answers for these ${questions} are: ${answers}`
             answers.map((ans) => userPrompt += ans)
             complexity = true
         }
         else{
             try{
+                logger.info(`Running complexity checker`)
                 isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
             }
             catch(e){
+                logger.info(`Failed complexity checker`)
                 console.error(e)
                 return {
                     status: 'error',
@@ -201,40 +206,42 @@ export class OrchestratorAgent{
         }
         
         let designsHtml: string[] = []
-        if(designRes.data.length === 0){
-            const designs = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
-            designsHtml = await this.uiExpert.fetchDesigns(designs)
+        if(designs.length === 0){
+            logger.info(`Generating designs`)
+            const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
+            designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
             return {
                 status: 'select_design',
                 designs: designsHtml
             }
         }
-        const { data: screen } = await axios.get<Screen>(`${BACKEND_URL}/db/${this.runId}/getSelectedDesign`)
-
+        const { data: selectedDesignRes } = await axios.get<{success: boolean, data: {htmlContent: string}}>(`${BACKEND_URL}/api/design/${this.projectId}/selectedDesign`, { headers: internalAuthHeader() })
+        logger.info(`Screen fetched from db`)
         return {
             status: 'pass',
             isComplex: complexity,
             updatedPrompt: userPrompt,
-            questions: questionRes.data.length > 0 ? questionRes.data : [],
-            selectedDesign: screen
+            questions: questions.length > 0 ? questions : [],
+            selectedDesign: selectedDesignRes.data.htmlContent
         }
     }
 
     async Orchestrate(userPrompt: string, answers?: Answers[], design?: string): Promise<OrchestratorResponse>{
-
+        logger.info(`Running orchestrator`)
         const data = await this.Bootstrap(userPrompt, answers);
         logger.info(`Bootstrapped respose: ${data}`)
 
         if(data.status === 'clarification_needed'){
-            // or save questions to db here? 
-            await axios.post(`${BACKEND_URL}/questions/${this.projectId}/${this.runId}`, data.questions)
+            // or save questions to db here?
+            await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
             return {
                 status: 'clarification_needed',
                 questions: data.questions
             }
         }
         else if(data.status === 'select_design'){
-            // save design to the db 
+            // save design to the db
+            await axios.post(`${BACKEND_URL}/api/design/${this.projectId}`, { designs: data.designs }, { headers: internalAuthHeader() })
             return {
                 status: 'select_design',
                 designs: data.designs
@@ -247,8 +254,8 @@ export class OrchestratorAgent{
             }
         }
         if(!design){
-            const { data: fetchedDesign } = await axios.get<string>(`${BACKEND_URL}/${this.projectId}/designs/selected`)
-            design = fetchedDesign
+            const { data: selectedDesignRes } = await axios.get<{success: boolean, data: {htmlContent: string}}>(`${BACKEND_URL}/api/design/${this.projectId}/selectedDesign`, { headers: internalAuthHeader() })
+            design = selectedDesignRes.data.htmlContent
         }
         this.selectedDesign = design
 
@@ -279,7 +286,7 @@ export class OrchestratorAgent{
                 const agentType = todo?.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
                 
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.sandbox, this.selectedDesign)
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
 
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
@@ -349,7 +356,7 @@ export class OrchestratorAgent{
         try{
             let previousErrorSignature: string | null = null
             while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
-                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.sandbox, this.selectedDesign)
+                const tester = new SubAgent('tester', "", this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
     
                 const testerRes: TesterResponse = await tester.Test()
                 const error: Error = {
@@ -377,7 +384,7 @@ export class OrchestratorAgent{
                     designNeeded: false
                 }
                 const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.sandbox, this.selectedDesign)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
                 const debuggerResult = await debuggerAgent.runLoop()
                 this.state.lastToolResult = {
                     success: debuggerResult.success,                                

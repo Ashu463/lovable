@@ -52,7 +52,7 @@ export type design_needed = {
 // }
 export type BootstrapResponse = clarification_needed | design_needed 
     | {status: 'error', error: string} 
-    | {status: 'pass', isComplex: boolean, updatedPrompt: string, questions?: Question[], selectedDesign?: Screen}
+    | {status: 'pass', isComplex: boolean, updatedPrompt: string, questions?: Question[], selectedDesign?: string}
 
 export interface Answers{
     question: string, 

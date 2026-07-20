@@ -128,8 +128,8 @@ model Design {
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   screenId    String 
-  summary     String  @db.Text
-  htmlContent String? @db.Text
+  // summary     String  @db.Text
+  htmlContent String @db.Text
   isSelected  Boolean @default(false)
 
   createdAt   DateTime @default(now())
