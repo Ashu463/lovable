@@ -10,19 +10,20 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // url = env("DATABASE_URL")
 }
 
 
 model User {
-  id         String    @id @default(uuid())
-  email      String    @unique
-  name       String?
-  semanticMem String?  @db.Text
+  id          String    @id @default(uuid())
+  email       String    @unique
+  name        String?
+  password    String?
+  googleId    String?   @unique
+  semanticMem String?   @db.Text
 
-  projects   Project[]
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  projects    Project[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Project {
