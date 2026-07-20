@@ -1,13 +1,12 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { auth } from "./middleware";
-import { type OrchestratorEvent } from "../../../packages/agents";
 import { randomUUIDv7 } from "bun";
-import { prisma } from "../src/prisma";
+import { prisma } from "../prisma";
 import { redis } from "./redis";
-import { E2BSandbox } from "../../../packages/agents/agent/utils/sandbox";
 import { logger } from "./utils";
 import { runQueue } from "./worker";
+import type { OrchestratorEvent } from "../../../../packages/agents";
 
 const chatRouter = Router()
 /*
@@ -46,12 +45,12 @@ async function createRun(req: Request, res: Response){
         return res.status(400).json({})
     }
     
-    const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
+    // const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
     
     const run = await prisma.run.create({data:{
         id: randomUUIDv7(),
         projectId: projectId, 
-        sandboxId: sandbox.sandboxId,
+        sandboxId: existingSandboxId ? existingSandboxId : null,
         userPrompt: userPrompt,
     }})
     const runId = run.id
@@ -70,7 +69,7 @@ async function createRun(req: Request, res: Response){
             prompt: userPrompt,
             runId: run.id,
             semanticMem: user.semanticMem,
-            sandboxId: sandbox.sandboxId,
+            sandboxId: existingSandboxId ? existingSandboxId : null,
         })
     } catch(e){
         logger.error(`Failed to enqueue run ${run.id}: ${e}`)
@@ -99,12 +98,12 @@ chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Re
         return res.status(404).json({message: `Run with ${previousRunId} not found or clarification not needed for this runid`})
     }
 
-    const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId)
+    // const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId)
 
     const run = await prisma.run.create({data: {
         id: randomUUIDv7(),
         projectId: projectId,
-        sandboxId: sandbox.sandboxId,
+        sandboxId: existingSandboxId ? existingSandboxId : null,
         userPrompt: previousRun.userPrompt,
         parentRunId: previousRun.id
     }})
@@ -117,7 +116,7 @@ chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Re
             prompt: run.userPrompt,
             runId: run.id,
             semanticMem: user.semanticMem,
-            sandboxId: sandbox.sandboxId,
+            sandboxId: existingSandboxId ? existingSandboxId : null,
             answers,
         })
     } catch(e){

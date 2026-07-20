@@ -2,11 +2,11 @@
 GET    /projects/:projectId/questions
 */
 import { Router } from "express";
-import { prisma } from "../src/prisma";
+import { prisma } from "../prisma";
 import { auth } from "./middleware";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
-import type { Question } from "../../../packages/agents/baml_client";
+import type { Question } from "../../generated/prisma/browser";
 
 export const questionRouter = Router();
 
@@ -54,7 +54,7 @@ questionRouter.post('/:projectId/:runId', auth, async (req: Request, res: Respon
                 runId,
                 projectId,
                 question: question.question,
-                options: question.option,
+                options: question.options,
                 createdAt: new Date(),
             },
             })

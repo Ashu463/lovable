@@ -1,8 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { auth } from "./middleware";
-import { prisma } from "../src/prisma";
+import { prisma } from "../prisma";
 import { randomUUIDv7 } from "bun";
-import type { OrchestratorEvent } from "../../../packages/agents";
+import type { OrchestratorEvent } from "../../../../packages/agents";
 
 /*
 POST   /internal/sessions/:runId/events
@@ -45,3 +45,5 @@ sessionRouter.post('/:runId/state', auth, async (req: Request, res: Response) =>
 
     return res.status(200).json({success: true, message: `session and context state to db`})
 })
+
+export default sessionRouter;
