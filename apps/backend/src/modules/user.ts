@@ -33,7 +33,6 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
 
     try {
         const existing = await prisma.user.findUnique({ where: { email } });
-        prisma.user.findUnique({where: {email: email}})
         if (existing) {
             console.error(`Email already registered: ${email}`);
             return res.status(409).json({ success: false, message: "Email already registered" });

@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from "express";
-import { auth } from "./middleware";
+import { internalAuth } from "./middleware";
 import { prisma } from "../prisma";
 import { randomUUIDv7 } from "bun";
 import type { OrchestratorEvent } from "../../../../packages/agents";
@@ -10,7 +10,7 @@ POST   /internal/sessions/:runId/state
 */
 const sessionRouter = Router();
 
-sessionRouter.post('/:runId/events', auth, async (req: Request, res: Response) =>{
+sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Response) =>{
 
     const {runId} = req.params
     const event: OrchestratorEvent = req.body
@@ -28,7 +28,7 @@ sessionRouter.post('/:runId/events', auth, async (req: Request, res: Response) =
     return res.status(200).json({success: true, message: `event saved`})
 })
 
-sessionRouter.post('/:runId/state', auth, async (req: Request, res: Response) =>{
+sessionRouter.post('/:runId/state', internalAuth, async (req: Request, res: Response) =>{
 
     const {runId} = req.params
     const data = req.body

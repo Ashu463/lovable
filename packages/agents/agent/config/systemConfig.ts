@@ -1,7 +1,7 @@
 export const PORT = 3000
 export const MAX_BOOT_WAIT_MS = 20000
 export const POLL_INTERVAL_MS = 500
-export const BACKEND_URL = `http://localhost:3000`
+export const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:3000`
 export const REDIS_HOST = process.env.REDIS_HOST ?? "redis"
 export const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6379)
 export const MAIN_AGENT_MAX_ITERATIONS = 30

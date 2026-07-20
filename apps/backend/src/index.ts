@@ -1,5 +1,3 @@
-import dotenv from 'dotenv'
-dotenv.config()
 import express from 'express'
 import cors from 'cors'
 import projectRouter from './modules/project';
@@ -20,7 +18,7 @@ app.use("/api/users", userRouter);
 app.use("/api/chat", chatRouter)
 app.use("/api/design", designRouter)
 app.use("/api/question", questionRouter)
-app.use("/api/sessions", sessionRouter)
+app.use("/internal/sessions", sessionRouter)
 app.listen(3000, () =>{
     console.log("Server is running on port 3000")
 })

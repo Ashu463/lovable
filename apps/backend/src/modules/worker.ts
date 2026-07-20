@@ -12,7 +12,6 @@ const worker = new Worker("run-agent", async (job) => {
     // Reconnect to the sandbox chat.ts already started for this run instead of
     // booting a second one.
     let sandbox;
-    console.log(process.env.E2B_API_KEY, ' is the sandbox key')
     if(sandboxId){
         sandbox = await E2BSandbox.StartSandbox(userId, projectId, sandboxId);
     } else {
@@ -23,7 +22,6 @@ const worker = new Worker("run-agent", async (job) => {
       await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers);
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
-      await sandbox.stop();
       throw e;
     }
     },{connection: redis, concurrency: 5}

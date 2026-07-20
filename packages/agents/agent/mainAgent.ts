@@ -201,11 +201,18 @@ export class MainAgent{
     }
     
     async saveSessionState(){
-        await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
-            context_snapshot: this.context,
-            session_snapshot: this.session,
-            iteration: this.iterations,
-        })
+        try{
+            await axios.post(`${BACKEND_URL}/internal/sessions/${this.projectId}/state`, {
+                context_snapshot: this.context,
+                session_snapshot: this.session,
+                iteration: this.iterations,
+            }, {
+                headers: { Authorization: `Bearer ${process.env.INTERNAL_SERVICE_TOKEN}` },
+                timeout: 5000,
+            })
+        } catch(e){
+            console.error(`Failed to save session state for run ${this.runId}:`, e)
+        }
     }
 
     async executeTool(toolCall: ToolCall): Promise<string | Screen> {

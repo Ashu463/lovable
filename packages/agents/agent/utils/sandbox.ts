@@ -231,7 +231,7 @@ export class E2BSandbox{
         }
     }
     Release(){
-        this.sandbox.kill
+        this.sandbox.kill()
     }
 }
 

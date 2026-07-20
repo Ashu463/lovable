@@ -3,6 +3,10 @@
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "bun --hot src/index.ts",
+    "worker": "bun --hot src/modules/worker.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/pg": "^8.20.0",
@@ -19,7 +23,6 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "bullmq": "^5.80.9",
-    "dotenv": "^17.4.2",
     "google-auth-library": "^10.9.0",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",

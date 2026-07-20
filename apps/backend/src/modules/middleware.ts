@@ -41,3 +41,22 @@ export function auth(
     });
   }
 }
+
+// For service-to-service calls from the agent worker (session state/event
+// persistence) — a shared secret, not a user JWT.
+export function internalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : undefined;
+
+  if (!token || token !== process.env.INTERNAL_SERVICE_TOKEN) {
+    return res.status(401).json({
+      message: "Unauthorized",
+    });
+  }
+
+  next();
+}
