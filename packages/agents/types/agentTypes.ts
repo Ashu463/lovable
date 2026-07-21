@@ -39,9 +39,13 @@ export type clarification_needed = {
     questions: Question[],
     alreadySaved?: boolean
 }
+export type DesignOption = {
+    id: string,
+    htmlContent: string
+}
 export type design_needed = {
     status: 'select_design',
-    designs: string[],
+    designs: DesignOption[],
     alreadySaved?: boolean
 }
 // export interface BootstrapResponse{

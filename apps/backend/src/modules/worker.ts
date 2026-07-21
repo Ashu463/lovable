@@ -8,7 +8,7 @@ export const runQueue = new Queue(
     "run-agent", {connection: redis}
 );
 const worker = new Worker("run-agent", async (job) => {
-    const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesign } = job.data;
+    const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId } = job.data;
     // Reconnect to the sandbox chat.ts already started for this run instead of
     // booting a second one.
     let sandbox;
@@ -19,7 +19,7 @@ const worker = new Worker("run-agent", async (job) => {
     }
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
-      await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesign);
+      await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;

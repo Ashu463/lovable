@@ -1,4 +1,4 @@
-import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, BootstrapResponse } from "../types/agentTypes"
+import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, BootstrapResponse, DesignOption } from "../types/agentTypes"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
@@ -7,7 +7,7 @@ import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
-import { BACKEND_URL, DEBUGGERR_MAX_ITERATIONS } from "./config/systemConfig"
+import { BACKEND_URL, TESTER_DEBUGGER_LOOP_MAX_ITERATIONS } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
@@ -164,7 +164,7 @@ export class OrchestratorAgent{
         logger.info(`Starting to fetch qeustions and designs`)
         let [questionRes, designRes] = await Promise.all([
             axios.get<{success: boolean, data: {question: string, options: string[]}[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
-            axios.get<{success: boolean, data: {htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
+            axios.get<{success: boolean, data: {id: string, htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
         ])
         const savedQuestions = questionRes.data.data
         const questions: Question[] = savedQuestions.map((q) => ({question: q.question, option: q.options}))
@@ -226,9 +226,18 @@ export class OrchestratorAgent{
                     error: `Error occurred while generating designs: ${e instanceof Error ? e.message : String(e)}`
                 }
             }
+            // Save right away so the response can hand back real ids — the
+            // frontend/caller only ever needs to pass an id around after this,
+            // never the full htmlContent again.
+            const { data: saved } = await axios.post<{success: boolean, data: {id: string, htmlContent: string}[]}>(
+                `${BACKEND_URL}/api/design/${this.projectId}`,
+                { designs: designsHtml },
+                { headers: internalAuthHeader() }
+            )
             return {
                 status: 'select_design',
-                designs: designsHtml
+                designs: saved.data.map((d): DesignOption => ({id: d.id, htmlContent: d.htmlContent})),
+                alreadySaved: true
             }
         }
         const selectedDesign = designs.find((d) => d.isSelected)
@@ -236,7 +245,7 @@ export class OrchestratorAgent{
              logger.info(`Reusing previously generated designs, still awaiting selection`)
             return {
                 status: 'select_design',
-                designs: designs.map((d) => d.htmlContent),
+                designs: designs.map((d): DesignOption => ({id: d.id, htmlContent: d.htmlContent})),
                 alreadySaved: true
             }
         }
@@ -250,8 +259,11 @@ export class OrchestratorAgent{
         }
     }
 
-    async Orchestrate(userPrompt: string, answers?: Answers[], design?: string): Promise<OrchestratorResponse>{
+    async Orchestrate(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<OrchestratorResponse>{
         logger.info(`Running orchestrator`)
+        if(selectedDesignId){
+            await axios.patch(`${BACKEND_URL}/api/design/${this.projectId}/designs/${selectedDesignId}`, {}, { headers: internalAuthHeader() })
+        }
         var data;
         try{
             data = await this.Bootstrap(userPrompt, answers);
@@ -274,10 +286,6 @@ export class OrchestratorAgent{
             }
         }
         else if(data.status === 'select_design'){
-            if(!data.alreadySaved){
-                logger.info(`LLM generated designs, saving them`)
-                await axios.post(`${BACKEND_URL}/api/design/${this.projectId}`, { designs: data.designs }, { headers: internalAuthHeader() })
-            }
             return {
                 status: 'select_design',
                 designs: data.designs
@@ -289,11 +297,7 @@ export class OrchestratorAgent{
                 reason: data.error
             }
         }
-        if(!design){
-            const { data: selectedDesignRes } = await axios.get<{success: boolean, data: {htmlContent: string}}>(`${BACKEND_URL}/api/design/${this.projectId}/selectedDesign`, { headers: internalAuthHeader() })
-            design = selectedDesignRes.data.htmlContent
-        }
-        this.selectedDesign = design
+        this.selectedDesign = data.selectedDesign ?? ""
 
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
@@ -311,13 +315,16 @@ export class OrchestratorAgent{
 
         }
         else{
+            logger.info(`Given task is complex, generating todos`)
             tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
             
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+            logger.info(`todos generated and arranged sequentially`)
             let summaries: string[] = []
 
             for(let i = 0 ; i < sequentialTodos.length; i++){
+                logger.info(`Starting task ${sequentialTodos[i]?.task}`)
                 const todo = sequentialTodos[i];
                 // #TODO: Failure handling of planner
                 if (!todo?.agent){
@@ -327,17 +334,17 @@ export class OrchestratorAgent{
 
                 const agentType = todo?.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
-                
+                logger.info(`${input} is the input made for ${agentType}`)
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
-
+                logger.info(`Starting runloop for the subagent`)
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
 
                 let testsPassing: boolean | null = null;
                 let lastErrors = null
                 let testResults
-
                 if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
+                    logger.info(`Starting tester debugger loop`)
                     testsPassing = false;
                     testResults = await this.TesterDebuggerLoop(this.semanticMem)
                     if(testResults.success) testsPassing = true
@@ -362,7 +369,7 @@ export class OrchestratorAgent{
         if(deployResult.success){
             return {
                 status: 'completed',
-                design: design,
+                design: this.selectedDesign,
                 todos: data.isComplex ? tasks : [],
                 previewUrl: deployResult.url,
                 summary: orchestratorSummary
@@ -398,7 +405,7 @@ export class OrchestratorAgent{
         try{
             let previousErrorSignature: string | null = null
             let repeatCount = 0
-            while (loopCount < DEBUGGERR_MAX_ITERATIONS && !deployReady) {
+            while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
                 const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
 
                 const testerRes: TesterResponse = await tester.testCodebase()

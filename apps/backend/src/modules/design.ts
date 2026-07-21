@@ -27,9 +27,10 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
             message: "Invalid projectId",
         });
     }
+    let result
     try{
         console.log(`Saving designs to the db`)
-        await Promise.all(designs.map((design: string) =>
+        result = await Promise.all(designs.map((design: string) =>
             prisma.design.create({
                 data:{
                     id: randomUUIDv7(),
@@ -44,7 +45,9 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
         logger.error(`Error occurred while saving design ${e}`)
         return res.status(500).json({message: `Internal server error`})
     }
-    return res.status(201).json({success: true})
+    // Echo the created rows back (with ids) so callers can hand a design id
+    // to the frontend instead of routing full htmlContent through every hop.
+    return res.status(201).json({success: true, data: result})
 })
 // get all designs
 designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Response) => {

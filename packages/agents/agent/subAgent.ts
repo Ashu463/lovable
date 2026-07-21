@@ -5,7 +5,7 @@ import { Researcher } from "./subagents/researcher";
 import { TesterAgent, type TesterResponse } from "./subagents/tester";
 
 import type { BaseAgent } from "./subagents/baseAgent";
-import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, MAX_SUBAGENT_ITERATIONS } from "./config/systemConfig";
+import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
@@ -88,7 +88,8 @@ export class SubAgent<T extends keyof ContextMap> {
             await this.emitSSEUpdate(toolRes)
             this.SaveSessionState().catch(err => console.error(`Failed to save session for task ${this.taskId}`, err))
 
-            if (this.iteration++ > this.maxIterations()) {
+            this.iteration++
+            if (this.iteration >= this.maxIterations()) {
                 success = false
                 break
             }
@@ -168,7 +169,9 @@ export class SubAgent<T extends keyof ContextMap> {
         switch (this.agentType) {
             case 'debuggerr': return DEBUGGERR_MAX_ITERATIONS
             case 'coder': return CODER_MAX_ITERATIONS
-            default: return MAX_SUBAGENT_ITERATIONS
+            case 'researcher': return RESEARCHER_MAX_ITERATIONS
+            case 'tester': return TESTER_MAX_ITERATIONS
+            case 'uiExpert': return UI_EXPERT_MAX_ITERATIONS
         }
     }
 
