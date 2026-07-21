@@ -8,7 +8,10 @@ class UIExpertContext{
     priorDesigns Design[]
 }
 
-function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string) -> string{
+class DesignVariants{
+    prompts string[]
+}
+function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string) -> DesignVariants{
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}

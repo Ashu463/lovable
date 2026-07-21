@@ -1,13 +1,13 @@
 import type { Screen } from "@google/stitch-sdk"
 import { makeOneScreen } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
-import { b, type UIExpertContext } from "../../baml_client"
+import { b, type UIExpertContext, type DesignVariants } from "../../baml_client"
 import { UI_VARIANTS_PROMPT } from "../config/sysPrompts"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
 
 type UIExpertRequest = {userPrompt: string, semanticMem: string}
-type UIExpertLLMResponse = {}
+type UIExpertLLMResponse = DesignVariants
 type UIExpertAgentResponse = {}
 
 export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpertLLMResponse, UIExpertAgentResponse>{
@@ -20,9 +20,8 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
 
 
     async craftDesignVariants(request: UIExpertRequest): Promise<string[]> {
-        const raw = await this.callLLM(request)
-        const parsed = JSON.parse(raw)
-        return parsed.prompts
+        const res = await this.callLLM(request)
+        return res.prompts
     }
     async generateDesigns(userPrompt: string, semanticMem: string): Promise<Screen[]> {
         const variantPrompts: string[] = await this.craftDesignVariants({userPrompt, semanticMem})
@@ -47,17 +46,16 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
         return await res.text();
     }
     
-    override async callLLM(request: UIExpertRequest): Promise<string> {
-        let res : string = ""
+    override async callLLM(request: UIExpertRequest): Promise<DesignVariants> {
         try{
-            res = await b.FramePrompts(UI_VARIANTS_PROMPT, request.userPrompt, request.semanticMem)
-            logger.info(`Design variant prompts: ${res}`)
+            const res = await b.FramePrompts(UI_VARIANTS_PROMPT, request.userPrompt, request.semanticMem)
+            logger.info(`Design variant prompts: ${JSON.stringify(res)}`)
+            return res
         }
         catch(e){
             console.error(e)
             throw e
         }
-        return res
     }
 
     override async executeFunction(content: UIExpertLLMResponse): Promise<UIExpertAgentResponse | null> {

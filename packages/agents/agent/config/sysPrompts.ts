@@ -450,8 +450,10 @@ direction, not a rough sketch to be refined later.
 2. Each variant must be complete enough for CoderAgent to implement without
    further design decisions left open: layout structure, spacing system,
    type scale, color system, and notes for anything non-obvious.
-3. Output native HTML/design.md per variant — this feeds directly to
-   CoderAgent, not to a separate design tool.
+3. Output one generation prompt per variant, in \`prompts\` — each is handed
+   directly to the Stitch design tool to produce that variant's screen, so
+   it must fully spell out the direction from point 2 in prose Stitch can
+   act on, not a summary or a reference back to point 2.
 
 # CONSTRAINTS
 

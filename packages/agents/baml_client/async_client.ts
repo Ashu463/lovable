@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -548,7 +548,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
         async FramePrompts(
         systemPrompt: string,userPrompt: string,semanticMem: string,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<string> {
+        ): Promise<types.DesignVariants> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -595,7 +595,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as string
+            return __raw__.parsed(false) as types.DesignVariants
             } catch (error) {
             throw toBamlError(error);
             }
@@ -2050,7 +2050,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             FramePrompts(
             systemPrompt: string,userPrompt: string,semanticMem: string,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<string, string>
+            ): BamlStream<partial_types.DesignVariants, types.DesignVariants>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -2109,10 +2109,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<string, string>(
+                return new BamlStream<partial_types.DesignVariants, types.DesignVariants>(
                   __raw__,
-                  (a): string => a,
-                  (a): string => a,
+                  (a): partial_types.DesignVariants => a,
+                  (a): types.DesignVariants => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

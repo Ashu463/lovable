@@ -6,8 +6,9 @@ import { prisma } from "../prisma";
 import { auth, internalAuth } from "./middleware";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
-import type { Question } from "../../generated/prisma/browser";
 import { logger } from "./utils";
+
+type IncomingQuestion = {question: string, option: string[]}
 
 export const questionRouter = Router();
 
@@ -36,28 +37,28 @@ questionRouter.get('/:projectId/getQuestions', auth, async (req: Request, res: R
 
 questionRouter.post('/:projectId/:runId', internalAuth, async (req: Request, res: Response) =>{
     const {projectId, runId} = req.params
-
     const {questionsObj} = req.body
 
     if(typeof projectId !== 'string' || typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Bad types of the params`})
     }
-    await Promise.all(
-        questionsObj.map((question: Question) =>
+    const result = await Promise.all(
+        questionsObj.map((question: IncomingQuestion) =>
             prisma.question.create({
-            data: {
-                id: randomUUIDv7(),
-                runId,
-                projectId,
-                question: question.question,
-                options: question.options,
-                createdAt: new Date(),
-            },
+                data: {
+                    id: randomUUIDv7(),
+                    runId,
+                    projectId,
+                    question: question.question,
+                    options: question.option,
+                    createdAt: new Date(),
+                },
             })
         )
     );
     return res.status(201).json({
         success: true,
+        data: result
     });
 })
 

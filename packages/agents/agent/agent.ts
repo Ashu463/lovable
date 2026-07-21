@@ -158,8 +158,6 @@ export class OrchestratorAgent{
     }
 
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
-        // I've to store the state somewhere. Probably in backend/db? What say? Just fetch from the backend normally
-        // const isComplex: ComplexityLevel = await b.CheckComplexity(userPrompt, COMPLEXITY_CHECKER_PROMPT)
         let isComplex
         let complexity: boolean = false
         // const {data: questions } = await 
@@ -254,8 +252,16 @@ export class OrchestratorAgent{
 
     async Orchestrate(userPrompt: string, answers?: Answers[], design?: string): Promise<OrchestratorResponse>{
         logger.info(`Running orchestrator`)
-        const data = await this.Bootstrap(userPrompt, answers);
-        logger.info(`Bootstrapped respose: ${data}`)
+        var data;
+        try{
+            data = await this.Bootstrap(userPrompt, answers);
+        }
+        catch(e){
+            return {
+                status: 'error',
+                reason: `Bootstrap failed with error ${e}`
+            }
+        }
 
         if(data.status === 'clarification_needed'){
             if(!data.alreadySaved){

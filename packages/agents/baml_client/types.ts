@@ -184,6 +184,11 @@ export interface Design {
   
 }
 
+export interface DesignVariants {
+  prompts: string[]
+  
+}
+
 export interface DocsSearch {
   type: "docsSearch"
   library: string

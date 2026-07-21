@@ -59,6 +59,8 @@ export default class TypeBuilder {
     
     Design: ClassViewer<'Design', "taskId" | "summary">;
     
+    DesignVariants: ClassViewer<'DesignVariants', "prompts">;
+    
     DocsSearch: ClassViewer<'DocsSearch', "type" | "library" | "query">;
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
@@ -146,7 +148,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
@@ -216,6 +218,10 @@ export default class TypeBuilder {
         
         this.Design = this.tb.classViewer("Design", [
           "taskId","summary",
+        ]);
+        
+        this.DesignVariants = this.tb.classViewer("DesignVariants", [
+          "prompts",
         ]);
         
         this.DocsSearch = this.tb.classViewer("DocsSearch", [
