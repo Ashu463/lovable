@@ -18,13 +18,14 @@ export async function AgentCall(
   runId: string,
   sandbox: E2BSandbox,
   semanticMem: string,
-  answers?: Answers[]
+  answers?: Answers[],
+  selectedDesign?: string
 ): Promise<any> {
 
   const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem)
 
   try {
-    const result = await orchestrator.Orchestrate(userPrompt, answers)
+    const result = await orchestrator.Orchestrate(userPrompt, answers, selectedDesign)
     return result
   } catch (err) {
     await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })

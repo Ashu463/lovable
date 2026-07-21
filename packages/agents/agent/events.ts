@@ -30,7 +30,7 @@ export function createBackendEmitter(runId: string): EventEmitter{
     return {
         async emit(event: OrchestratorEvent){
             try{
-                await axios.post(`${BACKEND_URL}/internal/sessions/${runId}/events`, event, {
+                await axios.post(`${BACKEND_URL}/internal/session/${runId}/events`, event, {
                     headers: internalAuthHeader(),
                     timeout: 5000,
                 })

@@ -13,6 +13,7 @@ import axios from "axios"
 
 import { E2BSandbox } from "./utils/sandbox"
 import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events"
+import { logger } from "./utils/logger"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
 export class MainAgent{
     private iterations: number
@@ -36,23 +37,28 @@ export class MainAgent{
         this.K = COMPACTION_PARAMETER
         this.r2 = new R2()
         this.emitter = createRunEmitter(runId)
+        logger.info(`[MainAgent:${this.runId}] Initialized for user=${this.userId} project=${this.projectId}`)
     }
-    
+
     async runLoop(): Promise<MainAgentResponse>{
+        logger.info(`[MainAgent:${this.runId}] runLoop starting, maxIterations=${MAIN_AGENT_MAX_ITERATIONS}`)
         try{
             while(this.iterations < MAIN_AGENT_MAX_ITERATIONS){
+                logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} starting`)
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
                 let shouldBreak = false
 
                 const response: LLMResponse = await this.callLLM(this.userPrompt);
-                
+                logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM stopReason=${response.stopReason}`)
+
                 iterationLog.push({
                     role: "assistant",
                     content: response.content,
                     timestamp: new Date().toISOString()
                 })
-    
+
                 if(response.stopReason === 'completed') {
+                    logger.info(`[MainAgent:${this.runId}] LLM signaled completion at iteration ${this.iterations}`)
                     iterationLog.push({
                         role: 'assistant',
                         content: `LLM Response completed`,
@@ -61,6 +67,7 @@ export class MainAgent{
                     shouldBreak = true
                 }
                 if(response.stopReason === 'aborted'){
+                    logger.warn(`[MainAgent:${this.runId}] LLM call aborted at iteration ${this.iterations}`)
                     iterationLog.push({
                         role: 'assistant',
                         content: `LLM call aborted`,
@@ -89,6 +96,7 @@ export class MainAgent{
                         throw new Error("Tool call not sended by LLM")
                     }
                     const toolType = response.toolCall.type
+                    logger.info(`[MainAgent:${this.runId}] Tool call requested: ${toolType}`)
                     this.session.push({
                         role: 'assistant',
                         content: `LLM requested tool call for ${toolType}`,
@@ -101,6 +109,7 @@ export class MainAgent{
                     })
                     try{
                         const toolResult: string | Screen = await this.executeTool(response.toolCall)
+                        logger.info(`[MainAgent:${this.runId}] Tool call ${toolType} succeeded`)
                         iterationLog.push({
                             role: 'toolCall',
                             content: JSON.stringify(toolResult),
@@ -116,6 +125,7 @@ export class MainAgent{
                             await this.syncToR2({action: "delete", path: response.toolCall.deleteFile.path})
                         }
                     }catch(e){
+                        logger.error(`[MainAgent:${this.runId}] Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`)
                         iterationLog.push({
                             role: 'toolCall',
                             content: `Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`,
@@ -134,6 +144,7 @@ export class MainAgent{
                 if(shouldBreak){
                     await this.saveSessionState()   // write to Postgres — failure recovery
                     this.iterations++
+                    logger.info(`[MainAgent:${this.runId}] runLoop breaking after iteration ${this.iterations}`)
                     break
                 }
                 this.saveSessionState()   // write to Postgres — failure recovery
@@ -141,12 +152,13 @@ export class MainAgent{
             }
         }
         catch(e){
-            console.error(e)
+            logger.error(`[MainAgent:${this.runId}] runLoop failed at iteration ${this.iterations}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
             return{
                 success: false,
                 summary: `Main Agent failed with error, ${e}`
             }
         }
+        logger.info(`[MainAgent:${this.runId}] runLoop finished after ${this.iterations} iterations, building summary`)
         return {
             success: true,
             summary: await this.BuildSummary()
@@ -159,20 +171,27 @@ export class MainAgent{
             return response
         }
         catch(e){
-            console.error(e)
+            logger.error(`[MainAgent:${this.runId}] MainLLMCall failed: ${e instanceof Error ? e.message : String(e)}`)
             throw e
         }
     }
 
     async ManageContext(): Promise<Message[]>{
-        if(this.estimateTokens(this.context) <= COMPACT_THRESHOLD) return this.context
+        const tokens = this.estimateTokens(this.context)
+        if(tokens <= COMPACT_THRESHOLD) return this.context
+        logger.info(`[MainAgent:${this.runId}] Context at ${tokens} tokens exceeds threshold ${COMPACT_THRESHOLD}, compacting older half`)
 
         const len = this.context.length
         const olderHalf = this.context.slice(0, len/2)
         const olderCompacted: Message[] = await b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf)
         const updated: Message[] = [...olderCompacted, ...this.context.slice(len/2, len)]
-        if(this.estimateTokens(updated) <= COMPACT_THRESHOLD) return updated
+        const updatedTokens = this.estimateTokens(updated)
+        if(updatedTokens <= COMPACT_THRESHOLD){
+            logger.info(`[MainAgent:${this.runId}] Compaction brought context to ${updatedTokens} tokens`)
+            return updated
+        }
 
+        logger.warn(`[MainAgent:${this.runId}] Compaction insufficient (${updatedTokens} tokens), summarizing full context`)
         return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, this.context)
     }
 
@@ -185,28 +204,30 @@ export class MainAgent{
 
         if(data.action === 'write'){
             try{
+                logger.info(`[MainAgent:${this.runId}] Syncing write to R2: ${data.path}`)
                 await this.r2.putFile(key + data.path, data.content)
             }
             catch(e){
-                console.error(e)
+                logger.error(`[MainAgent:${this.runId}] R2 write failed for ${data.path}: ${e instanceof Error ? e.message : String(e)}`)
                 throw e
             }
 
         }
         else{
             try{
+                logger.info(`[MainAgent:${this.runId}] Syncing delete to R2: ${data.path}`)
                 await this.r2.deleteFile(key + data.path)
             }
             catch(e){
-                console.error(e)
+                logger.error(`[MainAgent:${this.runId}] R2 delete failed for ${data.path}: ${e instanceof Error ? e.message : String(e)}`)
                 throw e
             }
         }
     }
-    
+
     async saveSessionState(){
         try{
-            await axios.post(`${BACKEND_URL}/internal/sessions/${this.runId}/state`, {
+            await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
                 context_snapshot: this.context,
                 session_snapshot: this.session,
                 iteration: this.iterations,
@@ -214,8 +235,9 @@ export class MainAgent{
                 headers: internalAuthHeader(),
                 timeout: 5000,
             })
+            logger.info(`[MainAgent:${this.runId}] Session state saved at iteration ${this.iterations}`)
         } catch(e){
-            console.error(`Failed to save session state for run ${this.runId}:`, e)
+            logger.error(`[MainAgent:${this.runId}] Failed to save session state: ${e instanceof Error ? e.message : String(e)}`)
         }
     }
 
@@ -223,38 +245,47 @@ export class MainAgent{
         switch (toolCall.type) {
             case ToolType.Apify:
                 if (!toolCall.apify) throw new Error("Apify tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] Apify: scraping ${toolCall.apify.urls.length} url(s), maxPages=${toolCall.apify.maxPages}`)
                 return await webScrape(toolCall.apify.urls, toolCall.apify.maxPages)
 
             case ToolType.Context7:
                 if (!toolCall.context7) throw new Error("Context7 tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] Context7: fetching docs for ${toolCall.context7.library}, query="${toolCall.context7.query}"`)
                 return await fetchDocs(toolCall.context7.library, toolCall.context7.query)
 
             case ToolType.Tavily:
                 if (!toolCall.tavily) throw new Error("Tavily tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] Tavily: searching "${toolCall.tavily.query}", maxResults=${toolCall.tavily.maxResults}`)
                 return await webSearch(toolCall.tavily.query, toolCall.tavily.maxResults)
 
             case ToolType.Stitch:
                 if (!toolCall.stitch) throw new Error("Stitch tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] Stitch: generating screen for prompt="${toolCall.stitch.prompt}"`)
                 return await makeOneScreen(toolCall.stitch.prompt, toolCall.stitch.userId)
 
             case ToolType.ReadFile:
                 if (!toolCall.readFile) throw new Error("ReadFile tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] ReadFile: ${toolCall.readFile.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "read", path: toolCall.readFile.path})).content
 
             case ToolType.WriteFile:
                 if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] WriteFile: ${toolCall.writeFile.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})).content
 
             case ToolType.EditFile:
                 if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.editFile.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.editFile.path, content: toolCall.editFile.content})).content
 
             case ToolType.DeleteFile:
                 if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] DeleteFile: ${toolCall.deleteFile.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "delete", path: toolCall.deleteFile.path})).content
 
             case ToolType.RunCommand:
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.runCommand.command}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
 
             default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
@@ -263,9 +294,10 @@ export class MainAgent{
 
     async BuildSummary(): Promise<string> {
         try {
+            logger.info(`[MainAgent:${this.runId}] Building summary from ${this.session.length} session entries`)
             return await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.session)
         } catch (e) {
-            console.error("Error occurred while generating summary")
+            logger.error(`[MainAgent:${this.runId}] Error occurred while generating summary: ${e instanceof Error ? e.message : String(e)}`)
             throw e
         }
     }

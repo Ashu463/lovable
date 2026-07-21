@@ -226,7 +226,7 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async SaveSessionState() {
         try{
-            await axios.post(`${BACKEND_URL}/internal/sessions/${this.runId}/state`, {
+            await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
                 iteration: this.iteration,
                 context_snapshot: this.context,
                 session_snapshot: this.session

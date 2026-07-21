@@ -6,7 +6,7 @@ client OpenAIGeneric {
     model "deepseek-v4-flash"
   }
 }
-client<llm> Gemini {
+client Gemini {
   provider google-ai
   options {
     model "gemini-3.5-flash"

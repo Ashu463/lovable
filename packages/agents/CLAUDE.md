@@ -104,3 +104,10 @@ bun --hot ./index.ts
 ```
 
 For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+
+# Task for today: 
+I'll be focusing on testing today, and I've to test out main and subagents in next 3 hours anyhow. 
+I'll be testing myself and you help me with fixing each error quickly, so that I can save some time from there. 
+Testing would be done for each individual component; starting with the orchestrator loop itself, then main agent 
+and hence all subagents. 
+Always read the error from terminal and carefully analyze the logs, be fast and response that can fix things quickly.

@@ -36,11 +36,13 @@ export type OrchestratorResponse =
     | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
 export type clarification_needed = {
     status: 'clarification_needed',
-    questions: Question[]
+    questions: Question[],
+    alreadySaved?: boolean
 }
 export type design_needed = {
     status: 'select_design',
-    designs: string[]
+    designs: string[],
+    alreadySaved?: boolean
 }
 // export interface BootstrapResponse{
 //     status: 'ready_to_act' | 'select_design' | 'clarification_needed' | 'error'

@@ -7,6 +7,7 @@ import { redis } from "./redis";
 import { logger } from "./utils";
 import { runQueue } from "./worker";
 import type { OrchestratorEvent } from "../../../../packages/agents";
+import type { Answers } from "../../../../packages/agents/types/agentTypes";
 
 const chatRouter = Router()
 /*
@@ -28,6 +29,9 @@ async function createRun(req: Request, res: Response){
     let projectId = req.params?.projectId
     const userPrompt = req.body.userPrompt
     const existingSandboxId = req.body?.sandboxId
+    const answers: Answers[] = req.body?.answers
+    const selectedDesign: string = req.body?.selectedDesign
+
     if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
         return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
     }
@@ -70,6 +74,8 @@ async function createRun(req: Request, res: Response){
             runId: run.id,
             semanticMem: user.semanticMem,
             sandboxId: existingSandboxId ? existingSandboxId : null,
+            answers: answers?.length > 0 ? answers : null,
+            selectedDesign: selectedDesign ? selectedDesign : null
         })
         logger.info(`Added to run queue`)
     } catch(e){

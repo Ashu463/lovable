@@ -163,18 +163,28 @@ export class OrchestratorAgent{
         let isComplex
         let complexity: boolean = false
         // const {data: questions } = await 
-
+        logger.info(`Starting to fetch qeustions and designs`)
         let [questionRes, designRes] = await Promise.all([
-            axios.get<{success: boolean, data: Question[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
-            axios.get<{success: boolean, data: Screen[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
+            axios.get<{success: boolean, data: {question: string, options: string[]}[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
+            axios.get<{success: boolean, data: {htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
         ])
-        const questions = questionRes.data.data
+        const savedQuestions = questionRes.data.data
+        const questions: Question[] = savedQuestions.map((q) => ({question: q.question, option: q.options}))
         const designs = designRes.data.data
+        logger.info(`${questions} and ${designs} are response from backend`)
         if(answers){
             logger.info(`Answer added to user prompt`)
             userPrompt += `Answers for these ${questions} are: ${answers}`
             answers.map((ans) => userPrompt += ans)
             complexity = true
+        }
+        else if(questions.length > 0){
+            logger.info(`Reusing previously generated questions, skipping complexity check`)
+            return {
+                status: 'clarification_needed',
+                questions: questions,
+                alreadySaved: true
+            }
         }
         else{
             try{
@@ -182,8 +192,7 @@ export class OrchestratorAgent{
                 isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
             }
             catch(e){
-                logger.info(`Failed complexity checker`)
-                console.error(e)
+                logger.error(`Failed complexity checker ${e}`)
                 return {
                     status: 'error',
                     error: `Error occurred while checking complexity: ${e instanceof Error ? e.message : String(e)}`
@@ -208,21 +217,38 @@ export class OrchestratorAgent{
         let designsHtml: string[] = []
         if(designs.length === 0){
             logger.info(`Generating designs`)
-            const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
-            designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
+            try{
+                const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
+                designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
+            }
+            catch(e){
+                logger.error(`Failed to generate designs ${e}`)
+                return {
+                    status: 'error',
+                    error: `Error occurred while generating designs: ${e instanceof Error ? e.message : String(e)}`
+                }
+            }
             return {
                 status: 'select_design',
                 designs: designsHtml
             }
         }
-        const { data: selectedDesignRes } = await axios.get<{success: boolean, data: {htmlContent: string}}>(`${BACKEND_URL}/api/design/${this.projectId}/selectedDesign`, { headers: internalAuthHeader() })
+        const selectedDesign = designs.find((d) => d.isSelected)
+        if(!selectedDesign){
+             logger.info(`Reusing previously generated designs, still awaiting selection`)
+            return {
+                status: 'select_design',
+                designs: designs.map((d) => d.htmlContent),
+                alreadySaved: true
+            }
+        }
         logger.info(`Screen fetched from db`)
         return {
             status: 'pass',
             isComplex: complexity,
             updatedPrompt: userPrompt,
-            questions: questions.length > 0 ? questions : [],
-            selectedDesign: selectedDesignRes.data.htmlContent
+            questions: questions,
+            selectedDesign: selectedDesign.htmlContent
         }
     }
 
@@ -232,16 +258,20 @@ export class OrchestratorAgent{
         logger.info(`Bootstrapped respose: ${data}`)
 
         if(data.status === 'clarification_needed'){
-            // or save questions to db here?
-            await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
+            if(!data.alreadySaved){
+                logger.info(`LLM generated questions, saving them`)
+                await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
+            }
             return {
                 status: 'clarification_needed',
                 questions: data.questions
             }
         }
         else if(data.status === 'select_design'){
-            // save design to the db
-            await axios.post(`${BACKEND_URL}/api/design/${this.projectId}`, { designs: data.designs }, { headers: internalAuthHeader() })
+            if(!data.alreadySaved){
+                logger.info(`LLM generated designs, saving them`)
+                await axios.post(`${BACKEND_URL}/api/design/${this.projectId}`, { designs: data.designs }, { headers: internalAuthHeader() })
+            }
             return {
                 status: 'select_design',
                 designs: data.designs
@@ -262,7 +292,7 @@ export class OrchestratorAgent{
         let orchestratorSummary: string = ""
         let tasks: PlannerTodo[] = []
         if(!data.isComplex){
-            const mainAgent: MainAgent = new MainAgent(userPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
+            const mainAgent: MainAgent = new MainAgent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
 
             const mainResult = await mainAgent.runLoop()
             if(!mainResult.success){

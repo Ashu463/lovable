@@ -19,7 +19,7 @@ model User {
   name        String?
   password    String?
   googleId    String?   @unique
-  semanticMem String?   @db.Text
+  semanticMem String?   @db.Text @default("")
 
   projects    Project[]
   createdAt   DateTime  @default(now())
