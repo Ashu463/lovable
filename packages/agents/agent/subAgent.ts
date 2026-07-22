@@ -14,6 +14,7 @@ import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, ContextMap
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events";
+import { logger } from "./utils/logger";
 
 export class SubAgent<T extends keyof ContextMap> {
     private agentInstance: BaseAgent<InputMap[T], ContextMap[T], any, any>
@@ -58,33 +59,50 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
 
+    // coder/debuggerr genuinely return a tagged union with a Done/DebuggingDone
+    // {action: "done"} variant, so checking res.action there is meaningful.
+    // tester/researcher/uiExpert don't — TesterAgent.callLLM returns
+    // ErrorResponse, Researcher.callLLM returns a bare string, UIExpert.callLLM
+    // returns DesignVariants — none of them ever carry `action`/`stopReason`
+    // at all (TLLMResponse is typed `any` here, so nothing caught this at
+    // compile time). Each of those three is a single LLM call by design, not
+    // a multi-turn tool loop, so treat their first response as the end.
+    private isSingleShotAgent(): boolean {
+        return this.agentType === 'tester' || this.agentType === 'researcher' || this.agentType === 'uiExpert'
+    }
+
     async runLoop(): Promise<SubAgentResponse> {
+        logger.info(`Building context for ${this.agentType}`)
         this.context = await this.BuildInitialContext()
+        logger.info(`${this.context} is the context for ${this.agentType}`)
         let success = true
 
         while (true) {
+            logger.info(`calling LLM for ${this.agentType}`)
             const res = await this.agentInstance.callLLM(this.input, this.context)
 
-            if (res.action === 'done' || res.stopReason === 'completed') {
+            if (this.isSingleShotAgent() || res.action === 'done' || res.stopReason === 'completed') {
+                logger.info(`${this.agentType} done`)
                 const toolRes = await this.agentInstance.executeFunction(res)
                 this.pushSession('assistant', 'done', toolRes)
                 await this.SaveSessionState()
                 break
             }
             if(res.stopReason === 'aborted'){
+                logger.info(`Aborted`)
                 this.pushSession('assistant', 'halted', res)
                 await this.SaveSessionState()
                 success = false
                 break;
             }
-
+            logger.info(`Executing tool call, ${res}`)
             const toolRes = await this.agentInstance.executeFunction(res)
 
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 
             this.context = await this.ManageContext(toolRes)
-
+            logger.info(`${toolRes}, is the tool res.`)
             await this.emitSSEUpdate(toolRes)
             this.SaveSessionState().catch(err => console.error(`Failed to save session for task ${this.taskId}`, err))
 
@@ -126,12 +144,13 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
     async BuildCoderContext(): Promise<CoderContext>{
+        logger.info(`Building context for coder`)
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
             this.repoTree = await this.sandbox.getRepoTree()
         }
         const res = await axios.get<{success: boolean, data: {summary: string, todo: {taskId: number}}[]}>(
-            `${BACKEND_URL}/api/runs/${this.projectId}/runs/${this.runId}/summaries`,
+            `${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/summaries`,
             { headers: internalAuthHeader() }
         )
         const summaries: TaskSummary[] = res.data.data

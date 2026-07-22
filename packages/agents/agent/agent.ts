@@ -317,7 +317,13 @@ export class OrchestratorAgent{
         else{
             logger.info(`Given task is complex, generating todos`)
             tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
-            
+
+            try{
+                await axios.post(`${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos`, { todos: tasks }, { headers: internalAuthHeader() })
+            } catch(e){
+                logger.error(`Failed to save todos for run ${this.runId}: ${e}`)
+            }
+
             const dag: DAG = new DAG(tasks)
             const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
             logger.info(`todos generated and arranged sequentially`)
@@ -339,6 +345,16 @@ export class OrchestratorAgent{
                 logger.info(`Starting runloop for the subagent`)
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
+
+                try{
+                    await axios.post(
+                        `${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos/${todo.id}/summary`,
+                        { summary: result.summary },
+                        { headers: internalAuthHeader() }
+                    )
+                } catch(e){
+                    logger.error(`Failed to save summary for task ${todo.id} on run ${this.runId}: ${e}`)
+                }
 
                 let testsPassing: boolean | null = null;
                 let lastErrors = null
