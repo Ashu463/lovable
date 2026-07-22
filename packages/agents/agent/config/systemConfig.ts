@@ -1,4 +1,6 @@
 export const PORT = 3000
+export const SANDBOX_HOME = '/home/user'
+export const PROJECT_ROOT = `${SANDBOX_HOME}/app`
 export const MAX_BOOT_WAIT_MS = 20000
 export const POLL_INTERVAL_MS = 500
 export const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:3000`

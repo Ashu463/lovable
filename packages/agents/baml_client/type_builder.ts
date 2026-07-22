@@ -77,8 +77,6 @@ export default class TypeBuilder {
     
     FileEdit: ClassViewer<'FileEdit', "fileName" | "summary">;
     
-    FinalResponse: ClassViewer<'FinalResponse', "status" | "previewUrl" | "deployUrl">;
-    
     Fixes: ClassViewer<'Fixes', "error" | "fixSummary">;
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
@@ -148,7 +146,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FinalResponse","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","Fixes","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
@@ -254,10 +252,6 @@ export default class TypeBuilder {
         
         this.FileEdit = this.tb.classViewer("FileEdit", [
           "fileName","summary",
-        ]);
-        
-        this.FinalResponse = this.tb.classViewer("FinalResponse", [
-          "status","previewUrl","deployUrl",
         ]);
         
         this.Fixes = this.tb.classViewer("Fixes", [

@@ -77,7 +77,7 @@ function MainLLMCall(
 }
 function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> string{
 
-    client OpenAIGeneric
+    client Gemini
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.

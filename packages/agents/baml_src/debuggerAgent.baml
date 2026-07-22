@@ -25,7 +25,7 @@ function DebuggerAgent(
     toolResult: ToolResult?
 ) -> ReadFile | RunCommand | WriteFile | EditFile | Research | DebuggingDone{
     
-    client OpenAIGeneric
+    client Gemini
     prompt #"
         {{systemPrompt}}
         {{errors}} - what failed: the command that failed and its output,

@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FinalResponse, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -37,39 +37,6 @@ type BamlCallOptions<EventsT = never> = {
 export class HttpRequest {
   constructor(private runtime: BamlRuntime, private ctxManager: BamlCtxManager) {}
 
-  
-  BugFinder(
-      errors: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "BugFinder",
-        {
-          "errors": errors,"systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        false,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
   
   CheckComplexityAndGenerateQuestions(
       systemPrompt: string,userPrompt: string,
@@ -434,39 +401,6 @@ export class HttpRequest {
     }
   }
   
-  OrchestrateAgent(
-      systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "OrchestrateAgent",
-        {
-          "systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        false,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
   OrchestratorSummary(
       systemPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
@@ -599,39 +533,6 @@ export class HttpRequest {
     }
   }
   
-  StreamOneAgent(
-      userPrompt: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "StreamOneAgent",
-        {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        false,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
   SummarizeCoderContext(
       systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
@@ -752,39 +653,6 @@ export class HttpRequest {
         "SummarizeEpisodic",
         {
           "systemPrompt": systemPrompt,"episodicMem": episodicMem
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        false,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  TesterAgent(
-      userPrompt: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "TesterAgent",
-        {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -836,39 +704,6 @@ export class HttpStreamRequest {
   constructor(private runtime: BamlRuntime, private ctxManager: BamlCtxManager) {}
 
   
-  BugFinder(
-      errors: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "BugFinder",
-        {
-          "errors": errors,"systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        true,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
   CheckComplexityAndGenerateQuestions(
       systemPrompt: string,userPrompt: string,
       __baml_options__?: BamlCallOptions<never>
@@ -1232,39 +1067,6 @@ export class HttpStreamRequest {
     }
   }
   
-  OrchestrateAgent(
-      systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "OrchestrateAgent",
-        {
-          "systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        true,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
   OrchestratorSummary(
       systemPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
@@ -1397,39 +1199,6 @@ export class HttpStreamRequest {
     }
   }
   
-  StreamOneAgent(
-      userPrompt: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "StreamOneAgent",
-        {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        true,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
   SummarizeCoderContext(
       systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
@@ -1550,39 +1319,6 @@ export class HttpStreamRequest {
         "SummarizeEpisodic",
         {
           "systemPrompt": systemPrompt,"episodicMem": episodicMem
-        },
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __clientRegistry__,
-        true,
-        __env__,
-      )
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  TesterAgent(
-      userPrompt: string,systemPrompt: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): HTTPRequest {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __baml_options__?.clientRegistry;
-      if (__baml_options__?.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__baml_options__.client);
-      }
-
-      return this.runtime.buildRequestSync(
-        "TesterAgent",
-        {
-          "userPrompt": userPrompt,"systemPrompt": systemPrompt
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

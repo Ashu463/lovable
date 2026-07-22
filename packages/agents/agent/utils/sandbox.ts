@@ -1,6 +1,7 @@
 import { Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
+import { SANDBOX_HOME, PROJECT_ROOT } from '../config/systemConfig';
 
 export interface ExecuteRes{
     success: boolean,
@@ -48,8 +49,6 @@ export class E2BSandbox{
         await instance.restoreOrBootstrap()
         return instance
     }
-    private readonly APP_DIR = '/home/user/app'
-
     private async restoreOrBootstrap(): Promise<void> {
         const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
 
@@ -61,7 +60,7 @@ export class E2BSandbox{
                 const content = await this.r2.getFile(key)
                 await this.Execute(this.sandboxId, {
                     action: 'writeFile',
-                    path: `${this.APP_DIR}${relativePath}`,
+                    path: `${SANDBOX_HOME}${relativePath}`,
                     content
                 })
             }
@@ -70,19 +69,19 @@ export class E2BSandbox{
         } else {
             console.log('Bootstrapping fresh sandbox')
 
-            await this.sandbox.commands.run(`mkdir -p ${this.APP_DIR}`)
+            await this.sandbox.commands.run(`mkdir -p ${PROJECT_ROOT}`)
 
             await this.sandbox.commands.run(
                 'curl -fsSL https://codeload.github.com/Ashu463/react-template/tar.gz/refs/heads/master -o repo.tar.gz',
-                { cwd: this.APP_DIR }
+                { cwd: PROJECT_ROOT }
             )
 
             await this.sandbox.commands.run(
                 'tar -xzf repo.tar.gz --strip-components=1 && rm repo.tar.gz',
-                { cwd: this.APP_DIR }
+                { cwd: PROJECT_ROOT }
             )
 
-            const install = await this.sandbox.commands.run('npm install', { cwd: this.APP_DIR })
+            const install = await this.sandbox.commands.run('npm install', { cwd: PROJECT_ROOT })
             if (install.exitCode !== 0) {
                 console.error('npm install failed:', install.stderr)
                 throw new Error('Bootstrap failed: npm install did not succeed')
@@ -92,16 +91,18 @@ export class E2BSandbox{
 
             await this.SyncR2()
         }
-        
+
     }
-    // implement to increase the TTL of sandbox by one hour whenever any of these 
-    // functions get called.
+    private resolvePath(path: string): string {
+        if (path.startsWith('/')) return path
+        return `${PROJECT_ROOT}/${path.replace(/^\.\//, '')}`
+    }
 
     async getRepoTree(): Promise<string>{
         try{
             const result = await this.sandbox.commands.run(
                 "find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' -not -name '.env'",
-                { cwd: '/home/user/app' }
+                { cwd: PROJECT_ROOT }
             )
             return result.stdout
 
@@ -114,9 +115,10 @@ export class E2BSandbox{
     
     async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
         // const homeDir = 
+
         if(payload.action === 'read'){
             try{
-                const result: string = await this.sandbox.files.read(payload.path)
+                const result: string = await this.sandbox.files.read(this.resolvePath(payload.path))
                 return {
                     success: true,
                     content: result
@@ -129,8 +131,8 @@ export class E2BSandbox{
         }
         else if(payload.action === 'writeFile'){
             try{
-                const writeRes = await this.sandbox.files.write(payload.path, payload.content)
-                
+                const writeRes = await this.sandbox.files.write(this.resolvePath(payload.path), payload.content)
+
                 return {
                     success: true,
                     content: `Content written at ${writeRes.path}`
@@ -146,8 +148,8 @@ export class E2BSandbox{
         }
         else if(payload.action === 'delete'){
             try{
-                const deleteRes = await this.sandbox.files.remove(payload.path)
-                
+                const deleteRes = await this.sandbox.files.remove(this.resolvePath(payload.path))
+
                 return {
                     success: true,
                     content: `Deleted file is ${deleteRes}`
@@ -161,6 +163,7 @@ export class E2BSandbox{
         else if(payload.action === 'runCommand'){
             try{
                 const cmdRes = await this.sandbox.commands.run(payload.command, {
+                    cwd: PROJECT_ROOT,
                     timeoutMs: 60000
                 })
 
@@ -196,14 +199,13 @@ export class E2BSandbox{
     
     async SyncR2(){
         /*Steps: sandbox -> r2
-        - create the new path for all such files. 
+        - create the new path for all such files.
         - putfile with that key for each of the file.
         copy whole directory of sandbox /home/usr  to the R2.
         */
-        const cwd = (await this.sandbox.commands.run("pwd")).stdout.trim()
         const prefix = this.r2.filesPrefix(this.userId, this.projectId)
         const findCmd = [
-            `find ${cwd} -type f`,
+            `find ${PROJECT_ROOT} -type f`,
             `-not -path '*/node_modules/*'`,
             `-not -path '*/dist/*'`,
             `-not -path '*/build/*'`,
@@ -214,17 +216,15 @@ export class E2BSandbox{
         ].join(' ')
 
         const result = await this.sandbox.commands.run(findCmd)
-        // console.log(result, " is the find -type f command result")
-       // I've to trust the LLM that he'll send me the right folder directory while writing any file
 
         const absolutePaths = result.stdout.split('\n')
             .map(p => p.trim())
             .filter(Boolean)
-        
+
         for(let i = 0 ; i < absolutePaths.length; i += 10){
             const batch = absolutePaths.slice(i, i + 10)
             await Promise.all(batch.map(async (absPath) =>{
-                const relPath = absPath.replace(`${cwd}`, "")
+                const relPath = absPath.replace(SANDBOX_HOME, "")
                 const content = await this.sandbox.files.read(absPath)
                 await this.r2.putFile(prefix + relPath, content)
             }))

@@ -2,7 +2,7 @@ import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/sysPrompts"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 
 type TesterInput = ""
@@ -26,8 +26,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
-        // #TEST: replace with appropriate path of project directory
-        const handle = await sandbox.commands.run(`cd /home/usr/${this.userId}/projects/${this.projectId} && npm run dev`, {
+        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev`, {
             background: true,
             onStdout: (data: string) => {stdOutBuf += data},
             onStderr: (data: string) => {stdErrBuf += data}
