@@ -336,7 +336,7 @@ export class HttpRequest {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.SessionMap,
+      systemPrompt: string,subagentType: string,session: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -355,7 +355,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "GenerateSubagentSummary",
         {
-          "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+          "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1002,7 +1002,7 @@ export class HttpStreamRequest {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.SessionMap,
+      systemPrompt: string,subagentType: string,session: string,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1021,7 +1021,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "GenerateSubagentSummary",
         {
-          "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+          "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

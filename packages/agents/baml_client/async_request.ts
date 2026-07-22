@@ -340,7 +340,7 @@ env?: Record<string, string | undefined>
       }
       
   async GenerateSubagentSummary(
-  systemPrompt: string,subagentType: string,context: types.SessionMap,
+  systemPrompt: string,subagentType: string,session: string,
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -359,7 +359,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "GenerateSubagentSummary",
       {
-      "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+      "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -1006,7 +1006,7 @@ env?: Record<string, string | undefined>
           }
           
       async GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.SessionMap,
+      systemPrompt: string,subagentType: string,session: string,
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -1025,7 +1025,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "GenerateSubagentSummary",
           {
-          "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+          "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),

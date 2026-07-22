@@ -602,7 +602,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async GenerateSubagentSummary(
-        systemPrompt: string,subagentType: string,context: types.SessionMap,
+        systemPrompt: string,subagentType: string,session: string,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<string> {
           try {
@@ -616,7 +616,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.GenerateSubagentSummary(
-          systemPrompt,subagentType,context,
+          systemPrompt,subagentType,session,
           __baml_options__
           );
 
@@ -640,7 +640,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "GenerateSubagentSummary",
             {
-            "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+            "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -1898,7 +1898,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             GenerateSubagentSummary(
-            systemPrompt: string,subagentType: string,context: types.SessionMap,
+            systemPrompt: string,subagentType: string,session: string,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<string, string>
               {
@@ -1947,7 +1947,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "GenerateSubagentSummary",
                 {
-                "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+                "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
                 },
                 undefined,
                 this.ctxManager.cloneContext(),

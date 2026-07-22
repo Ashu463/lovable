@@ -548,7 +548,7 @@ export class BamlSyncClient {
   }
   
   GenerateSubagentSummary(
-      systemPrompt: string,subagentType: string,context: types.SessionMap,
+      systemPrompt: string,subagentType: string,session: string,
       __baml_options__?: BamlCallOptions<never>
   ): string {
     try {
@@ -580,7 +580,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "GenerateSubagentSummary",
         {
-          "systemPrompt": systemPrompt,"subagentType": subagentType,"context": context
+          "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),

@@ -2,6 +2,7 @@ import { Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
 import { SANDBOX_HOME, PROJECT_ROOT } from '../config/systemConfig';
+import { logger } from './logger';
 
 export interface ExecuteRes{
     success: boolean,
@@ -53,7 +54,7 @@ export class E2BSandbox{
         const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
 
         if (files.length > 0) {
-            console.log(`Restoring ${files.length} files from R2`)
+            logger.info(`Restoring ${files.length} files from R2`)
 
             for (const key of files) {
                 const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
@@ -65,9 +66,9 @@ export class E2BSandbox{
                 })
             }
 
-            console.log('Restore complete')
+            logger.info('Restore complete')
         } else {
-            console.log('Bootstrapping fresh sandbox')
+            logger.info('Bootstrapping fresh sandbox')
 
             await this.sandbox.commands.run(`mkdir -p ${PROJECT_ROOT}`)
 
@@ -83,11 +84,11 @@ export class E2BSandbox{
 
             const install = await this.sandbox.commands.run('npm install', { cwd: PROJECT_ROOT })
             if (install.exitCode !== 0) {
-                console.error('npm install failed:', install.stderr)
+                logger.error(`npm install failed: ${install.stderr}`)
                 throw new Error('Bootstrap failed: npm install did not succeed')
             }
 
-            console.log('Bootstrap complete, sandboxId:', this.sandboxId)
+            logger.info(`Bootstrap complete, sandboxId: ${this.sandboxId}`)
 
             await this.SyncR2()
         }
@@ -108,7 +109,7 @@ export class E2BSandbox{
 
         }
         catch(e){
-            console.warn(e)
+            logger.error(`Failed to generate repo tree: ${e}`)
             throw new Error(`Error occurred while generating repository tree`)
         }
     }
@@ -117,21 +118,23 @@ export class E2BSandbox{
         // const homeDir = 
 
         if(payload.action === 'read'){
+            const path = this.resolvePath(payload.path)
             try{
-                const result: string = await this.sandbox.files.read(this.resolvePath(payload.path))
+                const result: string = await this.sandbox.files.read(path)
                 return {
                     success: true,
                     content: result
                 }
             }
             catch(e){
-                console.warn(e)
+                logger.error(`Failed to read ${path}: ${e}`)
                 throw new Error("Error occured while reading from sandbox file")
             }
         }
         else if(payload.action === 'writeFile'){
+            const path = this.resolvePath(payload.path)
             try{
-                const writeRes = await this.sandbox.files.write(this.resolvePath(payload.path), payload.content)
+                const writeRes = await this.sandbox.files.write(path, payload.content)
 
                 return {
                     success: true,
@@ -139,7 +142,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                console.warn(e)
+                logger.error(`Failed to write ${path}: ${e}`)
                 throw new Error("Error occurred while executing write sandbox file")
             }
         }
@@ -147,8 +150,9 @@ export class E2BSandbox{
             throw new Error(`To be implemented don't call this please`)
         }
         else if(payload.action === 'delete'){
+            const path = this.resolvePath(payload.path)
             try{
-                const deleteRes = await this.sandbox.files.remove(this.resolvePath(payload.path))
+                const deleteRes = await this.sandbox.files.remove(path)
 
                 return {
                     success: true,
@@ -156,7 +160,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                console.warn(e)
+                logger.error(`Failed to delete ${path}: ${e}`)
                 throw new Error("Error occurred while executing deleting sandbox file")
             }
         }
@@ -169,7 +173,7 @@ export class E2BSandbox{
 
                 if(cmdRes.exitCode !== 0){
                     return {
-                        success: false, 
+                        success: false,
                         content: cmdRes.stderr || cmdRes.stdout
                     }
                 }
@@ -181,7 +185,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                console.warn(e)
+                logger.error(`Failed to run command "${payload.command}": ${e}`)
                 throw new Error("Error occurred while executing sandbox cmd")
             }
         }

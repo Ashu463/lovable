@@ -1,4 +1,5 @@
 import { Screen, stitch } from "@google/stitch-sdk";
+import { logger } from "../utils/logger";
 
 type CreateProjectResult = {
   name: string;          // "projects/5539700355047826969"
@@ -13,8 +14,6 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
       title: userId,
     });
 
-    console.dir(projectResult, { depth: null });
-
     if (!projectResult?.name) {
         throw new Error(`create_project returned unexpected shape: ${JSON.stringify(projectResult)}`);
     }
@@ -24,15 +23,16 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
     if(typeof projectId !== 'string' ){
       throw new Error(`project id not worth tupe`)
     }
+    logger.info(`Stitch project created: ${projectId}`)
     const project = stitch.project(projectId);
 
     const screen: Screen = await project.generate(prompt);
-    console.log(screen, " is the complete screen by stitch");
+    logger.info(`Stitch screen generated: ${screen.screenId}`)
 
     const htmlUrl = await screen.getHtml();
     const imageUrl = await screen.getImage();
+    logger.info(`Stitch screen ${screen.screenId} html/image ready`)
 
-    console.log({ htmlUrl, imageUrl });
     return screen;
 }
 

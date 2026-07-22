@@ -71,10 +71,16 @@ export class SubAgent<T extends keyof ContextMap> {
         return this.agentType === 'tester' || this.agentType === 'researcher' || this.agentType === 'uiExpert'
     }
 
+    private summarizeToolCall(res: any): string {
+        if (!res || typeof res !== 'object') return String(res)
+        if (res.path) return `${res.action}:${res.path}`
+        if (res.command) return `${res.action}:${res.command}`
+        if (res.filesEdited) return `${res.action} (${res.filesEdited.length} file(s))`
+        return String(res.action ?? 'unknown')
+    }
+
     async runLoop(): Promise<SubAgentResponse> {
-        logger.info(`Building context for ${this.agentType}`)
         this.context = await this.BuildInitialContext()
-        logger.info(`${this.context} is the context for ${this.agentType}`)
         let success = true
 
         while (true) {
@@ -89,22 +95,21 @@ export class SubAgent<T extends keyof ContextMap> {
                 break
             }
             if(res.stopReason === 'aborted'){
-                logger.info(`Aborted`)
+                logger.warn(`${this.agentType} aborted at iteration ${this.iteration}`)
                 this.pushSession('assistant', 'halted', res)
                 await this.SaveSessionState()
                 success = false
                 break;
             }
-            logger.info(`Executing tool call, ${res}`)
+            logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
             const toolRes = await this.agentInstance.executeFunction(res)
 
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 
             this.context = await this.ManageContext(toolRes)
-            logger.info(`${toolRes}, is the tool res.`)
             await this.emitSSEUpdate(toolRes)
-            this.SaveSessionState().catch(err => console.error(`Failed to save session for task ${this.taskId}`, err))
+            this.SaveSessionState().catch(err => logger.error(`Failed to save session for task ${this.taskId}: ${err}`))
 
             this.iteration++
             if (this.iteration >= this.maxIterations()) {
@@ -199,9 +204,9 @@ export class SubAgent<T extends keyof ContextMap> {
             // #CRITICAL: See session map of baml side and here agent side are not imported from same direction
             // so might cause some issue here.
             // Fix for it is store stringified version of whatever thing you want to save
-            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.agentType, this.session as unknown as SessionMap)
+            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.agentType, JSON.stringify(this.session))
         } catch (e) {
-            console.error("Error occurred while generating summary")
+            logger.error(`Error occurred while generating summary for ${this.agentType}: ${e}`)
             throw e
         }
     }
@@ -250,14 +255,14 @@ export class SubAgent<T extends keyof ContextMap> {
         try{
             await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
                 iteration: this.iteration,
-                context_snapshot: this.context,
-                session_snapshot: this.session
+                context_snapshot: JSON.stringify(this.context),
+                session_snapshot: JSON.stringify(this.session)
             }, {
                 headers: internalAuthHeader(),
                 timeout: 5000,
             })
         } catch(e){
-            console.error(`Failed to save session state for task ${this.taskId}:`, e)
+            logger.error(`Failed to save session state for task ${this.taskId}: ${e}`)
         }
     }
 }

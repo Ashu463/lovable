@@ -1,13 +1,13 @@
 class AgentContext{}
 
 // Subagent session map, for generating summary
-function GenerateSubagentSummary(systemPrompt: string, subagentType: string, context: SessionMap) -> string{
+function GenerateSubagentSummary(systemPrompt: string, subagentType: string, session: string) -> string{
 
     client Gemini
     prompt #"
         {{systemPrompt}}
         {{subagentType}}
-        {{context}}
+        {{session}}
 
         {{ctx.output_format}}
     "#

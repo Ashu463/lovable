@@ -32,10 +32,10 @@ export class Researcher extends BaseAgent<ResearcherInput, ResearcherContext, Re
         let res = ""
         try{
             res = await webSearch(query, maxResults)
-            logger.info(`Web search response: ${res}`)
+            logger.info(`Web search "${query}" returned ${res.length} chars`)
         }
         catch(e){
-            console.error(e)
+            logger.error(`Web search "${query}" failed: ${e}`)
             throw e;
         }
         return res
@@ -44,10 +44,10 @@ export class Researcher extends BaseAgent<ResearcherInput, ResearcherContext, Re
         let res = ""
         try{
             res = await webScrape(url, maxPages)
-            logger.info(`Web scrape response: ${res}`)
+            logger.info(`Web scrape of ${url.length} url(s) returned ${res.length} chars`)
         }
         catch(e){
-            console.error(e)
+            logger.error(`Web scrape of ${url.length} url(s) failed: ${e}`)
             throw e;
         }
         return res
