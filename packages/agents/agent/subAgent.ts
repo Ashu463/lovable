@@ -59,14 +59,6 @@ export class SubAgent<T extends keyof ContextMap> {
         }
     }
 
-    // coder/debuggerr genuinely return a tagged union with a Done/DebuggingDone
-    // {action: "done"} variant, so checking res.action there is meaningful.
-    // tester/researcher/uiExpert don't — TesterAgent.callLLM returns
-    // ErrorResponse, Researcher.callLLM returns a bare string, UIExpert.callLLM
-    // returns DesignVariants — none of them ever carry `action`/`stopReason`
-    // at all (TLLMResponse is typed `any` here, so nothing caught this at
-    // compile time). Each of those three is a single LLM call by design, not
-    // a multi-turn tool loop, so treat their first response as the end.
     private isSingleShotAgent(): boolean {
         return this.agentType === 'tester' || this.agentType === 'researcher' || this.agentType === 'uiExpert'
     }

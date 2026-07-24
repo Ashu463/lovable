@@ -110,58 +110,17 @@ transcript once this digest exists.
     subagentType #"
       coder
     "#
-    context {
-        coder {
-          taskId 1
-          role "user"
-          status "in_progress"
-          iterationCount 123
-          timestamp #"
-          hello world
-        "#
-          content null
-      }
-        debuggerr {
-          taskId 123
-          role "user"
-          status "in_progress"
-          iterationCount 123
-          timestamp #"
-          hello world
-        "#
-          content null
-          rawTranscript null
-      }
-        tester {
-          taskId 123
-          role "user"
-          status "in_progress"
-          iterationCount 123
-          timestamp #"
-          hello world
-        "#
-          content null
-      }
-        researcher {
-          taskId 123
-          role "user"
-          status "in_progress"
-          iterationCount 123
-          timestamp #"
-          hello world
-        "#
-          content null
-      }
-        uiExpert {
-          taskId 123
-          role "user"
-          status "in_progress"
-          iterationCount 123
-          timestamp #"
-          hello world
-        "#
-          content null
-      }
-    }
+    session #"
+      [
+        {
+          "taskId": 1,
+          "role": "assistant",
+          "status": "done",
+          "iterationCount": 3,
+          "timestamp": "2026-07-21T08:00:00Z",
+          "content": "Created src/routes/hello.ts with a hello world route."
+        }
+      ]
+    "#
   }
 }
