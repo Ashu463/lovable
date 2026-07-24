@@ -47,33 +47,8 @@ class TesterResponse{
 
 }
 
-function StreamOneAgent(userPrompt: string,  systemPrompt: string) -> AgentResponse{
-
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{userPrompt}}
-
-        {{ctx.output_format}}
-    "#
-}
-
-class FinalResponse{
-    status "success" | "failed"
-    previewUrl string?
-    deployUrl string?
-}
-function OrchestrateAgent(systemPrompt: string) -> FinalResponse{
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-
-        {{ctx.output_format}}
-    "#
-
-}
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAIGeneric
+    client Gemini
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -84,28 +59,7 @@ function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -
 }
 
 
-function BugFinder(errors: string, systemPrompt: string) -> Error[]{
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{errors}}
 
-        {{ctx.output_format}}
-    "#
-}
-
-function TesterAgent(userPrompt: string, systemPrompt: string, ) -> TesterResponse{
-    // just compare the concised version of whatever is built till now and the actual user prompt
-    // then find the similarty score of both, if > 75 then okay
-    // else loop in again the coder for fixing this. 
-    client OpenAIGeneric
-    prompt #"
-        {{systemPrompt}}
-        {{userPrompt}}
-
-        {{ctx.output_format}}
-    "#
-}
 class PlannerTodo{
     id int
     task string
@@ -197,7 +151,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenAIGeneric
+    client Gemini
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the

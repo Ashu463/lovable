@@ -49,11 +49,11 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
     override async callLLM(request: UIExpertRequest): Promise<DesignVariants> {
         try{
             const res = await b.FramePrompts(UI_VARIANTS_PROMPT, request.userPrompt, request.semanticMem)
-            logger.info(`Design variant prompts: ${JSON.stringify(res)}`)
+            logger.info(`Framed ${res.prompts.length} design variant prompt(s)`)
             return res
         }
         catch(e){
-            console.error(e)
+            logger.error(`Failed to frame design variant prompts: ${e}`)
             throw e
         }
     }

@@ -169,7 +169,7 @@ export class OrchestratorAgent{
         const savedQuestions = questionRes.data.data
         const questions: Question[] = savedQuestions.map((q) => ({question: q.question, option: q.options}))
         const designs = designRes.data.data
-        logger.info(`${questions} and ${designs} are response from backend`)
+        logger.info(`Fetched ${questions.length} saved question(s) and ${designs.length} saved design(s)`)
         if(answers){
             logger.info(`Answer added to user prompt`)
             userPrompt += `Answers for these ${questions} are: ${answers}`
@@ -330,19 +330,18 @@ export class OrchestratorAgent{
             let summaries: string[] = []
 
             for(let i = 0 ; i < sequentialTodos.length; i++){
-                logger.info(`Starting task ${sequentialTodos[i]?.task}`)
                 const todo = sequentialTodos[i];
+                logger.info(`Task ${todo?.id}: ${todo?.task}`)
                 // #TODO: Failure handling of planner
                 if (!todo?.agent){
-                    console.warn(`This ${todo} is not assigned with any agent.`)
+                    logger.warn(`Task ${todo?.id} has no agent assigned, stopping DAG execution`)
                     break;
                 }
 
                 const agentType = todo?.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
-                logger.info(`${input} is the input made for ${agentType}`)
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
-                logger.info(`Starting runloop for the subagent`)
+                logger.info(`Starting runloop for ${agentType} (task ${todo.id})`)
                 const result = await subagent.runLoop()
                 summaries.push(result.summary)
 
@@ -479,7 +478,7 @@ export class OrchestratorAgent{
             }
         }
         catch(e){
-            console.error(e)
+            logger.error(`TesterDebuggerLoop failed: ${e}`)
             return{
                 success: false,
                 summaries,

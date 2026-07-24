@@ -100,7 +100,6 @@ runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Respons
 
 runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Response) => {
     const { projectId, runId } = req.params;
-
     if (
         typeof projectId !== "string" ||
         typeof runId !== "string"
@@ -214,6 +213,8 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
 
 
 runRouter.post("/:projectId/:runId/todos", internalAuth, async (req: Request, res: Response) => {
+    logger.info(`Saving todos to the db`)
+
     const { projectId, runId } = req.params;
     const { todos } = req.body as {
         todos: {id: number, task: string, agent: AgentType, status: "pending" | "completed", dependency: number[], designNeeded?: boolean}[]
@@ -233,6 +234,8 @@ runRouter.post("/:projectId/:runId/todos", internalAuth, async (req: Request, re
     }
 
     try {
+    logger.info(`calling promises to save todos`)
+
         const created = await Promise.all(todos.map((t) =>
             prisma.todo.create({
                 data: {

@@ -18,6 +18,7 @@ projectRouter.get("/", auth, async (req: AuthRequest, res: Response) => {
         
         res.status(401).json({success: false, message: `UserId not given`})
     }
+    await prisma.project.findMany({where: {userId: userId}})
     const projects = await prisma.project.findMany({where: {userId: userId}})
 
     if(!projects){

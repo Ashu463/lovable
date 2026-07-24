@@ -4,7 +4,7 @@ dotenv.config();
 import { stitch } from "@google/stitch-sdk";
 
 async function test() {
-  console.log("STITCH_API_KEY exists:", !!process.env.STITCH_API_KEY, process.env.STITCH_API_KEY);
+  console.log("STITCH_API_KEY exists:", !!process.env.STITCH_API_KEY);
 
   const result = await stitch.callTool("create_project", {
     title: "test-project",

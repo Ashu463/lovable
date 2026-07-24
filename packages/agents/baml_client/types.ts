@@ -250,13 +250,6 @@ export interface FileEdit {
   
 }
 
-export interface FinalResponse {
-  status: "success" | "failed"
-  previewUrl?: string | null
-  deployUrl?: string | null
-  
-}
-
 export interface Fixes {
   error: string
   fixSummary: string

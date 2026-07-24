@@ -228,8 +228,8 @@ export class MainAgent{
     async saveSessionState(){
         try{
             await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
-                context_snapshot: this.context,
-                session_snapshot: this.session,
+                context_snapshot: JSON.stringify(this.context),
+                session_snapshot: JSON.stringify(this.session),
                 iteration: this.iterations,
             }, {
                 headers: internalAuthHeader(),

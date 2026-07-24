@@ -2,8 +2,9 @@ import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/sysPrompts"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT } from "../config/systemConfig"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
+import { logger } from "../utils/logger"
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse
@@ -26,8 +27,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
-        // #TEST: replace with appropriate path of project directory
-        const handle = await sandbox.commands.run(`cd /home/usr/${this.userId}/projects/${this.projectId} && npm run dev`, {
+        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev`, {
             background: true,
             onStdout: (data: string) => {stdOutBuf += data},
             onStderr: (data: string) => {stdErrBuf += data}
@@ -37,10 +37,12 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         try{
             const started = await this.pollUntilUp(sandbox)
             if(started){
+                logger.info(`Dev server started`)
                 return{
                     success: true
                 }
             }
+            logger.warn(`Dev server didn't come up in time, killing and reframing error`)
             await handle.kill()
             const error = await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`)
             return {
@@ -49,10 +51,10 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             }
         }
         catch(e){
-            console.error(e)
+            logger.error(`testCodebase failed: ${e}`)
             throw e
         }
-        
+
     }
 
     async pollUntilUp(sandbox: Sandbox): Promise<boolean> {
@@ -75,7 +77,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             errorReFramed = await b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error)
 
         } catch (error) {
-            console.error(error)
+            logger.error(`ReframeError failed: ${error}`)
             throw error
         }
         return errorReFramed
