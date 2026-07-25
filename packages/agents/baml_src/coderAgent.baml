@@ -13,6 +13,7 @@ class CoderContext{
     task string
     dependentSummary TaskSummary[]
     repoTree string
+    skills Skill[]
 }
 
 function CoderAgent(

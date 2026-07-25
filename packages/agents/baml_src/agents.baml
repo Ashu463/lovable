@@ -138,7 +138,11 @@ class ResearcherContext{
     query string
 }
 class TesterContext{}
-
+class Skill{
+    name string
+    description string
+    content string?
+}
 class SubAgentsContexts{
     coder CoderContext
     debuggerr DebuggerContext // this is not a typo, I made this intentionally 

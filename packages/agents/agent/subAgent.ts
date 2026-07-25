@@ -15,6 +15,7 @@ import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events";
 import { logger } from "./utils/logger";
+import { SkillStore } from "./skills";
 
 export class SubAgent<T extends keyof ContextMap> {
     private agentInstance: BaseAgent<InputMap[T], ContextMap[T], any, any>
@@ -25,7 +26,7 @@ export class SubAgent<T extends keyof ContextMap> {
     private taskId: number
     private repoTree: string = ""
     private emitter: EventEmitter
-
+    private skillStore: SkillStore = new SkillStore()
     constructor(
         private agentType: T,
         private input: InputMap[T],
@@ -153,7 +154,9 @@ export class SubAgent<T extends keyof ContextMap> {
         const summaries: TaskSummary[] = res.data.data
             .filter(s => dependentTaskIds.includes(s.todo.taskId))
             .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
-        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree }
+
+        const skills = [...this.skillStore.globalSkills(), ...this.skillStore.getCoderSkills(), ...this.skillStore.getAllTaskSkills()]
+        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){

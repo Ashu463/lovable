@@ -14,6 +14,7 @@ import axios from "axios"
 import { E2BSandbox } from "./utils/sandbox"
 import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
+import { SkillStore } from "./skills"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
 export class MainAgent{
     private iterations: number
@@ -23,6 +24,8 @@ export class MainAgent{
     private static encoder = encoding_for_model("gpt-4o")
     private r2: R2
     private emitter: EventEmitter
+    private skillStore: SkillStore = new SkillStore()
+
     constructor(
         private userPrompt: string,
         private userId: string,
@@ -40,15 +43,20 @@ export class MainAgent{
         logger.info(`[MainAgent:${this.runId}] Initialized for user=${this.userId} project=${this.projectId}`)
     }
 
+    buildSystemPrompt(): string{
+        return  this.skillStore.globalSkills() + this.skillStore.getMainAgentRoleSkills() + this.skillStore.getAllTaskSkills()
+    }
+
     async runLoop(): Promise<MainAgentResponse>{
         logger.info(`[MainAgent:${this.runId}] runLoop starting, maxIterations=${MAIN_AGENT_MAX_ITERATIONS}`)
         try{
+            const updatedSystemPrompt = MAIN_AGENT_SYSTEM_PROMPT + this.buildSystemPrompt()
             while(this.iterations < MAIN_AGENT_MAX_ITERATIONS){
                 logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} starting`)
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
                 let shouldBreak = false
 
-                const response: LLMResponse = await this.callLLM(this.userPrompt);
+                const response: LLMResponse = await this.callLLM(updatedSystemPrompt, this.userPrompt);
                 logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM stopReason=${response.stopReason}`)
 
                 iterationLog.push({
@@ -165,9 +173,10 @@ export class MainAgent{
         }
     }
 
-    async callLLM(userPrompt: string): Promise<LLMResponse>{
+    async callLLM(systemPrompt: string, userPrompt: string): Promise<LLMResponse>{
         try{
-            const response: LLMResponse = await b.MainLLMCall(MAIN_AGENT_SYSTEM_PROMPT, userPrompt, this.context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
+
+            const response: LLMResponse = await b.MainLLMCall(systemPrompt, userPrompt, this.context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
             return response
         }
         catch(e){

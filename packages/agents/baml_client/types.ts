@@ -115,6 +115,7 @@ export interface CoderContext {
   task: string
   dependentSummary: TaskSummary[]
   repoTree: string
+  skills: Skill[]
   
 }
 
@@ -344,6 +345,13 @@ export interface SessionMap {
 
 export interface SimpleComplexity {
   complex: false
+  
+}
+
+export interface Skill {
+  name: string
+  description: string
+  content?: string | null
   
 }
 
