@@ -154,6 +154,7 @@ export interface DebuggerContext {
   originalError: string
   fixHistory: Fixes[]
   skills: Skill[]
+  recentTurns: Message[]
   
 }
 

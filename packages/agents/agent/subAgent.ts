@@ -196,7 +196,8 @@ export class SubAgent<T extends keyof ContextMap> {
             repoTree: this.repoTree,
             originalError: (this.input as BaseTaskInput).task.task,
             fixHistory: [],
-            skills: skills
+            skills: skills,
+            recentTurns: []
         }
     }
     async BuildTesterContext(): Promise<TesterContext>{

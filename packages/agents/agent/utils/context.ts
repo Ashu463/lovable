@@ -3,14 +3,20 @@ import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type R
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
-import { CODER_RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+
+function extractResultText(toolRes: any): string {
+    if (typeof toolRes?.response === 'string') return toolRes.response
+    if (typeof toolRes?.editedFiles === 'string') return toolRes.editedFiles
+    if (typeof toolRes?.toolResult === 'string') return toolRes.toolResult
+    return JSON.stringify(toolRes)
+}
 
 function summarizeTurn(res: any, toolRes: any): Message {
     const label = res?.path ?? res?.command ?? res?.skillName ?? ''
-    const result = typeof toolRes?.response === 'string' ? toolRes.response : JSON.stringify(toolRes)
     return {
         role: 'toolCall',
-        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}`,
+        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${extractResultText(toolRes)}`,
         timestamp: new Date().toISOString()
     }
 }
@@ -95,7 +101,7 @@ export abstract class ContextManager<TContext>{
 
 export class CoderContextManager extends ContextManager<CoderContext>{
     appendTurn(context: CoderContext, res: any, toolRes: any): CoderContext {
-        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-CODER_RECENT_TURNS_LIMIT)
+        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
@@ -142,6 +148,7 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     appendTurn(context: DebuggerContext, res: any, toolRes: any): DebuggerContext {
         const label = res?.action ?? 'unknown'
+        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             repoTree: context.repoTree,
             originalError: context.originalError,
@@ -149,7 +156,8 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
                 ...context.fixHistory,
                 { error: context.originalError, fixSummary: `${label}: ${toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500)}` }
             ],
-            skills: context.skills
+            skills: context.skills,
+            recentTurns
         }
     }
 
@@ -160,7 +168,8 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
             repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: context.fixHistory.slice(0, len/2),
-            skills: context.skills
+            skills: context.skills,
+            recentTurns: context.recentTurns
         }
         const olderCompacted = await b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
@@ -168,7 +177,8 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
             repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: [...olderCompacted.fixHistory, ...context.fixHistory.slice(len/2, len)],
-            skills: context.skills
+            skills: context.skills,
+            recentTurns: olderCompacted.recentTurns
         }
     }
     // I don't think we will ever need this coz debugger should fix the error before this could even hit

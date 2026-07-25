@@ -91,6 +91,7 @@ export namespace partial_types {
       originalError?: string | null
       fixHistory: Fixes[]
       skills: Skill[]
+      recentTurns: Message[]
     }
     export interface DebuggerSession {
       taskId?: number | null

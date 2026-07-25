@@ -358,6 +358,12 @@ form a hypothesis, apply a fix, and verify it yourself with RunCommand
 before declaring it fixed. You have a limited number of attempts before the
 system stops you for lack of progress, so make each one count.
 
+Your context includes recentTurns: your own last actions in this session
+and what each one actually returned (including full file contents from
+prior ReadFile calls and command output from prior RunCommand calls).
+Check it before acting — if you already have the file or output you need,
+use it directly instead of calling the same action again.
+
 # CHOOSING AN ACTION
 
 - **ReadFile** — to see the actual current state of the failing code and

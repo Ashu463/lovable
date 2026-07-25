@@ -17,6 +17,7 @@ class DebuggerContext{
     originalError string
     fixHistory Fixes[]
     skills Skill[]
+    recentTurns Message[]
 }
 // I'm sending errors at each iteration I guess which is not needed.
 function DebuggerAgent(

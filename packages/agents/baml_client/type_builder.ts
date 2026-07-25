@@ -49,7 +49,7 @@ export default class TypeBuilder {
     
     Context7: ClassViewer<'Context7', "library" | "query">;
     
-    DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory" | "skills">;
+    DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory" | "skills" | "recentTurns">;
     
     DebuggerSession: ClassViewer<'DebuggerSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content" | "rawTranscript">;
     
@@ -205,7 +205,7 @@ export default class TypeBuilder {
         ]);
         
         this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
-          "repoTree","originalError","fixHistory","skills",
+          "repoTree","originalError","fixHistory","skills","recentTurns",
         ]);
         
         this.DebuggerSession = this.tb.classViewer("DebuggerSession", [
