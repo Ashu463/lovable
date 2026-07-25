@@ -79,9 +79,14 @@ export class SubAgent<T extends keyof ContextMap> {
         logger.info(`calling LLM for ${this.agentType}`)
         console.log("logger instance", logger.level);
         while (true) {
-            const res = await this.agentInstance.callLLM(this.input, this.context)
+            try{
+                var res = await this.agentInstance.callLLM(this.input, this.context)
+            }
+            catch(e){
+                logger.error(`Error occurred while LLM generated response ${e}`)
+                throw new Error
+            }
             console.log(JSON.stringify(res, null, 2), " is the LLM response of subagent, ", this.agentType)
-            logger.info(`LLM response will be ${res} for ${this.agentType}`)
             logger.info(
                 {
                   agent: this.agentType,
@@ -105,7 +110,13 @@ export class SubAgent<T extends keyof ContextMap> {
                 break;
             }
             // logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
-            const toolRes = await this.agentInstance.executeFunction(res)
+            try{
+                var toolRes = await this.agentInstance.executeFunction(res)
+            }
+            catch(e){
+                logger.error(`Error occurred while making tool call ${e}`)
+                throw new Error
+            }
             logger.info(`${JSON.stringify(toolRes, null, 2)} is the tool response`)
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)

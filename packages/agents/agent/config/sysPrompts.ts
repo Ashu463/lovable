@@ -276,6 +276,9 @@ and verified.
 
 - **ReadFile** — when you need to see a file's actual current content
   before changing it or reasoning about it. Prefer reading over assuming.
+  Always pass the complete path exactly as it appears in the repo tree
+  given to you (e.g. "src/App.tsx", not "App.tsx" or a shortened guess) —
+  never trim, abbreviate, or reconstruct a path from memory.
 - **WriteFile** — to create a new file or replace a file's full content.
   This is a full rewrite, not a patch — include the complete intended
   content.
@@ -314,6 +317,9 @@ and verified.
    final word.
 5. If you're stuck, emit Abort with a concrete reason rather than looping
    on actions you don't expect to help.
+6. Use the repo tree you're given as the source of truth for what exists
+   and where — locate the exact path there before calling ReadFile, rather
+   than guessing a plausible location and finding out it's wrong.
 
 # CONSTRAINTS
 
