@@ -24,7 +24,7 @@ export class MainAgent{
     private static encoder = encoding_for_model("gpt-4o")
     private r2: R2
     private emitter: EventEmitter
-    private skillStore: SkillStore = new SkillStore()
+    private skillStore: SkillStore = new SkillStore() // I'm injectig skills into system prompt for main agent.
 
     constructor(
         private userPrompt: string,
@@ -44,7 +44,7 @@ export class MainAgent{
     }
 
     buildSystemPrompt(): string{
-        return  this.skillStore.globalSkills() + this.skillStore.getMainAgentRoleSkills() + this.skillStore.getAllTaskSkills()
+        return this.skillStore.globalSkills() + this.skillStore.getMainAgentRoleSkills() + this.skillStore.getAllTaskSkills()
     }
 
     async runLoop(): Promise<MainAgentResponse>{

@@ -93,6 +93,10 @@ class DocsSearch{
     library string
     query string
 }
+class GetSkill{
+    action "getSkill"
+    skillName string
+}
 class FileEdit{
     fileName string
     summary  string
@@ -136,8 +140,11 @@ enum ContextType{
 }
 class ResearcherContext{
     query string
+    skills Skill[]
 }
-class TesterContext{}
+class TesterContext{
+    skills Skill[]
+}
 class Skill{
     name string
     description string

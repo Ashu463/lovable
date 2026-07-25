@@ -1,12 +1,13 @@
 import { CODER_PROMPT } from "../config/sysPrompts";
-import {b, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
+import {b, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";
 import type { CoderTaskInput } from "../../types/subAgentsTypes";
+import { SkillStore } from "../skills";
 
-type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | GetSkill | Done
 type CoderAgentResponse = {
     success: boolean,
     response: string,
@@ -15,6 +16,7 @@ type CoderAgentResponse = {
 export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLMResponse, CoderAgentResponse>{
 
     private researcher: Researcher
+    private skillStore: SkillStore = new SkillStore()
     constructor(
         userId: string,
         projectId: string,
@@ -63,6 +65,13 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
                 return {
                     success: true,
                     response: researchResponse
+                }
+            }
+            else if(response.action === 'getSkill'){
+                const content = await this.skillStore.fetchSkillContent(response.skillName, 'coder')
+                return {
+                    success: true,
+                    response: content
                 }
             }
             else if(response.action === 'done'){

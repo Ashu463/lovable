@@ -1,4 +1,4 @@
-import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch } from "../../baml_client";
+import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch, GetSkill } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/sysPrompts";
@@ -6,6 +6,7 @@ import { Researcher } from "./researcher";
 import { fetchDocs } from "../MCPs/context7";
 import { webScrape } from "../MCPs/apify";
 import type { E2BSandbox } from "../utils/sandbox";
+import { SkillStore } from "../skills";
 
 export interface DebuggerAgentResponse{
     success: boolean,
@@ -18,12 +19,13 @@ type DebuggerRequest = {
   toolResult?: ToolResult;
 };
 // TODO: implement line by line edit feature, instead writing complete file 
-type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | EditFile | DebuggingDone | Research
+type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | EditFile | DebuggingDone | Research | GetSkill
 
-// type DebuggerToolResponse = 
+// type DebuggerToolResponse =
 export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, DebuggerLLMResponse, DebuggerAgentResponse>{
 
-    private researcher: Researcher 
+    private researcher: Researcher
+    private skillStore: SkillStore = new SkillStore()
     constructor(
         userId: string,
         projectId: string,
@@ -77,6 +79,13 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             return {
                 success: true,
                 toolResult: researchResponse
+            }
+        }
+        else if(response.action === 'getSkill'){
+            const content = await this.skillStore.fetchSkillContent(response.skillName, 'debuggerr')
+            return {
+                success: true,
+                toolResult: content
             }
         }
         else if(response.action === 'done'){

@@ -1,87 +1,210 @@
 import type { Skill } from "../../baml_client";
+import type { SubAgentType } from "../../types/subAgentsTypes";
 
-const skillFiles: Record<SkillId, string> = {
-    1: "design-system.md",
-    2: "dependency-policy.md",
-    3: "triage-protocol.md",
-    4: "derive-acceptance-criteria.md",
-    5: "smoke-checklist.md",
-    6: "responsive-rules.md",
-    7: "report-format.md",
-    8: "source-quality-rubric.md",
-    9: "scaffold-new-project.md",
-    10: "add-a-route.md",
-    11: "database-integration.md",
-    12: "api-route-conventions.md",
-    13: "state-management-rules.md",
-    14: "form-handling.md",
-    15: "layout-patterns.md",
-    16: "asset-policy.md",
-    17: "visual-verification.md",
-    100: "project-convention.md",
-};
-  
+// MainAgent isn't a SubAgentType (it's the single-generalist path, not one of
+// the 5 subagent roles) but it needs its own entry in the role/task maps
+// below, so the skill-consumer key set is SubAgentType plus 'main'.
+export type AgentKey = SubAgentType | "main";
+
+const skillsMapper = {
+    DESIGN_SYSTEM: 1,
+    DEPENDENCY_POLICY: 2,
+    TRIAGE_PROTOCOL: 3,
+    DERIVE_ACCEPTANCE_CRITERIA: 4,
+    SMOKE_CHECKLIST: 5,
+    RESPONSIVE_RULES: 6,
+    REPORT_FORMAT: 7,
+    SOURCE_QUALITY_RUBRIC: 8,
+    SCAFFOLD_NEW_PROJECT: 9,
+    ADD_A_ROUTE: 10,
+    DATABASE_INTEGRATION: 11,
+    API_ROUTE_CONVENTIONS: 12,
+    STATE_MANAGEMENT_RULES: 13,
+    FORM_HANDLING: 14,
+    LAYOUT_PATTERNS: 15,
+    ASSET_POLICY: 16,
+    VISUAL_VERIFICATION: 17,
+    PROJECT_CONVENTION: 100,
+} as const;
+
 type SkillId = (typeof skillsMapper)[keyof typeof skillsMapper];
 
-const globalSkills = [
-skillsMapper.PROJECT_CONVENTION,
-] as const;
+// id -> default source folder under agent/skills/<folder>/SKILL.md
+const skillFiles: Record<SkillId, string> = {
+    [skillsMapper.DESIGN_SYSTEM]: "design-systems",
+    [skillsMapper.DEPENDENCY_POLICY]: "dependency",
+    [skillsMapper.TRIAGE_PROTOCOL]: "triage",
+    [skillsMapper.DERIVE_ACCEPTANCE_CRITERIA]: "acceptance-criteria",
+    [skillsMapper.SMOKE_CHECKLIST]: "baseline-checks",
+    [skillsMapper.RESPONSIVE_RULES]: "responsive-rules",
+    [skillsMapper.REPORT_FORMAT]: "research-format",
+    [skillsMapper.SOURCE_QUALITY_RUBRIC]: "source-quality-rubric",
+    [skillsMapper.SCAFFOLD_NEW_PROJECT]: "scaffold-new-project",
+    [skillsMapper.ADD_A_ROUTE]: "add-a-route",
+    [skillsMapper.DATABASE_INTEGRATION]: "db-integration",
+    [skillsMapper.API_ROUTE_CONVENTIONS]: "api-route-convention",
+    [skillsMapper.STATE_MANAGEMENT_RULES]: "state-management-rules",
+    [skillsMapper.FORM_HANDLING]: "form-handling",
+    [skillsMapper.LAYOUT_PATTERNS]: "layout-patterns",
+    [skillsMapper.ASSET_POLICY]: "asset-policy",
+    [skillsMapper.VISUAL_VERIFICATION]: "visual-verification",
+    [skillsMapper.PROJECT_CONVENTION]: "project-conventions",
+};
 
-type GlobalSkill = typeof globalSkills[number];
+// canonical `name:` frontmatter value per id — the reverse of this table is
+// how a getSkill(skillName) tool call resolves back to an id.
+const skillNames: Record<SkillId, string> = {
+    [skillsMapper.DESIGN_SYSTEM]: "design-system",
+    [skillsMapper.DEPENDENCY_POLICY]: "dependency-policy",
+    [skillsMapper.TRIAGE_PROTOCOL]: "triage-protocol",
+    [skillsMapper.DERIVE_ACCEPTANCE_CRITERIA]: "derive-acceptance-criteria",
+    [skillsMapper.SMOKE_CHECKLIST]: "smoke-checklist",
+    [skillsMapper.RESPONSIVE_RULES]: "responsive-rules",
+    [skillsMapper.REPORT_FORMAT]: "report-format",
+    [skillsMapper.SOURCE_QUALITY_RUBRIC]: "source-quality-rubric",
+    [skillsMapper.SCAFFOLD_NEW_PROJECT]: "scaffold-new-project",
+    [skillsMapper.ADD_A_ROUTE]: "add-a-route",
+    [skillsMapper.DATABASE_INTEGRATION]: "database-integration",
+    [skillsMapper.API_ROUTE_CONVENTIONS]: "api-route-conventions",
+    [skillsMapper.STATE_MANAGEMENT_RULES]: "state-management-rules",
+    [skillsMapper.FORM_HANDLING]: "form-handling",
+    [skillsMapper.LAYOUT_PATTERNS]: "layout-patterns",
+    [skillsMapper.ASSET_POLICY]: "asset-policy",
+    [skillsMapper.VISUAL_VERIFICATION]: "visual-verification",
+    [skillsMapper.PROJECT_CONVENTION]: "project-conventions",
+};
 
-type RoleBasedSkill =
-| typeof skillsMapper.DEPENDENCY_POLICY
-| typeof skillsMapper.DERIVE_ACCEPTANCE_CRITERIA
-| typeof skillsMapper.RESPONSIVE_RULES;
+// per-agent override: some agents load a given skill id from a different
+// folder than the default. UIExpert's design-system record lives in
+// design-ui/ (held back until UIExpert had real skill wiring — it does now).
+const skillFileOverrides: Partial<Record<AgentKey, Partial<Record<SkillId, string>>>> = {
+    uiExpert: {
+        [skillsMapper.DESIGN_SYSTEM]: "design-ui",
+    },
+};
 
-type TaskBasedSkill =
-Exclude<SkillId, GlobalSkill | RoleBasedSkill>;
+// "Global (always-loaded)" tier — same for every agent.
+const GLOBAL_SKILLS: SkillId[] = [skillsMapper.PROJECT_CONVENTION];
 
-type SkillStoreType =
-| {
-    type: "roleBased";
-    skills: RoleBasedSkill[];
-    }
-| {
-    type: "taskBased";
-    skills: TaskBasedSkill[];
-    };
+// Role tier — always attached in full to that agent's prompt/context.
+const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
+    coder: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+    debuggerr: [skillsMapper.TRIAGE_PROTOCOL],
+    tester: [skillsMapper.DERIVE_ACCEPTANCE_CRITERIA, skillsMapper.SMOKE_CHECKLIST],
+    researcher: [skillsMapper.REPORT_FORMAT, skillsMapper.SOURCE_QUALITY_RUBRIC],
+    uiExpert: [skillsMapper.DESIGN_SYSTEM, skillsMapper.RESPONSIVE_RULES],
+    // MainAgent is the single-generalist path — functionally a standalone
+    // Coder (see sysPrompts.ts), so it mirrors Coder's role set.
+    main: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+};
+
+// Task tier — "planner selects per node." For loop-based agents (coder,
+// debuggerr, main) these are exposed as a name+description catalog and
+// fetched in full on demand via a getSkill tool call. For single-shot
+// agents (tester, uiExpert — one LLM call, no follow-up turn to ask with)
+// these are attached in full alongside the role tier instead.
+const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
+    coder: [
+        skillsMapper.SCAFFOLD_NEW_PROJECT,
+        skillsMapper.ADD_A_ROUTE,
+        skillsMapper.DATABASE_INTEGRATION,
+        skillsMapper.API_ROUTE_CONVENTIONS,
+        skillsMapper.STATE_MANAGEMENT_RULES,
+        skillsMapper.FORM_HANDLING,
+    ],
+    debuggerr: [],
+    tester: [skillsMapper.VISUAL_VERIFICATION],
+    researcher: [],
+    uiExpert: [skillsMapper.LAYOUT_PATTERNS, skillsMapper.ASSET_POLICY],
+    main: [
+        skillsMapper.SCAFFOLD_NEW_PROJECT,
+        skillsMapper.ADD_A_ROUTE,
+        skillsMapper.DATABASE_INTEGRATION,
+        skillsMapper.API_ROUTE_CONVENTIONS,
+        skillsMapper.STATE_MANAGEMENT_RULES,
+        skillsMapper.FORM_HANDLING,
+    ],
+};
 
 export class SkillStore {
+    // cache key is the resolved source folder, so a default load and an
+    // agent-specific override never collide even though they share an id.
+    private cache = new Map<string, Skill>();
+    private nameToId = new Map<string, SkillId>(
+        (Object.entries(skillNames) as [string, string][]).map(([id, name]) => [name, Number(id) as SkillId]),
+    );
+
     constructor() {}
 
-    // will be same for both main and subagents
-    public globalSkills(): Skill {
-        return globalSkills.map((id) => this.fetchSkill(id)).join("\n\n");
-    }
-    
-    public getMainAgentRoleSkills(): Skill{
-
-    }
-    // for listing to the LLM, name and description only
-    public getAllTaskSkills(): Skill{
-        
-    }
-    public getCoderSkills(): Skill{
-
+    // Global tier — identical for MainAgent and every subagent.
+    async globalSkills(agent?: AgentKey): Promise<Skill[]> {
+        return Promise.all(GLOBAL_SKILLS.map((id) => this.loadSkill(id, agent)));
     }
 
-    public getSkills(agentType: string): string {
-        switch (store.type) {
-        case "roleBased":
-            return store.skills.map((id) => this.fetchSkill(id)).join("\n\n");
-        case "taskBased":
+    // Role tier — always attached in full.
+    async getRoleSkills(agent: AgentKey): Promise<Skill[]> {
+        return Promise.all(ROLE_SKILLS[agent].map((id) => this.loadSkill(id, agent)));
+    }
 
-        default:
-            return "";
+    // Task tier, catalog form: name + description only, content omitted.
+    // This is what a loop-based agent sees so it knows what it can ask for.
+    async getTaskCatalog(agent: AgentKey): Promise<Skill[]> {
+        const skills = await this.getTaskSkillsFull(agent);
+        return skills.map(({ name, description }) => ({ name, description, content: null }));
+    }
+
+    // Task tier, full form: name + description + content. Used for
+    // single-shot agents that never get a getSkill turn to ask with.
+    async getTaskSkillsFull(agent: AgentKey): Promise<Skill[]> {
+        return Promise.all(TASK_SKILLS[agent].map((id) => this.loadSkill(id, agent)));
+    }
+
+    // Resolves a getSkill(skillName) tool call to that skill's full content.
+    async fetchSkillContent(skillName: string, agent?: AgentKey): Promise<string> {
+        const id = this.nameToId.get(skillName);
+        if (id === undefined) {
+            throw new Error(`Unknown skill requested via getSkill: "${skillName}"`);
         }
+        const skill = await this.loadSkill(id, agent);
+        return skill.content ?? "";
     }
 
-    private fetchSkill(id: SkillId): string {
-        const file = skillFiles[id];
-        // Example:
-        // return fs.readFileSync(`skills/${id}.md`, "utf8");
+    // Flattens a Skill[] to markdown text, for agents (MainAgent) whose
+    // system prompt is a plain concatenated string rather than a typed
+    // context field.
+    renderAsText(skills: Skill[]): string {
+        return skills
+            .map((s) =>
+                s.content
+                    ? `## ${s.name}\n${s.description}\n\n${s.content}`
+                    : `## ${s.name} (call getSkill("${s.name}") to load full content)\n${s.description}`,
+            )
+            .join("\n\n");
+    }
 
-        return `Skill ${id}`;
+    private async loadSkill(id: SkillId, agent?: AgentKey): Promise<Skill> {
+        const folder = (agent && skillFileOverrides[agent]?.[id]) ?? skillFiles[id];
+        const cached = this.cache.get(folder);
+        if (cached) return cached;
+
+        const path = `${import.meta.dir}/${folder}/SKILL.md`;
+        const raw = await Bun.file(path).text();
+        const { name, description, content } = this.parseSkillFile(raw);
+        const skill: Skill = { name, description, content };
+        this.cache.set(folder, skill);
+        return skill;
+    }
+
+    private parseSkillFile(raw: string): { name: string; description: string; content: string } {
+        const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+        const frontmatter = match?.[1] ?? "";
+        const body = (match?.[2] ?? raw).trim();
+        const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+        const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
+        return {
+            name: nameMatch?.[1]?.trim() ?? "",
+            description: descMatch?.[1]?.trim() ?? "",
+            content: body,
+        };
     }
 }

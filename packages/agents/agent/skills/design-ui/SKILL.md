@@ -1,4 +1,3 @@
-----------DO NOT USE THIS SKILL UNTIL UI EXPERT IS READY--------------------------------
 ---
 name: design-system
 description: Tokens, spacing scale, typography, color palette, and the Stitch design-variant workflow for generated UI. Use whenever writing or editing any component that renders visible markup, choosing colors/spacing/fonts, generating design variants from a user prompt, or reviewing UI for visual consistency. Always consult before hardcoding a style value or before UIExpert generates designs.

@@ -20,7 +20,7 @@ function CoderAgent(
     systemPrompt: string, 
     figmaBoilerPlate: string?, 
     context: CoderContext,
-) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Research | Done  
+) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Research | GetSkill | Done
     {
     // also this figmaBoilerPlate would be run for the first time iteration
     // that means if ths have any conversation history or chat id then don't call stitch MCP]

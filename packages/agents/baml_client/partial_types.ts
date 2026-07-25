@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  Fixes,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  Fixes,  GetSkill,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -85,6 +85,7 @@ export namespace partial_types {
       repoTree?: string | null
       originalError?: string | null
       fixHistory: Fixes[]
+      skills: Skill[]
     }
     export interface DebuggerSession {
       taskId?: number | null
@@ -165,6 +166,10 @@ export namespace partial_types {
       error?: string | null
       fixSummary?: string | null
     }
+    export interface GetSkill {
+      action?: "getSkill" | null
+      skillName?: string | null
+    }
     export interface ItemRes {
       title?: string | null
       description?: string | null
@@ -203,6 +208,7 @@ export namespace partial_types {
     }
     export interface ResearcherContext {
       query?: string | null
+      skills: Skill[]
     }
     export interface ResearcherResponse {
       query?: string | null
@@ -259,6 +265,7 @@ export namespace partial_types {
       maxResults?: number | null
     }
     export interface TesterContext {
+      skills: Skill[]
     }
     export interface TesterResponse {
     }
@@ -281,6 +288,7 @@ export namespace partial_types {
       editFile?: EditFile | null
       runCommand?: RunCommand | null
       deleteFile?: DeleteFile | null
+      getSkill?: GetSkill | null
     }
     export interface ToolResult {
       success?: boolean | null
@@ -289,6 +297,7 @@ export namespace partial_types {
     export interface UIExpertContext {
       userPrompt?: string | null
       priorDesigns: Design[]
+      skills: Skill[]
     }
     export interface UIExpertSession {
       taskId?: number | null

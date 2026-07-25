@@ -23,7 +23,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video, FunctionLog
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, Fixes, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, Fixes, GetSkill, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -274,7 +274,7 @@ env?: Record<string, string | undefined>
       }
       
   async FramePrompts(
-  systemPrompt: string,userPrompt: string,semanticMem: string,
+  systemPrompt: string,userPrompt: string,semanticMem: string,skills: types.Skill[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -293,7 +293,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "FramePrompts",
       {
-      "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem
+      "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem,"skills": skills
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -472,7 +472,7 @@ env?: Record<string, string | undefined>
       }
       
   async ReframeError(
-  systemPrompt: string,error: string,
+  systemPrompt: string,error: string,context: types.TesterContext,
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -491,7 +491,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "ReframeError",
       {
-      "systemPrompt": systemPrompt,"error": error
+      "systemPrompt": systemPrompt,"error": error,"context": context
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -940,7 +940,7 @@ env?: Record<string, string | undefined>
           }
           
       async FramePrompts(
-      systemPrompt: string,userPrompt: string,semanticMem: string,
+      systemPrompt: string,userPrompt: string,semanticMem: string,skills: types.Skill[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -959,7 +959,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "FramePrompts",
           {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"semanticMem": semanticMem,"skills": skills
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),
@@ -1138,7 +1138,7 @@ env?: Record<string, string | undefined>
           }
           
       async ReframeError(
-      systemPrompt: string,error: string,
+      systemPrompt: string,error: string,context: types.TesterContext,
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -1157,7 +1157,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "ReframeError",
           {
-          "systemPrompt": systemPrompt,"error": error
+          "systemPrompt": systemPrompt,"error": error,"context": context
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),

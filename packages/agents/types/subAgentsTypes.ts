@@ -3,7 +3,7 @@
 //     stopReason: string,
 //     toolCall?: ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
-import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertContext, Error } from "../baml_client"
+import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertContext, Error, ResearcherContext, TesterContext } from "../baml_client"
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
@@ -54,12 +54,6 @@ export type ContextMap = {
     researcher: ResearcherContext,
     uiExpert: UIExpertContext
 }
-export type ResearcherContext = {
-    query: string
-}
-
-export type TesterContext = Record<string, never>
-
 // session types for subagents
 export type SessionMap = {
     coder: CoderSession,

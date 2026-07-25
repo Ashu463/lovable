@@ -9,13 +9,16 @@ class ErrorResponse{
 
 //     client 
 // }
-function ReframeError(systemPrompt: string, error: string) -> ErrorResponse{
+function ReframeError(systemPrompt: string, error: string, context: TesterContext) -> ErrorResponse{
 
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{error}} - unstructured stdout/stderr from a failed
 build/lint/test command.
+        {{context}} - carries the skills always attached to Tester (acceptance
+  criteria, smoke checklist) plus visual-verification, so reframing stays
+  consistent with what "done" means for this project.
 
 
         {{ctx.output_format}}

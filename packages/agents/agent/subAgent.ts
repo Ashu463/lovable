@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary,  type UIExpertContext } from "../baml_client";
+import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary,  type UIExpertContext, type ResearcherContext, type TesterContext } from "../baml_client";
 import { CoderAgent } from "./subagents/coder";
 import { DebuggerAgent } from "./subagents/debugger";
 import { Researcher } from "./subagents/researcher";
@@ -10,7 +10,7 @@ import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
 import axios from "axios";
-import type { BaseTaskInput, ResearcherContext, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
+import type { BaseTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events";
@@ -155,33 +155,62 @@ export class SubAgent<T extends keyof ContextMap> {
             .filter(s => dependentTaskIds.includes(s.todo.taskId))
             .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
 
-        const skills = [...this.skillStore.globalSkills(), ...this.skillStore.getCoderSkills(), ...this.skillStore.getAllTaskSkills()]
+        const skills = [
+            ...(await this.skillStore.globalSkills('coder')),
+            ...(await this.skillStore.getRoleSkills('coder')),
+            ...(await this.skillStore.getTaskCatalog('coder')),
+        ]
         return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
             this.repoTree = await this.sandbox.getRepoTree()
         }
+        const skills = [
+            ...(await this.skillStore.globalSkills('debuggerr')),
+            ...(await this.skillStore.getRoleSkills('debuggerr')),
+            ...(await this.skillStore.getTaskCatalog('debuggerr')),
+        ]
         return {
             repoTree: this.repoTree,
             originalError: (this.input as BaseTaskInput).task.task,
-            fixHistory: []
+            fixHistory: [],
+            skills: skills
         }
     }
+    async BuildTesterContext(): Promise<TesterContext>{
+        const skills = [
+            ...(await this.skillStore.globalSkills('tester')),
+            ...(await this.skillStore.getRoleSkills('tester')),
+            ...(await this.skillStore.getTaskSkillsFull('tester')),
+        ]
+        return { skills }
+    }
     async BuildResearcherContext(): Promise<ResearcherContext>{
-        return { query: (this.input as BaseTaskInput).task.task }
+        const skills = [
+            ...(await this.skillStore.globalSkills('researcher')),
+            ...(await this.skillStore.getRoleSkills('researcher')),
+            ...(await this.skillStore.getTaskSkillsFull('researcher')),
+        ]
+        return { query: (this.input as BaseTaskInput).task.task, skills }
     }
     async BuildUIExpertContext(): Promise<UIExpertContext>{
         const priorDesigns = await axios.get(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, {
             headers: internalAuthHeader()
         })
+        const skills = [
+            ...(await this.skillStore.globalSkills('uiExpert')),
+            ...(await this.skillStore.getRoleSkills('uiExpert')),
+            ...(await this.skillStore.getTaskSkillsFull('uiExpert')),
+        ]
         // #TODO: backend returns the raw Design rows (htmlContent/screenId/...), but
         // UIExpertContext.priorDesigns expects baml's Design{taskId, summary} shape —
         // these don't line up yet, needs a product decision on what "prior designs"
         // should mean here before mapping it properly.
         return {
             userPrompt: (this.input as BaseTaskInput).task.task,
-            priorDesigns: priorDesigns.data.data
+            priorDesigns: priorDesigns.data.data,
+            skills
         }
     }
     private maxIterations(): number {

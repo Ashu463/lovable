@@ -74,6 +74,7 @@ export enum ToolType {
   RunCommand = "RunCommand",
   DeleteFile = "DeleteFile",
   QnA = "QnA",
+  GetSkill = "GetSkill",
 }
 
 export interface AgentContext {
@@ -145,6 +146,7 @@ export interface DebuggerContext {
   repoTree: string
   originalError: string
   fixHistory: Fixes[]
+  skills: Skill[]
   
 }
 
@@ -257,6 +259,12 @@ export interface Fixes {
   
 }
 
+export interface GetSkill {
+  action: "getSkill"
+  skillName: string
+  
+}
+
 export interface ItemRes {
   title: string
   description: string
@@ -309,6 +317,7 @@ export interface Research {
 
 export interface ResearcherContext {
   query: string
+  skills: Skill[]
   
 }
 
@@ -389,6 +398,7 @@ export interface Tavily {
 }
 
 export interface TesterContext {
+  skills: Skill[]
   
 }
 
@@ -417,6 +427,7 @@ export interface ToolCall {
   editFile?: EditFile | null
   runCommand?: RunCommand | null
   deleteFile?: DeleteFile | null
+  getSkill?: GetSkill | null
   
 }
 
@@ -429,6 +440,7 @@ export interface ToolResult {
 export interface UIExpertContext {
   userPrompt: string
   priorDesigns: Design[]
+  skills: Skill[]
   
 }
 

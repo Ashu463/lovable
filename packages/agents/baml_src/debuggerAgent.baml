@@ -16,6 +16,7 @@ class DebuggerContext{
     repoTree string
     originalError string
     fixHistory Fixes[]
+    skills Skill[]
 }
 // I'm sending errors at each iteration I guess which is not needed.
 function DebuggerAgent(
@@ -23,7 +24,7 @@ function DebuggerAgent(
     errors: Error[],
     context: DebuggerContext,
     toolResult: ToolResult?
-) -> ReadFile | RunCommand | WriteFile | EditFile | Research | DebuggingDone{
+) -> ReadFile | RunCommand | WriteFile | EditFile | Research | GetSkill | DebuggingDone{
     
     client Gemini
     prompt #"

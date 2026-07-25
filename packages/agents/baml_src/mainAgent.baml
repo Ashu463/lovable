@@ -9,6 +9,7 @@ enum ToolType {
   RunCommand
   DeleteFile
   QnA
+  GetSkill
 }
 class ToolCall {
   type ToolType
@@ -22,6 +23,7 @@ class ToolCall {
   editFile EditFile?
   runCommand RunCommand?
   deleteFile DeleteFile?
+  getSkill GetSkill?
 }
 class StitchTool {
   prompt string
