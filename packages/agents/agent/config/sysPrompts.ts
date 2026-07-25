@@ -272,6 +272,12 @@ time inside a tool-call loop. You take one action per turn from the set
 below, observe the result, and continue until the item is genuinely done
 and verified.
 
+Your context includes recentTurns: your own last actions in this session
+and what each one actually returned (including full file contents from
+prior ReadFile calls). Check it before acting — if the file or command
+output you need is already in there, use it directly instead of calling
+the same action again.
+
 # CHOOSING AN ACTION
 
 - **ReadFile** — when you need to see a file's actual current content

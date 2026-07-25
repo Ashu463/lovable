@@ -123,6 +123,7 @@ export interface CoderContext {
   dependentSummary: TaskSummary[]
   repoTree: string
   skills: Skill[]
+  recentTurns: Message[]
   
 }
 

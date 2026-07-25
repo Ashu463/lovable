@@ -14,6 +14,7 @@ class CoderContext{
     dependentSummary TaskSummary[]
     repoTree string
     skills Skill[]
+    recentTurns Message[]
 }
 
 function CoderAgent(
@@ -50,6 +51,8 @@ test TestName {
         repoTree #"
         hello world
       "#
+        skills []
+        recentTurns []
     }
   }
 }

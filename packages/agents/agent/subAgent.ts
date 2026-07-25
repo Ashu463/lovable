@@ -121,7 +121,7 @@ export class SubAgent<T extends keyof ContextMap> {
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 
-            this.context = await this.ManageContext(toolRes)
+            this.context = await this.ManageContext(res, toolRes)
             await this.emitSSEUpdate(toolRes)
             this.SaveSessionState().catch(err => logger.error(`Failed to save session for task ${this.taskId}: ${err}`))
 
@@ -181,7 +181,7 @@ export class SubAgent<T extends keyof ContextMap> {
             ...(await this.skillStore.getRoleSkills('coder')),
             ...(await this.skillStore.getTaskCatalog('coder')),
         ]
-        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills }
+        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills, recentTurns: [] }
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
@@ -265,11 +265,11 @@ export class SubAgent<T extends keyof ContextMap> {
 
     // return await this.contextManager.SummarizeContext(compactedContext)
 
-    async ManageContext(toolRes: any): Promise<ContextMap[T]> {
+    async ManageContext(res: any, toolRes: any): Promise<ContextMap[T]> {
         // which is not needed for tester, uiexpert, researcher.
         if(!this.contextManager) return this.context
 
-        const updated = this.contextManager.appendTurn(this.context, toolRes)
+        const updated = this.contextManager.appendTurn(this.context, res, toolRes)
         
         const tokens = this.estimateTokens(updated)
         if(tokens <= COMPACT_THRESHOLD) return updated

@@ -68,6 +68,7 @@ export namespace partial_types {
       dependentSummary: TaskSummary[]
       repoTree?: string | null
       skills: Skill[]
+      recentTurns: Message[]
     }
     export interface CoderSession {
       taskId?: number | null

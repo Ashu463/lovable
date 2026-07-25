@@ -3,7 +3,17 @@ import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type R
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
-import { COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+import { CODER_RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+
+function summarizeTurn(res: any, toolRes: any): Message {
+    const label = res?.path ?? res?.command ?? res?.skillName ?? ''
+    const result = typeof toolRes?.response === 'string' ? toolRes.response : JSON.stringify(toolRes)
+    return {
+        role: 'toolCall',
+        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}`,
+        timestamp: new Date().toISOString()
+    }
+}
 
 export abstract class ContextManager<TContext>{
 
@@ -80,17 +90,18 @@ export abstract class ContextManager<TContext>{
     // only for MCP or RAG 
     abstract OffLoadContext(): Promise<string>
 
-    abstract appendTurn(context: TContext, toolRes: any): TContext
+    abstract appendTurn(context: TContext, res: any, toolRes: any): TContext
 }
 
 export class CoderContextManager extends ContextManager<CoderContext>{
-    appendTurn(context: CoderContext, toolRes: any): CoderContext {
-        const treeChanged = toolRes?.action === 'WriteFile' || toolRes?.action === 'DeleteFile'
+    appendTurn(context: CoderContext, res: any, toolRes: any): CoderContext {
+        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-CODER_RECENT_TURNS_LIMIT)
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
-            repoTree: treeChanged ? toolRes.updatedTree : context.repoTree,
-            skills: context.skills // fixed at task start, doesn't grow per-turn
+            repoTree: context.repoTree,
+            skills: context.skills,
+            recentTurns
         }
     }
 
@@ -103,7 +114,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
             task: context.task,
             dependentSummary: olderHalf,
             repoTree: context.repoTree,
-            skills: context.skills
+            skills: context.skills,
+            recentTurns: context.recentTurns
         }
         const olderCompacted = await b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
@@ -111,7 +123,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
             task: context.task,
             dependentSummary: [...olderCompacted.dependentSummary, ...recentHalf],
             repoTree: context.repoTree,
-            skills: context.skills
+            skills: context.skills,
+            recentTurns: olderCompacted.recentTurns
         }
     }
     override async SummarizeContext(context: CoderContext): Promise<CoderContext> {
@@ -127,13 +140,14 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 
 }
 export class DebuggerContextManager extends ContextManager<DebuggerContext>{
-    appendTurn(context: DebuggerContext, toolRes: any): DebuggerContext {
+    appendTurn(context: DebuggerContext, res: any, toolRes: any): DebuggerContext {
+        const label = res?.action ?? 'unknown'
         return {
             repoTree: context.repoTree,
             originalError: context.originalError,
             fixHistory: [
                 ...context.fixHistory,
-                { error: context.originalError, fixSummary: toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500) }
+                { error: context.originalError, fixSummary: `${label}: ${toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500)}` }
             ],
             skills: context.skills
         }
