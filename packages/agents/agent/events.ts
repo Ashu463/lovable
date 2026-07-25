@@ -1,10 +1,12 @@
-import type { OrchestratorResponse } from '../types/agentTypes';
+import type { DesignOption, OrchestratorResponse } from '../types/agentTypes';
+import type { Question } from '../baml_client/types';
 import axios from 'axios';
 import { BACKEND_URL, REDIS_HOST, REDIS_PORT } from './config/systemConfig';
 import IORedis from "ioredis";
 export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
-    | { type: "clarification_needed"; questions: string[] }
+    | { type: "clarification_needed"; questions: Question[] }
+    | { type: "select_design"; designs: DesignOption[] }
     | { type: "main_agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
     | { type: "subagent_progress"; agent: string; taskId?: number; data?: unknown, subagentSummary?: string }
     | { type: "subagent_completed"; agent: string; taskId?: number; summary: string }

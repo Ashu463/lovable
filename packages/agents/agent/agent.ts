@@ -277,9 +277,11 @@ export class OrchestratorAgent{
             data = await this.Bootstrap(userPrompt, answers);
         }
         catch(e){
+            const reason = `Bootstrap failed with error ${e}`
+            await this.emitter.emit({ type: 'run_failed', error: reason })
             return {
                 status: 'error',
-                reason: `Bootstrap failed with error ${e}`
+                reason
             }
         }
 
@@ -288,18 +290,21 @@ export class OrchestratorAgent{
                 logger.info(`LLM generated questions, saving them`)
                 await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
             }
+            await this.emitter.emit({ type: 'clarification_needed', questions: data.questions })
             return {
                 status: 'clarification_needed',
                 questions: data.questions
             }
         }
         else if(data.status === 'select_design'){
+            await this.emitter.emit({ type: 'select_design', designs: data.designs })
             return {
                 status: 'select_design',
                 designs: data.designs
             }
         }
         else if(data.status === 'error'){
+            await this.emitter.emit({ type: 'run_failed', error: data.error })
             return {
                 status: 'error',
                 reason: data.error
@@ -391,13 +396,15 @@ export class OrchestratorAgent{
         try{
 
             const previewUrl = await this.sandbox.GetPreviewUrl()
-            return {
+            const result: OrchestratorResponse = {
                 status: "completed",
                 design: this.selectedDesign,
                 todos: data.isComplex ? tasks : [],
                 previewUrl,
                 summary: orchestratorSummary,
             };
+            await this.emitter.emit({ type: 'run_completed', result })
+            return result;
         }
         catch(e){
             logger.error(`Error occurred while hosting ${e}`)
