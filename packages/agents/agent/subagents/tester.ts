@@ -23,7 +23,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         super(userId, projectId, sandbox)
     }
 
-    async testCodebase() : Promise<TesterResponse>{
+    async testCodebase(context: TesterContext) : Promise<TesterResponse>{
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
@@ -44,7 +44,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             }
             logger.warn(`Dev server didn't come up in time, killing and reframing error`)
             await handle.kill()
-            const error = await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`)
+            const error = await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`, context)
             return {
                 success: false,
                 errorRes: error
@@ -71,10 +71,10 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         return false
     }
 
-    override async callLLM(error: string): Promise<ErrorResponse> {
+    override async callLLM(error: string, context: TesterContext): Promise<ErrorResponse> {
         let errorReFramed: ErrorResponse
         try {
-            errorReFramed = await b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error)
+            errorReFramed = await b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error, context)
 
         } catch (error) {
             logger.error(`ReframeError failed: ${error}`)

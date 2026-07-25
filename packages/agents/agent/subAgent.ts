@@ -118,7 +118,7 @@ export class SubAgent<T extends keyof ContextMap> {
     }
     async Test(): Promise<TesterResponse>{
         const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
-        return await tester.testCodebase()
+        return await tester.testCodebase(await this.BuildTesterContext())
     }
     pushSession(role: Role, status: Status, data?: any){
         const entry = {

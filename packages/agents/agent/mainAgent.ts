@@ -43,14 +43,17 @@ export class MainAgent{
         logger.info(`[MainAgent:${this.runId}] Initialized for user=${this.userId} project=${this.projectId}`)
     }
 
-    buildSystemPrompt(): string{
-        return this.skillStore.globalSkills() + this.skillStore.getMainAgentRoleSkills() + this.skillStore.getAllTaskSkills()
+    async buildSystemPrompt(): Promise<string>{
+        const global = this.skillStore.renderAsText(await this.skillStore.globalSkills('main'))
+        const role = this.skillStore.renderAsText(await this.skillStore.getRoleSkills('main'))
+        const taskCatalog = this.skillStore.renderAsText(await this.skillStore.getTaskCatalog('main'))
+        return `${global}\n\n${role}\n\n${taskCatalog}`
     }
 
     async runLoop(): Promise<MainAgentResponse>{
         logger.info(`[MainAgent:${this.runId}] runLoop starting, maxIterations=${MAIN_AGENT_MAX_ITERATIONS}`)
         try{
-            const updatedSystemPrompt = MAIN_AGENT_SYSTEM_PROMPT + this.buildSystemPrompt()
+            const updatedSystemPrompt = MAIN_AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
             while(this.iterations < MAIN_AGENT_MAX_ITERATIONS){
                 logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} starting`)
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
@@ -296,6 +299,11 @@ export class MainAgent{
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
                 logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.runCommand.command}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
+
+            case ToolType.GetSkill:
+                if (!toolCall.getSkill) throw new Error("GetSkill tool call missing params")
+                logger.info(`[MainAgent:${this.runId}] GetSkill: ${toolCall.getSkill.skillName}`)
+                return await this.skillStore.fetchSkillContent(toolCall.getSkill.skillName, 'main')
 
             default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
         }

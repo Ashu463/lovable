@@ -89,7 +89,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
-            repoTree: treeChanged ? toolRes.updatedTree : context.repoTree
+            repoTree: treeChanged ? toolRes.updatedTree : context.repoTree,
+            skills: context.skills // fixed at task start, doesn't grow per-turn
         }
     }
 
@@ -101,14 +102,16 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         const olderHalfContext: CoderContext = {
             task: context.task,
             dependentSummary: olderHalf,
-            repoTree: context.repoTree
+            repoTree: context.repoTree,
+            skills: context.skills
         }
         const olderCompacted = await b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
         return {
             task: context.task,
             dependentSummary: [...olderCompacted.dependentSummary, ...recentHalf],
-            repoTree: context.repoTree
+            repoTree: context.repoTree,
+            skills: context.skills
         }
     }
     override async SummarizeContext(context: CoderContext): Promise<CoderContext> {
@@ -131,7 +134,8 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
             fixHistory: [
                 ...context.fixHistory,
                 { error: context.originalError, fixSummary: toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500) }
-            ]
+            ],
+            skills: context.skills
         }
     }
 
@@ -141,14 +145,16 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
         const olderHalfContext: DebuggerContext = {
             repoTree: context.repoTree,
             originalError: context.originalError,
-            fixHistory: context.fixHistory.slice(0, len/2)
+            fixHistory: context.fixHistory.slice(0, len/2),
+            skills: context.skills
         }
         const olderCompacted = await b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
 
         return {
             repoTree: context.repoTree,
             originalError: context.originalError,
-            fixHistory: [...olderCompacted.fixHistory, ...context.fixHistory.slice(len/2, len)]
+            fixHistory: [...olderCompacted.fixHistory, ...context.fixHistory.slice(len/2, len)],
+            skills: context.skills
         }
     }
     // I don't think we will ever need this coz debugger should fix the error before this could even hit

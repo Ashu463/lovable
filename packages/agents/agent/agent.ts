@@ -16,6 +16,7 @@ import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
 import { createRunEmitter, internalAuthHeader, type EventEmitter, type OrchestratorEvent } from "./events"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
+import type { TesterContext } from "../baml_client"
 
 
 type InputBuilder<T extends SubAgentType> = (
@@ -49,6 +50,7 @@ export class OrchestratorAgent{
     private state: OrchestratorState
     private selectedDesign: string = ""
     private emitter: EventEmitter
+    private skillStore: SkillStore = new SkillStore()
     constructor(
         public userId: string,
         public projectId: string,
@@ -217,7 +219,12 @@ export class OrchestratorAgent{
         if(designs.length === 0){
             logger.info(`Generating designs`)
             try{
-                const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem)
+                const uiExpertSkills = [
+                    ...(await this.skillStore.globalSkills('uiExpert')),
+                    ...(await this.skillStore.getRoleSkills('uiExpert')),
+                    ...(await this.skillStore.getTaskSkillsFull('uiExpert')),
+                ]
+                const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem, uiExpertSkills)
                 designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
             }
             catch(e){
@@ -417,6 +424,13 @@ export class OrchestratorAgent{
         let lastError
 
         let deployReady = await this.preDeployCheck()
+        const testerContext: TesterContext = {
+            skills: [
+                ...(await this.skillStore.globalSkills('tester')),
+                ...(await this.skillStore.getRoleSkills('tester')),
+                ...(await this.skillStore.getTaskSkillsFull('tester')),
+            ],
+        }
 
         try{
             let previousErrorSignature: string | null = null
@@ -424,7 +438,7 @@ export class OrchestratorAgent{
             while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
                 const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
 
-                const testerRes: TesterResponse = await tester.testCodebase()
+                const testerRes: TesterResponse = await tester.testCodebase(testerContext)
                 const error: Error = {
                     fileName: testerRes.errorRes!.file,
                     error: testerRes.errorRes!.error + testerRes.errorRes!.line
