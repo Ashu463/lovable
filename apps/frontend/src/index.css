@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --color-background: #08070a;
+  --color-surface: #0f0e12;
+  --color-surface-hover: #17151b;
+  --color-border: #232025;
+  --color-border-hover: #322c31;
+  --color-foreground: #f5f2ef;
+  --color-muted: #9a9299;
+  --color-muted-foreground: #6f6870;
+
+  --color-accent-from: #fb7a1f;
+  --color-accent-to: #ffb648;
+  --color-accent: #fb7a1f;
+  --color-accent-foreground: #140a02;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .text-gradient-accent {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-accent-from),
+      var(--color-accent-to)
+    );
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .bg-gradient-accent {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-accent-from),
+      var(--color-accent-to)
+    );
+  }
+
+  .hero-glow {
+    background: radial-gradient(
+      ellipse 60% 50% at 50% 0%,
+      color-mix(in srgb, var(--color-accent) 22%, transparent),
+      transparent 70%
+    );
+  }
+}
