@@ -3,7 +3,7 @@ class AgentContext{}
 // Subagent session map, for generating summary
 function GenerateSubagentSummary(systemPrompt: string, subagentType: string, session: string) -> string{
 
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{subagentType}}

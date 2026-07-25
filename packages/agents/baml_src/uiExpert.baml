@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - what's being built, already past complexity and

@@ -48,7 +48,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -162,7 +162,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the

@@ -60,7 +60,7 @@ function MainLLMCall(
   orchestratorContext: string
   ) -> LLMResponse{
 
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the specific, already-clarified request you're
@@ -79,7 +79,7 @@ function MainLLMCall(
 }
 function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> string{
 
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.

@@ -12,7 +12,7 @@ class ComplexComplexity{
 type ComplexityLevel = SimpleComplexity | ComplexComplexity
 function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: string) -> SimpleComplexity | ComplexComplexity {
 
-    client Gemini
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.

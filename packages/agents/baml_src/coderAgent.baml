@@ -24,7 +24,7 @@ function CoderAgent(
     {
     // also this figmaBoilerPlate would be run for the first time iteration
     // that means if ths have any conversation history or chat id then don't call stitch MCP]
-    client Gemini
+    client OpenAIGeneric
     
     prompt #"
         {{systemPrompt}}
