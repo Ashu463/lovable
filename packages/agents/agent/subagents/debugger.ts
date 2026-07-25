@@ -1,4 +1,4 @@
-import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch, GetSkill } from "../../baml_client";
+import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch, GetSkill, Abort } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/sysPrompts";
@@ -19,7 +19,7 @@ type DebuggerRequest = {
   toolResult?: ToolResult;
 };
 // TODO: implement line by line edit feature, instead writing complete file 
-type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | EditFile | DebuggingDone | Research | GetSkill
+type DebuggerLLMResponse = ReadFile | RunCommand | WriteFile | EditFile | DebuggingDone | Research | GetSkill | Abort
 
 // type DebuggerToolResponse =
 export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, DebuggerLLMResponse, DebuggerAgentResponse>{
@@ -93,6 +93,12 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
                 success: true,
                 editedFiles: response.editedFile,
                 // errorsFixed: response.errors.
+            }
+        }
+        else if(response.action === 'abort'){
+            return {
+                success: false,
+                toolResult: response.reason
             }
         }
         else{

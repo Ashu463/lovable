@@ -1,5 +1,5 @@
 import { CODER_PROMPT } from "../config/sysPrompts";
-import {b, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
+import {b, type Abort, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
@@ -7,7 +7,7 @@ import { BaseAgent } from "./baseAgent";
 import type { CoderTaskInput } from "../../types/subAgentsTypes";
 import { SkillStore } from "../skills";
 
-type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | GetSkill | Done
+type CoderLLMResponse = WriteFile | EditFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | GetSkill | Done | Abort
 type CoderAgentResponse = {
     success: boolean,
     response: string,
@@ -79,6 +79,12 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
                 return {
                     success: true,
                     response: `Coder Agent completed it's work`
+                }
+            }
+            else if(response.action === 'abort'){
+                return {
+                    success: false,
+                    response: response.reason
                 }
             }
         }

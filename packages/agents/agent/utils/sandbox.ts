@@ -234,6 +234,23 @@ export class E2BSandbox{
             }))
         }
     }
+
+    async GetPreviewUrl(): Promise<string>{
+        try{
+            await this.sandbox.commands.run("npm run dev", {
+                cwd: PROJECT_ROOT,
+                background: true,
+            });
+            
+            // Get the public URL for the port your app is running on
+            const previewUrl = this.sandbox.getHost(3000); // or 5173, 8080, etc.
+            return previewUrl
+
+        }catch(e){
+            logger.error(`Error occurred while running server ${e}`)
+            throw new Error
+        }
+    }
     Release(){
         this.sandbox.kill()
     }

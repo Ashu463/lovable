@@ -97,6 +97,10 @@ class GetSkill{
     action "getSkill"
     skillName string
 }
+class Abort{
+    action "abort"
+    reason string
+}
 class FileEdit{
     fileName string
     summary  string

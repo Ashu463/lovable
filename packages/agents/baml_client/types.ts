@@ -77,6 +77,12 @@ export enum ToolType {
   GetSkill = "GetSkill",
 }
 
+export interface Abort {
+  action: "abort"
+  reason: string
+  
+}
+
 export interface AgentContext {
   
 }

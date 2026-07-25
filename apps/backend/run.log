@@ -1,0 +1,519 @@
+User router initialized
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+Hello via Bun!
+Starting server
+┌───┬────────────────────────────┬────────────┬─────────────────────────────────┐
+│   │ path                       │ methods    │ middlewares                     │
+├───┼────────────────────────────┼────────────┼─────────────────────────────────┤
+│ 0 │ /:projectId/getQuestions   │ [ "GET" ]  │ [ "auth", "anonymous" ]         │
+│ 1 │ /:projectId/:runId         │ [ "POST" ] │ [ "internalAuth", "anonymous" ] │
+│ 2 │ /:projectId/:runId/answers │ [ "POST" ] │ [ "auth", "anonymous" ]         │
+└───┴────────────────────────────┴────────────┴─────────────────────────────────┘
+Server is running on port 3000
+BullMQ dashboard on http://localhost:3000/admin/queues
+[2026-07-25 12:58:31.533 +0530] [32mINFO[39m: [36mProject id: 019f827c-1514-7000-b63f-085ae5253247[39m
+[2026-07-25 12:58:31.709 +0530] [32mINFO[39m: [36mRun created, id: 019f982c-f734-7000-9c9c-6061cabcc3a6[39m
+[2026-07-25 12:58:31.722 +0530] [32mINFO[39m: [36mAdded to run queue[39m
+[2026-07-25 12:58:33.413 +0530] INFO: Restoring 21 files from R2
+[2026-07-25 12:58:46.256 +0530] INFO: Restore complete
+[2026-07-25 12:58:46.257 +0530] [32mINFO[39m: [36mCalling agent 019f982c-f734-7000-9c9c-6061cabcc3a6 with sandbox ig7243ub6q25z1zhkjoaq[39m
+[2026-07-25 12:58:46.260 +0530] INFO: Running orchestrator
+[2026-07-25 12:58:46.261 +0530] INFO: Starting to fetch qeustions and designs
+[2026-07-25 12:58:46.270 +0530] [32mINFO[39m: [36mFetching questions[39m
+[2026-07-25 12:58:46.282 +0530] [32mINFO[39m: [36mDesigns are: [object Object],[object Object],[object Object][39m
+[2026-07-25 12:58:46.285 +0530] INFO: Fetched 0 saved question(s) and 3 saved design(s)
+[2026-07-25 12:58:46.285 +0530] INFO: Answer added to user prompt
+[2026-07-25 12:58:46.285 +0530] INFO: Screen fetched from db
+[2026-07-25 12:58:46.285 +0530] INFO: Given task is complex, generating todos
+[2026-07-25 12:58:52.403 +0530] INFO: Restoring 21 files from R2
+2026-07-25T12:59:01.231 [BAML INFO] Function PlanComplexTask:
+    Client: OpenAIGeneric (deepseek-v4-flash) - 14904ms. StopReason: stop. Tokens(in/out): 551/1307
+    ---PROMPT---
+    system: 
+    ------Update: Add design needed field information here---------
+    # ROLE
+    
+    You are the planner, invoked when the orchestrator has judged a request
+    complex enough to need the full pipeline. You decompose the request into
+    SubAgentsTodo items for CoderAgent to execute one at a time, plus a
+    PlannerTodo summary for the orchestrator to relay to the user in plain
+    language.
+    
+    Coder is the only executor you're planning for. Debugger is invoked
+    automatically and reactively if an item's verification fails — you don't
+    plan for it. Research and documentation lookup are tools Coder reaches for
+    itself mid-item — you don't plan separate research steps, though you may
+    flag an item as research-heavy as a hint.
+    
+    # DECOMPOSITION PRINCIPLES
+    
+    - Break work into the smallest units independently verifiable by a build/
+      test/lint command. A unit bundling unrelated changes makes it harder to
+      isolate what actually failed if verification fails.
+    - Order items so that anything a later item structurally depends on comes
+      first. Mark items parallel-safe only when they touch genuinely disjoint
+      files/surfaces.
+    - Don't over-decompose trivial requests into multiple items when one covers
+      it.
+    - If an item is likely to require nontrivial documentation lookup or web
+      research before Coder can implement it confidently, note that as a hint
+      in the item — it's still one Coder-executed item, just flagged.
+    
+    # CONSTRAINTS
+    
+    - Every item must be independently verifiable by a command Coder can run.
+    - Scope what must be true when the item is done, not implementation detail
+      that's Coder's own decision to make.
+    - If decomposing requires an assumption material enough to change the
+      outcome, don't guess — this should have been caught by the complexity
+      checker already, but if it wasn't, say so explicitly in the planner
+      summary rather than silently picking an interpretation.
+    
+          Build me a simple todo app with add/delete functionality, mark the task complexity true for this timeAnswers for these  are: [object Object][object Object] - the request to plan for, already past complexity and
+    clarification checks.
+          [] - current app state and prior decisions.
+    
+          Answer with a JSON Array using this schema:
+    [
+      {
+        id: int,
+        task: string,
+        agent: "coder" or "debuggerr" or "tester" or "researcher" or "uiExpert",
+        status: "pending" or "completed",
+        dependency: int[],
+        designNeeded: bool,
+      }
+    ]
+    
+    ---LLM REPLY---
+    [
+      {
+        "id": 1,
+        "task": "Build a simple todo app with add/delete functionality using HTML, CSS, and JavaScript. Create index.html, styles.css, and script.js with a clean UI that allows adding and deleting todo items.",
+        "agent": "coder",
+        "status": "pending",
+        "dependency": [],
+        "designNeeded": false
+      }
+    ]
+    ---Parsed Response (list<class PlannerTodo>)---
+    [
+      {
+        "id": 1,
+        "task": "Build a simple todo app with add/delete functionality using HTML, CSS, and JavaScript. Create index.html, styles.css, and script.js with a clean UI that allows adding and deleting todo items.",
+        "agent": "coder",
+        "status": "pending",
+        "dependency": [],
+        "designNeeded": false
+      }
+    ]
+[2026-07-25 12:59:01.239 +0530] [32mINFO[39m: [36mSaving todos to the db[39m
+[2026-07-25 12:59:01.239 +0530] [32mINFO[39m: [36mcalling promises to save todos[39m
+[2026-07-25 12:59:01.262 +0530] INFO: todos generated and arranged sequentially
+logger instance trace
+[2026-07-25 12:59:01.263 +0530] INFO: Task 1: Build a simple todo app with add/delete functionality using HTML, CSS, and JavaScript. Create index.html, styles.css, and script.js with a clean UI that allows adding and deleting todo items.
+[2026-07-25 12:59:01.263 +0530] INFO: Starting runloop for coder (task 1)
+[2026-07-25 12:59:01.264 +0530] INFO: Building context for coder
+logger instance trace
+[2026-07-25 12:59:01.535 +0530] INFO: calling LLM for coder
+[2026-07-25 12:59:03.955 +0530] INFO: Restore complete
+[2026-07-25 12:59:03.956 +0530] [32mINFO[39m: [36mCalling agent 019f982a-db9b-7000-8d61-9de632c4f41c with sandbox idxxu81s47ukuowqsom6f[39m
+[2026-07-25 12:59:03.956 +0530] INFO: Running orchestrator
+[2026-07-25 12:59:03.957 +0530] INFO: Starting to fetch qeustions and designs
+[2026-07-25 12:59:03.962 +0530] [32mINFO[39m: [36mFetching questions[39m
+[2026-07-25 12:59:03.975 +0530] [32mINFO[39m: [36mDesigns are: [object Object],[object Object],[object Object][39m
+[2026-07-25 12:59:03.977 +0530] INFO: Fetched 0 saved question(s) and 3 saved design(s)
+[2026-07-25 12:59:03.977 +0530] INFO: Answer added to user prompt
+[2026-07-25 12:59:03.977 +0530] INFO: Screen fetched from db
+[2026-07-25 12:59:03.977 +0530] INFO: Given task is complex, generating todos
+2026-07-25T12:59:10.441 [BAML INFO] Function CoderAgent:
+    Client: OpenAIGeneric (deepseek-v4-flash) - 8900ms. StopReason: stop. Tokens(in/out): 3763/829
+    ---PROMPT---
+    system: 
+    # ROLE
+    
+    You are the CoderAgent, implementing exactly one SubAgentsTodo item at a
+    time inside a tool-call loop. You take one action per turn from the set
+    below, observe the result, and continue until the item is genuinely done
+    and verified.
+    
+    # CHOOSING AN ACTION
+    
+    - **ReadFile** — when you need to see a file's actual current content
+      before changing it or reasoning about it. Prefer reading over assuming.
+    - **WriteFile** — to create a new file or replace a file's full content.
+      This is a full rewrite, not a patch — include the complete intended
+      content.
+    - **DeleteFile** — only when the item's scope genuinely requires removing
+      a file, not as a shortcut for a large edit.
+    - **RunCommand** — to build, lint, typecheck, or run tests. This is your
+      primary way to check your own work before finishing — use it before
+      Done, not only when something already looks broken.
+    - **FetchDocs** — structured, authoritative documentation lookup for a
+      library or API. Reach for this when your uncertainty is specifically
+      about a library's current interface or usage.
+    - **Research** — open web search/scrape for anything broader than a
+      specific library's documented interface. Use this, not FetchDocs, for
+      general "how is this typically done" questions.
+    - **Done** — only once the item's scope is fully implemented and you've
+      verified it via RunCommand. Don't emit Done on the basis of "this should
+      work" without having actually run a verification command for anything
+      verification-checkable.
+    - **Abort** — when you're genuinely stuck and further tool calls won't help:
+      the item's premise is wrong, required context is missing and unobtainable
+      through your tools, or you've made no real progress after several
+      attempts. State the concrete reason in the 'reason' field. Don't use this
+      as a way to skip verification effort you haven't actually tried yet.
+    
+    # RESPONSIBILITIES
+    
+    1. Stay inside the current item's scope. If you notice something unrelated
+       that seems worth fixing, don't fix it inline — that's outside this item.
+    2. If context is missing something you need, resolve it yourself with
+       ReadFile/FetchDocs/Research rather than guessing at plausible-looking
+       content — you have the tools to close that gap, use them.
+    3. Match existing codebase conventions (naming, structure, error handling
+       style) over your own default style.
+    4. Don't claim success — Done is your assertion that you've implemented and
+       verified the item, not a promise; downstream verification is still the
+       final word.
+    5. If you're stuck, emit Abort with a concrete reason rather than looping
+       on actions you don't expect to help.
+    
+    # CONSTRAINTS
+    
+    - Never fabricate the contents of a file you haven't actually read via
+      ReadFile in this session.
+    - Never emit Done without having run a verification command when one is
+      available for this kind of change.
+    
+          Whatever else {
+        "task": "Build a simple todo app with add/delete functionality using HTML, CSS, and JavaScript. Create index.html, styles.css, and script.js with a clean UI that allows adding and deleting todo items.",
+        "dependentSummary": [],
+        "repoTree": "./README.md\n./eslint.config.js\n./src/App.css\n./src/App.tsx\n./src/assets/hero.png\n./src/assets/react.svg\n./src/assets/vite.svg\n./src/index.css\n./src/main.tsx\n./index.html\n./package-lock.json\n./package.json\n./public/favicon.svg\n./public/icons.svg\n./tsconfig.app.json\n./tsconfig.json\n./tsconfig.node.json\n./vite.config.ts\n",
+        "skills": [
+            {
+                "name": "project-conventions",
+                "description": "File layout, naming, and import rules for generated projects. Use this whenever creating, moving, or renaming any file, adding a component, page, hook, or utility, wiring up imports, or deciding where new code belongs. Consult this before writing the first line of any new file, even for a small change.",
+                "content": "# Project Conventions\n\nStructural rules for every generated project. These are not suggestions —\ninconsistent structure across agents causes integration failures downstream.\n\n## Directory layout\n\n```\nsrc/\n├── components/     Reusable UI. One folder per component.\n│   └── ui/         Base primitives. Do not hand-edit these.\n├── pages/          Route-level components. One file per route.\n├── hooks/          Custom hooks. One hook per file.\n├── lib/            Pure utilities, no framework imports.\n├── integrations/   External clients (db, third-party APIs).\n└── types/          Shared types only. Component-local types stay local.\n```\n\nIf the current project's actual layout differs from this (check the repo\nbefore assuming), follow what's already there and do not restructure it.\n\n## Naming\n\n| Thing              | Case       | Example                        |\n|---------------------|------------|---------------------------------|\n| Component file      | PascalCase | `UserCard.tsx`                  |\n| Hook file            | camelCase  | `useAuth.ts`                     |\n| Utility file         | kebab-case | `format-date.ts`                 |\n| Type/interface       | PascalCase | `interface UserProfile`         |\n| Boolean prop/var     | is/has/can | `isLoading`, `hasError`         |\n\nNever suffix components with `Component`. `UserCard`, not `UserCardComponent`.\n\n## Imports\n\nUse the project's configured path alias (e.g. `@/`) for anything under `src/`.\nRelative imports only within the same folder.\n\n```\n// Wrong\nimport { UserCard } from '../../components/UserCard'\n\n// Right\nimport { UserCard } from '@/components/UserCard'\n```\n\nOrder: external packages → internal alias imports → relative imports → styles.\nBlank line between groups.\n\n## Component rules\n\n- One exported component per file. Named export, not default export.\n- Props interface declared directly above the component, named `<Name>Props`.\n- No inline styles — use the styling system already in the project.\n- If a component exceeds ~150 lines, extract subcomponents into the same folder.\n\n## Adding a new route\n\nDo all four steps below. A route added without navigation wired up is a\ncommon and easy-to-miss failure.\n\n1. Create the route file in `src/pages/`.\n2. Register it in the router.\n3. Add the nav entry if the route is user-reachable.\n4. Add loading and error states — never render a bare unhandled fetch.\n\n## Do not\n\n- Create top-level directories outside the layout above without a clear reason.\n- Hand-edit generated/vendored UI primitives — regenerate them instead.\n- Add a dependency without checking whether an existing one already covers it\n  (see `dependency-policy`).\n- Leave `TODO`, placeholder text, or lorem-ipsum-style content in shipped output.\n\n## Escape hatch\n\nIf the user explicitly requests a different structure, follow the user. Note\nthe deviation in your task summary so downstream agents don't fight it.",
+            },
+            {
+                "name": "design-system",
+                "description": "Tokens, spacing scale, typography, color palette, and the Stitch design-variant workflow for generated UI. Use whenever writing or editing any component that renders visible markup, choosing colors/spacing/fonts, generating design variants from a user prompt, or reviewing UI for visual consistency. Always consult before hardcoding a style value or before UIExpert generates designs.",
+                "content": "# Design System\n\nRules for keeping generated UI visually coherent across every agent that\ntouches it, and for how UIExpert's Stitch-generated design variants flow\ninto the Coder.\n\n## Design-variant workflow (UIExpert)\n\nFor any task that generates or substantially reshapes UI, do not go straight\nfrom the user prompt to a single design. Instead:\n\n1. Generate **three prompt variations** of the original user request —\n   distinct enough to explore different visual directions (e.g. more\n   minimal vs. more editorial vs. more dense/dashboard-like), but each still\n   a faithful interpretation of what the user actually asked for. Do not\n   invent requirements the user didn't imply.\n2. Run each variation through the Stitch SDK to produce three candidate\n   designs.\n3. Select (or have the orchestrator/user select) the design to proceed with.\n4. Record the **selected variant's tokens** — palette, spacing, type scale,\n   component shapes — into the shared design record (see below). This\n   record, not the Stitch output itself, is what the Coder reads.\n\n## Design record: the sync contract with Coder\n\nUIExpert and Coder must never independently re-derive style decisions from\nthe same user prompt — that produces mismatched output (different accent\ncolors, different spacing rhythm) even when both are \"right\" individually.\n\nThe design record is the single source of truth once a variant is chosen.\nIt must include:\n\n- Color palette (primary, secondary, accent, neutral scale, semantic colors\n  for success/warning/error)\n- Type scale (font family, size steps, weight steps)\n- Spacing scale (base unit and multiples in use)\n- Border radius and shadow conventions\n- Any component-shape decisions from the chosen Stitch variant (e.g. pill\n  buttons vs. rounded-rect, card elevation style)\n\nCoder reads this record before writing any styled markup for the task. If\nthe record doesn't exist yet for a task that needs one, Coder should not\nguess — flag it back to the orchestrator rather than inventing values that\nUIExpert will later contradict.\n\n## Baseline tokens (used when no variant-specific record exists)\n\nUse the project's already-established tokens if the project has prior UI.\nOnly fall back to defaults below for a brand-new project with no existing\ndesign record.\n\n| Token          | Default                                   |\n|----------------|--------------------------------------------|\n| Spacing unit   | 4px base, scale: 4/8/12/16/24/32/48/64      |\n| Radius         | sm: 4px, md: 8px, lg: 12px, full: 9999px    |\n| Font sizes     | 12/14/16/18/24/32/40                        |\n| Font weights   | 400 regular, 500 medium, 600 semibold, 700 bold |\n\n## Rules\n\n- No hardcoded hex/px values in component markup — reference the design\n  record or the project's token source (theme file, CSS variables, config).\n- One accent color per project. Don't introduce a second \"primary\" color\n  mid-project.\n- Match the spacing scale exactly — no arbitrary values like `padding: 13px`.\n- Icon set, once chosen for a project, stays consistent — don't mix icon\n  libraries within one app.\n\n## Do not\n\n- Generate only one design variant when three were expected — the point is\n  giving the user/orchestrator a real choice, not rubber-stamping the first\n  attempt.\n- Let Coder style a component before the design record exists for that task.\n- Silently override a token from the design record because a value \"looks\n  better\" — if it's actually wrong, flag it, don't just diverge.",
+            },
+            {
+                "name": "dependency-policy",
+                "description": "Approved libraries and the bar for adding a new dependency, including version compatibility checks against the current environment. Use whenever considering npm install, importing a package not already in package.json, or facing a problem that \"a library could solve.\" Check this before adding any dependency, not after.",
+                "content": "# Dependency Policy\n\n## Before adding anything\n\n1. Check `package.json` — is something already installed that covers this?\n   Don't add a second library for a problem an existing dependency solves.\n2. Check whether the standard library / framework already covers it\n   (e.g. don't add a date library for something `Intl` handles).\n3. If a new dependency is genuinely needed, verify **version compatibility\n   with the current environment** before installing:\n   - Node/Bun/runtime version actually in use in this project\n   - Existing major versions of related packages (framework version,\n     bundler version) — check the new package's peer dependencies against\n     what's installed, not against the latest docs\n   - Whether the package has a maintained release compatible with the\n     project's module system (ESM vs CJS)\n   Do not assume the latest version of a library is safe to add — check\n   its peer dependency range against what's already in `package.json`\n   first, and prefer the newest version that satisfies existing peers.\n\n## Approved categories (safe to add without escalation)\n\n- Well-known, actively maintained utility libraries for a narrow, common\n  problem (date formatting, schema validation, class-name merging)\n- Official SDKs for services already integrated in the project (e.g. the\n  project's existing database or auth provider's own client)\n\n## Requires justification in the task summary\n\n- Anything that adds a new category of infrastructure (a new database\n  client, a new state-management library, a new build tool)\n- Anything with low weekly downloads or no commits in the last year\n- Anything that duplicates functionality of an existing dependency\n\n## Do not\n\n- Add a dependency to solve a problem solvable in under ~15 lines of\n  project code.\n- Add a library still in alpha/beta for anything on the critical path.\n- Upgrade an existing dependency's major version as a side effect of an\n  unrelated task — that's a separate, deliberate task.\n- Install without checking peer dependency ranges against the current\n  lockfile.",
+            },
+            {
+                "name": "scaffold-new-project",
+                "description": "What must exist before any feature work starts on a brand-new (empty) project — base tooling, folder skeleton, and the first commit's contents. Use only for the very first task in a Run against an empty repo, not for adding to an already-scaffolded project.",
+                "content": null,
+            },
+            {
+                "name": "add-a-route",
+                "description": "Full checklist and conventions for adding a new page or route. Use whenever a task involves creating a new page, screen, or user-reachable endpoint — not for editing an existing route.",
+                "content": null,
+            },
+            {
+                "name": "database-integration",
+                "description": "Client setup, schema conventions, row-level security, and the migration procedure. Use whenever a task touches the database — creating or modifying tables, writing migrations, querying data, or anything involving auth-adjacent data access.",
+                "content": null,
+            },
+            {
+                "name": "api-route-conventions",
+                "description": "Error shape, status codes, and the streaming/SSE pattern for backend routes. Use whenever writing or editing an API or server route.",
+                "content": null,
+            },
+            {
+                "name": "state-management-rules",
+                "description": "When to use local component state vs. a shared/global store, and the conventions for each. Use whenever a task introduces new state, lifts existing state, or touches how data flows between components.",
+                "content": null,
+            },
+            {
+                "name": "form-handling",
+                "description": "Validation, submission, and error-display conventions for any form. Use whenever writing or editing a form — input collection, validation rules, submit handling, or the success/error states around a submission.",
+                "content": null,
+            },
+        ],
+    } carries about the current codebase state.
+    
+          Answer in JSON using any of these schemas:
+    {
+      action: "writeFile",
+      path: string,
+      content: string,
+    } or {
+      action: "read",
+      path: string,
+    } or {
+      action: "editFile",
+      path: string,
+      content: string,
+    } or {
+      action: "runCommand",
+      command: string,
+    } or {
+      action: "delete",
+      path: string,
+    } or {
+      action: "research",
+      searchType: {
+        type: "webSearch",
+        query: string,
+        maxResults: int,
+      } or {
+        type: "webScrape",
+        urls: string[],
+        maxPages: int,
+      } or {
+        type: "docsSearch",
+        library: string,
+        query: string,
+      },
+    } or {
+      action: "getSkill",
+      skillName: string,
+    } or {
+      action: "done",
+      filesEdited: [
+        {
+          fileName: string,
+          summary: string,
+        }
+      ],
+    } or {
+      action: "abort",
+      reason: string,
+    }
+    
+    ---LLM REPLY---
+    [
+      {
+        "action": "read",
+        "path": "index.html"
+      },
+      {
+        "action": "read",
+        "path": "src/App.tsx"
+      },
+      {
+        "action": "read",
+        "path": "src/App.css"
+      },
+      {
+        "action": "read",
+        "path": "src/main.tsx"
+      },
+      {
+        "action": "read",
+        "path": "package.json"
+      }
+    ]
+    ---Parsed Response (class ReadFile)---
+    {
+      "action": "read",
+      "path": "index.html"
+    }
+{
+  "action": "read",
+  "path": "index.html"
+}  is the LLM response of subagent,  coder
+[2026-07-25 12:59:10.443 +0530] INFO: LLM response will be [object Object] for coder
+[2026-07-25 12:59:10.443 +0530] INFO: LLM asdf response
+    agent: "coder"
+    response: {
+      "action": "read",
+      "path": "index.html"
+    }
+[2026-07-25 12:59:10.774 +0530] INFO: {
+  "success": true,
+  "response": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>react-template</title>\n  </head>\n  <body>\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.tsx\"></script>\n  </body>\n</html>\n"
+} is the tool response
+2026-07-25T12:59:16.580 [BAML INFO] Function CoderAgent:
+    Client: OpenAIGeneric (deepseek-v4-flash) - 5696ms. StopReason: stop. Tokens(in/out): 3763/540
+    ---PROMPT---
+    system: 
+    # ROLE
+    
+    You are the CoderAgent, implementing exactly one SubAgentsTodo item at a
+    time inside a tool-call loop. You take one action per turn from the set
+    below, observe the result, and continue until the item is genuinely done
+    and verified.
+    
+    # CHOOSING AN ACTION
+    
+    - **ReadFile** — when you need to see a file's actual current content
+      before changing it or reasoning about it. Prefer reading over assuming.
+    - **WriteFile** — to create a new file or replace a file's full content.
+      This is a full rewrite, not a patch — include the complete intended
+      content.
+    - **DeleteFile** — only when the item's scope genuinely requires removing
+      a file, not as a shortcut for a large edit.
+    - **RunCommand** — to build, lint, typecheck, or run tests. This is your
+      primary way to check your own work before finishing — use it before
+      Done, not only when something already looks broken.
+    - **FetchDocs** — structured, authoritative documentation lookup for a
+      library or API. Reach for this when your uncertainty is specifically
+      about a library's current interface or usage.
+    - **Research** — open web search/scrape for anything broader than a
+      specific library's documented interface. Use this, not FetchDocs, for
+      general "how is this typically done" questions.
+    - **Done** — only once the item's scope is fully implemented and you've
+      verified it via RunCommand. Don't emit Done on the basis of "this should
+      work" without having actually run a verification command for anything
+      verification-checkable.
+    - **Abort** — when you're genuinely stuck and further tool calls won't help:
+      the item's premise is wrong, required context is missing and unobtainable
+      through your tools, or you've made no real progress after several
+      attempts. State the concrete reason in the 'reason' field. Don't use this
+      as a way to skip verification effort you haven't actually tried yet.
+    
+    # RESPONSIBILITIES
+    
+    1. Stay inside the current item's scope. If you notice something unrelated
+       that seems worth fixing, don't fix it inline — that's outside this item.
+    2. If context is missing something you need, resolve it yourself with
+       ReadFile/FetchDocs/Research rather than guessing at plausible-looking
+       content — you have the tools to close that gap, use them.
+    3. Match existing codebase conventions (naming, structure, error handling
+       style) over your own default style.
+    4. Don't claim success — Done is your assertion that you've implemented and
+       verified the item, not a promise; downstream verification is still the
+       final word.
+    5. If you're stuck, emit Abort with a concrete reason rather than looping
+       on actions you don't expect to help.
+    
+    # CONSTRAINTS
+    
+    - Never fabricate the contents of a file you haven't actually read via
+      ReadFile in this session.
+    - Never emit Done without having run a verification command when one is
+      available for this kind of change.
+    
+          Whatever else {
+        "task": "Build a simple todo app with add/delete functionality using HTML, CSS, and JavaScript. Create index.html, styles.css, and script.js with a clean UI that allows adding and deleting todo items.",
+        "dependentSummary": [],
+        "repoTree": "./README.md\n./eslint.config.js\n./src/App.css\n./src/App.tsx\n./src/assets/hero.png\n./src/assets/react.svg\n./src/assets/vite.svg\n./src/index.css\n./src/main.tsx\n./index.html\n./package-lock.json\n./package.json\n./public/favicon.svg\n./public/icons.svg\n./tsconfig.app.json\n./tsconfig.json\n./tsconfig.node.json\n./vite.config.ts\n",
+        "skills": [
+            {
+                "name": "project-conventions",
+                "description": "File layout, naming, and import rules for generated projects. Use this whenever creating, moving, or renaming any file, adding a component, page, hook, or utility, wiring up imports, or deciding where new code belongs. Consult this before writing the first line of any new file, even for a small change.",
+                "content": "# Project Conventions\n\nStructural rules for every generated project. These are not suggestions —\ninconsistent structure across agents causes integration failures downstream.\n\n## Directory layout\n\n```\nsrc/\n├── components/     Reusable UI. One folder per component.\n│   └── ui/         Base primitives. Do not hand-edit these.\n├── pages/          Route-level components. One file per route.\n├── hooks/          Custom hooks. One hook per file.\n├── lib/            Pure utilities, no framework imports.\n├── integrations/   External clients (db, third-party APIs).\n└── types/          Shared types only. Component-local types stay local.\n```\n\nIf the current project's actual layout differs from this (check the repo\nbefore assuming), follow what's already there and do not restructure it.\n\n## Naming\n\n| Thing              | Case       | Example                        |\n|---------------------|------------|---------------------------------|\n| Component file      | PascalCase | `UserCard.tsx`                  |\n| Hook file            | camelCase  | `useAuth.ts`                     |\n| Utility file         | kebab-case | `format-date.ts`                 |\n| Type/interface       | PascalCase | `interface UserProfile`         |\n| Boolean prop/var     | is/has/can | `isLoading`, `hasError`         |\n\nNever suffix components with `Component`. `UserCard`, not `UserCardComponent`.\n\n## Imports\n\nUse the project's configured path alias (e.g. `@/`) for anything under `src/`.\nRelative imports only within the same folder.\n\n```\n// Wrong\nimport { UserCard } from '../../components/UserCard'\n\n// Right\nimport { UserCard } from '@/components/UserCard'\n```\n\nOrder: external packages → internal alias imports → relative imports → styles.\nBlank line between groups.\n\n## Component rules\n\n- One exported component per file. Named export, not default export.\n- Props interface declared directly above the component, named `<Name>Props`.\n- No inline styles — use the styling system already in the project.\n- If a component exceeds ~150 lines, extract subcomponents into the same folder.\n\n## Adding a new route\n\nDo all four steps below. A route added without navigation wired up is a\ncommon and easy-to-miss failure.\n\n1. Create the route file in `src/pages/`.\n2. Register it in the router.\n3. Add the nav entry if the route is user-reachable.\n4. Add loading and error states — never render a bare unhandled fetch.\n\n## Do not\n\n- Create top-level directories outside the layout above without a clear reason.\n- Hand-edit generated/vendored UI primitives — regenerate them instead.\n- Add a dependency without checking whether an existing one already covers it\n  (see `dependency-policy`).\n- Leave `TODO`, placeholder text, or lorem-ipsum-style content in shipped output.\n\n## Escape hatch\n\nIf the user explicitly requests a different structure, follow the user. Note\nthe deviation in your task summary so downstream agents don't fight it.",
+            },
+            {
+                "name": "design-system",
+                "description": "Tokens, spacing scale, typography, color palette, and the Stitch design-variant workflow for generated UI. Use whenever writing or editing any component that renders visible markup, choosing colors/spacing/fonts, generating design variants from a user prompt, or reviewing UI for visual consistency. Always consult before hardcoding a style value or before UIExpert generates designs.",
+                "content": "# Design System\n\nRules for keeping generated UI visually coherent across every agent that\ntouches it, and for how UIExpert's Stitch-generated design variants flow\ninto the Coder.\n\n## Design-variant workflow (UIExpert)\n\nFor any task that generates or substantially reshapes UI, do not go straight\nfrom the user prompt to a single design. Instead:\n\n1. Generate **three prompt variations** of the original user request —\n   distinct enough to explore different visual directions (e.g. more\n   minimal vs. more editorial vs. more dense/dashboard-like), but each still\n   a faithful interpretation of what the user actually asked for. Do not\n   invent requirements the user didn't imply.\n2. Run each variation through the Stitch SDK to produce three candidate\n   designs.\n3. Select (or have the orchestrator/user select) the design to proceed with.\n4. Record the **selected variant's tokens** — palette, spacing, type scale,\n   component shapes — into the shared design record (see below). This\n   record, not the Stitch output itself, is what the Coder reads.\n\n## Design record: the sync contract with Coder\n\nUIExpert and Coder must never independently re-derive style decisions from\nthe same user prompt — that produces mismatched output (different accent\ncolors, different spacing rhythm) even when both are \"right\" individually.\n\nThe design record is the single source of truth once a variant is chosen.\nIt must include:\n\n- Color palette (primary, secondary, accent, neutral scale, semantic colors\n  for success/warning/error)\n- Type scale (font family, size steps, weight steps)\n- Spacing scale (base unit and multiples in use)\n- Border radius and shadow conventions\n- Any component-shape decisions from the chosen Stitch variant (e.g. pill\n  buttons vs. rounded-rect, card elevation style)\n\nCoder reads this record before writing any styled markup for the task. If\nthe record doesn't exist yet for a task that needs one, Coder should not\nguess — flag it back to the orchestrator rather than inventing values that\nUIExpert will later contradict.\n\n## Baseline tokens (used when no variant-specific record exists)\n\nUse the project's already-established tokens if the project has prior UI.\nOnly fall back to defaults below for a brand-new project with no existing\ndesign record.\n\n| Token          | Default                                   |\n|----------------|--------------------------------------------|\n| Spacing unit   | 4px base, scale: 4/8/12/16/24/32/48/64      |\n| Radius         | sm: 4px, md: 8px, lg: 12px, full: 9999px    |\n| Font sizes     | 12/14/16/18/24/32/40                        |\n| Font weights   | 400 regular, 500 medium, 600 semibold, 700 bold |\n\n## Rules\n\n- No hardcoded hex/px values in component markup — reference the design\n  record or the project's token source (theme file, CSS variables, config).\n- One accent color per project. Don't introduce a second \"primary\" color\n  mid-project.\n- Match the spacing scale exactly — no arbitrary values like `padding: 13px`.\n- Icon set, once chosen for a project, stays consistent — don't mix icon\n  libraries within one app.\n\n## Do not\n\n- Generate only one design variant when three were expected — the point is\n  giving the user/orchestrator a real choice, not rubber-stamping the first\n  attempt.\n- Let Coder style a component before the design record exists for that task.\n- Silently override a token from the design record because a value \"looks\n  better\" — if it's actually wrong, flag it, don't just diverge.",
+            },
+            {
+                "name": "dependency-policy",
+                "description": "Approved libraries and the bar for adding a new dependency, including version compatibility checks against the current environment. Use whenever considering npm install, importing a package not already in package.json, or facing a problem that \"a library could solve.\" Check this before adding any dependency, not after.",
+                "content": "# Dependency Policy\n\n## Before adding anything\n\n1. Check `package.json` — is something already installed that covers this?\n   Don't add a second library for a problem an existing dependency solves.\n2. Check whether the standard library / framework already covers it\n   (e.g. don't add a date library for something `Intl` handles).\n3. If a new dependency is genuinely needed, verify **version compatibility\n   with the current environment** before installing:\n   - Node/Bun/runtime version actually in use in this project\n   - Existing major versions of related packages (framework version,\n     bundler version) — check the new package's peer dependencies against\n     what's installed, not against the latest docs\n   - Whether the package has a maintained release compatible with the\n     project's module system (ESM vs CJS)\n   Do not assume the latest version of a library is safe to add — check\n   its peer dependency range against what's already in `package.json`\n   first, and prefer the newest version that satisfies existing peers.\n\n## Approved categories (safe to add without escalation)\n\n- Well-known, actively maintained utility libraries for a narrow, common\n  problem (date formatting, schema validation, class-name merging)\n- Official SDKs for services already integrated in the project (e.g. the\n  project's existing database or auth provider's own client)\n\n## Requires justification in the task summary\n\n- Anything that adds a new category of infrastructure (a new database\n  client, a new state-management library, a new build tool)\n- Anything with low weekly downloads or no commits in the last year\n- Anything that duplicates functionality of an existing dependency\n\n## Do not\n\n- Add a dependency to solve a problem solvable in under ~15 lines of\n  project code.\n- Add a library still in alpha/beta for anything on the critical path.\n- Upgrade an existing dependency's major version as a side effect of an\n  unrelated task — that's a separate, deliberate task.\n- Install without checking peer dependency ranges against the current\n  lockfile.",
+            },
+            {
+                "name": "scaffold-new-project",
+                "description": "What must exist before any feature work starts on a brand-new (empty) project — base tooling, folder skeleton, and the first commit's contents. Use only for the very first task in a Run against an empty repo, not for adding to an already-scaffolded project.",
+                "content": null,
+            },
+            {
+                "name": "add-a-route",
+                "description": "Full checklist and conventions for adding a new page or route. Use whenever a task involves creating a new page, screen, or user-reachable endpoint — not for editing an existing route.",
+                "content": null,
+            },
+            {
+                "name": "database-integration",
+                "description": "Client setup, schema conventions, row-level security, and the migration procedure. Use whenever a task touches the database — creating or modifying tables, writing migrations, querying data, or anything involving auth-adjacent data access.",
+                "content": null,
+            },
+            {
+                "name": "api-route-conventions",
+                "description": "Error shape, status codes, and the streaming/SSE pattern for backend routes. Use whenever writing or editing an API or server route.",
+                "content": null,
+            },
+            {
+                "name": "state-management-rules",
+                "description": "When to use local component state vs. a shared/global store, and the conventions for each. Use whenever a task introduces new state, lifts existing state, or touches how data flows between components.",
+                "content": null,
+            },
+            {
+                "name": "form-handling",
+                "description": "Validation, submission, and error-display conventions for any form. Use whenever writing or editing a form — input collection, validation rules, submit handling, or the success/error states around a submission.",
+                "content": null,
+            },
+        ],
+    } carries about the current codebase state.
+    
+          Answer in JSON using any of these schemas:
+    {
+      action: "writeFile",
+      path: string,
+      content: string,
+    } or {
+      action: "read",
+      path: string,
+    } or {
+      action: "editFile",
+      path: string,
+      content: string,
+    } or {
+      action: "runCommand",
+      command: string,
+    } or {
+      action: "delete",
+      path: string,
+    } or {
+      action: "research",
+      searchType: {
+        type: "webSearch",
+        query: string,
+        maxResults: int,
+      } or {
+        type: "webScrape",
+        urls: string[],
+        maxPages: int,
+      } or {
+        type: "docsSearch",
+        library: string,
+        query: string,
+      },
+    } or {
+      action: "getSkill",
+      skillName: string,
+    } or {
+      action: "done",
+      filesEdited: [
+        {
+          fileName: string,
+          summary: string,
+        }
+      ],
+    } or {
+      action: "abort",
+      reason: string,
+    }
+    
+    ---LLM REPLY---
+    {
+      "action": "read",
+      "path": "/root/Workspace/generated_projects/example/index.html"
+    }
+    ---Parsed Response (class ReadFile)---
+    {
+      "action": "read",
+      "path": "/root/Workspace/generated_projects/example/index.html"
+    }
+{
+  "action": "read",
+  "path": "/root/Workspace/generated_projects/example/index.html"
+}  is the LLM response of subagent,  coder
+[2026-07-25 12:59:16.582 +0530] INFO: LLM response will be [object Object] for coder
+[2026-07-25 12:59:16.586 +0530] INFO: LLM asdf response
+    agent: "coder"
+    response: {
+      "action": "read",
+      "path": "/root/Workspace/generated_projects/example/index.html"
+    }
+[2026-07-25 12:59:16.870 +0530] ERROR: Failed to read /root/Workspace/generated_projects/example/index.html: FileNotFoundError: path '/root/Workspace/generated_projects/example/index.html' does not exist

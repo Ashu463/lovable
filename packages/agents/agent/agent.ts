@@ -338,6 +338,7 @@ export class OrchestratorAgent{
             let summaries: string[] = []
 
             for(let i = 0 ; i < sequentialTodos.length; i++){
+                console.log("logger instance", logger.level);
                 const todo = sequentialTodos[i];
                 logger.info(`Task ${todo?.id}: ${todo?.task}`)
                 // #TODO: Failure handling of planner
@@ -386,22 +387,38 @@ export class OrchestratorAgent{
             orchestratorSummary = JSON.stringify(summaries)
                 
         }
-        // const path = this.sandbox
-        // #TEST: replace with appropriate path of project directory
-        const deployResult: DeploymentResult = await this.Deploy(`/home/usr/${this.userId}/projects/${this.projectId}`)
-        if(deployResult.success){
+        // Start your dev server first (e.g. npm run dev)
+        try{
+
+            const previewUrl = await this.sandbox.GetPreviewUrl()
             return {
-                status: 'completed',
+                status: "completed",
                 design: this.selectedDesign,
                 todos: data.isComplex ? tasks : [],
-                previewUrl: deployResult.url,
-                summary: orchestratorSummary
-            }
+                previewUrl,
+                summary: orchestratorSummary,
+            };
         }
-        return{
-            status: 'error',
-            reason: `Deployment failed`
+        catch(e){
+            logger.error(`Error occurred while hosting ${e}`)
+            throw new Error
         }
+        // Deploy if only user says this explictily
+        // #TEST: replace with appropriate path of project directory
+        // const deployResult: DeploymentResult = await this.Deploy(`/home/usr/${this.userId}/projects/${this.projectId}`)
+        // if(deployResult.success){
+        //     return {
+        //         status: 'completed',
+        //         design: this.selectedDesign,
+        //         todos: data.isComplex ? tasks : [],
+        //         previewUrl: deployResult.url,
+        //         summary: orchestratorSummary
+        //     }
+        // }
+        // return{
+        //     status: 'error',
+        //     reason: `Deployment failed`
+        // }
     }
     
 

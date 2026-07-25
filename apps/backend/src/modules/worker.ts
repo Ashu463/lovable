@@ -24,7 +24,7 @@ const worker = new Worker("run-agent", async (job) => {
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;
     }
-    },{connection: redis, concurrency: 5}
+    },{connection: redis, lockDuration: 60_000, stalledInterval: 30_000, maxStalledCount: 1, concurrency: 5}
 );
 
 worker.on("failed", (job, err) => {

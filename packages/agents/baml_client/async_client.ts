@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, Fixes, GetSkill, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, Fixes, GetSkill, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -156,7 +156,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
         async CoderAgent(
         systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done> {
+        ): Promise<types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -203,7 +203,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done
+            return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort
             } catch (error) {
             throw toBamlError(error);
             }
@@ -436,7 +436,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
         async DebuggerAgent(
         systemPrompt: string,errors: types.Error[],context: types.DebuggerContext,toolResult?: types.ToolResult | null,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone> {
+        ): Promise<types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone | types.Abort> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -483,7 +483,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone
+            return __raw__.parsed(false) as types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone | types.Abort
             } catch (error) {
             throw toBamlError(error);
             }
@@ -1308,7 +1308,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             CoderAgent(
             systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done>
+            ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done | partial_types.Abort, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1367,10 +1367,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done>(
+                return new BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done | partial_types.Abort, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort>(
                   __raw__,
-                  (a): partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done => a,
-                  (a): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done => a,
+                  (a): partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done | partial_types.Abort => a,
+                  (a): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -1678,7 +1678,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             DebuggerAgent(
             systemPrompt: string,errors: types.Error[],context: types.DebuggerContext,toolResult?: types.ToolResult | null,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone, types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone>
+            ): BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone | partial_types.Abort, types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone | types.Abort>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1737,10 +1737,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone, types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone>(
+                return new BamlStream<partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone | partial_types.Abort, types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone | types.Abort>(
                   __raw__,
-                  (a): partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone => a,
-                  (a): types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone => a,
+                  (a): partial_types.ReadFile | partial_types.RunCommand | partial_types.WriteFile | partial_types.EditFile | partial_types.Research | partial_types.GetSkill | partial_types.DebuggingDone | partial_types.Abort => a,
+                  (a): types.ReadFile | types.RunCommand | types.WriteFile | types.EditFile | types.Research | types.GetSkill | types.DebuggingDone | types.Abort => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

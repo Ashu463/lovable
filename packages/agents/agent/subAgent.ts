@@ -76,27 +76,37 @@ export class SubAgent<T extends keyof ContextMap> {
         this.context = await this.BuildInitialContext()
         let success = true
 
+        logger.info(`calling LLM for ${this.agentType}`)
+        console.log("logger instance", logger.level);
         while (true) {
-            logger.info(`calling LLM for ${this.agentType}`)
             const res = await this.agentInstance.callLLM(this.input, this.context)
-
-            if (this.isSingleShotAgent() || res.action === 'done' || res.stopReason === 'completed') {
+            console.log(JSON.stringify(res, null, 2), " is the LLM response of subagent, ", this.agentType)
+            logger.info(`LLM response will be ${res} for ${this.agentType}`)
+            logger.info(
+                {
+                  agent: this.agentType,
+                  response: res,
+                },
+                "LLM asdf response"
+              );
+            if (this.isSingleShotAgent() || res.action === 'done') {
                 logger.info(`${this.agentType} done`)
                 const toolRes = await this.agentInstance.executeFunction(res)
                 this.pushSession('assistant', 'done', toolRes)
                 await this.SaveSessionState()
                 break
             }
-            if(res.stopReason === 'aborted'){
-                logger.warn(`${this.agentType} aborted at iteration ${this.iteration}`)
+
+            if(res.action === 'abort'){
+                logger.warn(`${this.agentType} aborted at iteration ${this.iteration}: ${res.reason}`)
                 this.pushSession('assistant', 'halted', res)
                 await this.SaveSessionState()
                 success = false
                 break;
             }
-            logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
+            // logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
             const toolRes = await this.agentInstance.executeFunction(res)
-
+            logger.info(`${JSON.stringify(toolRes, null, 2)} is the tool response`)
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 

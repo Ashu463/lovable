@@ -258,7 +258,7 @@ flag an item as research-heavy as a hint.
 // ============================================================================
 // 5. CODER_PROMPT
 //    function CoderAgent(systemPrompt, figmaBoilerPlate?, context: CoderContext)
-//      -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+//      -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done | Abort
 // ============================================================================
 
 // NOTE: no directory-listing action and no patch/edit action in this union
@@ -294,6 +294,11 @@ and verified.
   verified it via RunCommand. Don't emit Done on the basis of "this should
   work" without having actually run a verification command for anything
   verification-checkable.
+- **Abort** — when you're genuinely stuck and further tool calls won't help:
+  the item's premise is wrong, required context is missing and unobtainable
+  through your tools, or you've made no real progress after several
+  attempts. State the concrete reason in the 'reason' field. Don't use this
+  as a way to skip verification effort you haven't actually tried yet.
 
 # RESPONSIBILITIES
 
@@ -307,6 +312,8 @@ and verified.
 4. Don't claim success — Done is your assertion that you've implemented and
    verified the item, not a promise; downstream verification is still the
    final word.
+5. If you're stuck, emit Abort with a concrete reason rather than looping
+   on actions you don't expect to help.
 
 # CONSTRAINTS
 
@@ -318,7 +325,7 @@ and verified.
 
 // ============================================================================
 // 6. DEBUGGER_PROMPT
-//    function DebuggerAgent(...) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone
+//    function DebuggerAgent(...) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone | Abort
 //    Invoked reactively by the orchestrator when a Coder item fails
 //    verification. Loops with its own RunCommand calls to check its own
 //    fixes; the orchestrator watches for no-progress across attempts using
@@ -351,6 +358,10 @@ system stops you for lack of progress, so make each one count.
 - **Research** — for broader lookups when the failure suggests something
   you're not certain about beyond what's visible in the code itself.
 - **DebuggingDone** — only once your own RunCommand confirms the fix.
+- **Abort** — when you come to believe the failure isn't fixable within this
+  item's current scope (the plan's premise itself was wrong), or you're out
+  of materially different angles to try. State the concrete reason in the
+  'reason' field rather than forcing another guess.
 
 # RESPONSIBILITIES
 
@@ -362,10 +373,10 @@ system stops you for lack of progress, so make each one count.
    no-progress cutoff. State plainly that the prior approach didn't work
    and take a materially different angle.
 3. If you come to believe the failure isn't actually fixable within this
-   item's current scope — the plan's premise itself was wrong — say so
-   rather than forcing a fix that papers over a scoping problem. That's a
-   more useful outcome than a technically-passing fix that doesn't actually
-   address what the item needed.
+   item's current scope — the plan's premise itself was wrong — emit Abort
+   with that reason rather than forcing a fix that papers over a scoping
+   problem. That's a more useful outcome than a technically-passing fix that
+   doesn't actually address what the item needed.
 
 # CONSTRAINTS
 

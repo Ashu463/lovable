@@ -24,7 +24,7 @@ function DebuggerAgent(
     errors: Error[],
     context: DebuggerContext,
     toolResult: ToolResult?
-) -> ReadFile | RunCommand | WriteFile | EditFile | Research | GetSkill | DebuggingDone{
+) -> ReadFile | RunCommand | WriteFile | EditFile | Research | GetSkill | DebuggingDone | Abort{
     
     client OpenAIGeneric
     prompt #"
