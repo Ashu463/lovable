@@ -83,7 +83,7 @@ export function Docs() {
         <ul>
           <li>Persist run/chat state server-side (or in local storage keyed by project) so a refresh mid-build reconnects instead of losing the session.</li>
           <li>Implement <code>POST /chat/:runId/stop</code> for real, including releasing the sandbox.</li>
-          <li>Add a file-read endpoint so the workspace&rsquo;s Code tab shows real files instead of a placeholder.</li>
+          <li>Sync R2 more eagerly (or push a file-changed event) so the Code tab doesn&rsquo;t lag behind an in-progress sandbox between syncs.</li>
           <li>Make <code>Run.status</code> transition correctly on <code>select_design</code>, and give design selection its own resume endpoint instead of overloading create-run.</li>
           <li>Add integration tests around the SSE event contract specifically — this is exactly the class of bug (computed but never emitted) that a contract test would have caught immediately.</li>
         </ul>

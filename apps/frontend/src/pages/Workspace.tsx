@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useRun } from "@/lib/run";
 import { ClarifyingQuestions } from "@/features/build/ClarifyingQuestions";
 import { DesignVariantPicker } from "@/features/build/DesignVariantPicker";
+import { CodeViewer } from "@/features/build/CodeViewer";
 
 const MODES = ["Build", "Plan"];
 
@@ -149,9 +150,8 @@ function PreviewPane() {
       <TabsContent value="preview" className="flex-1">
         <iframe title="Live preview" src={state.result.previewUrl} className="h-full w-full bg-white" />
       </TabsContent>
-      <TabsContent value="code" className="flex-1 p-6 text-sm text-muted">
-        Code view isn&rsquo;t wired up yet — it needs a file-read endpoint on the
-        agent/sandbox side that doesn&rsquo;t exist yet. Tracked as a follow-up.
+      <TabsContent value="code" className="flex-1 overflow-hidden">
+        <CodeViewer projectId={state.projectId} />
       </TabsContent>
     </Tabs>
   );

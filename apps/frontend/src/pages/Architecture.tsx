@@ -71,6 +71,22 @@ export function Architecture() {
           which is the only way to keep the connection authenticated.
         </p>
 
+        <h2>Reading code without a live sandbox</h2>
+        <p>
+          The workspace&rsquo;s Code tab needs to show a project&rsquo;s files, but the
+          sandbox that generated them is owned by a worker process that may
+          have already exited by the time someone opens that tab — E2B
+          sandboxes are ephemeral, not something the backend can assume is
+          still alive. Rather than have the Express server reconnect to a
+          possibly-dead sandbox, <code>GET /api/project/:projectId/files</code>{" "}
+          reads from R2 instead: <code>E2BSandbox.SyncR2()</code> already
+          mirrors the sandbox&rsquo;s files to object storage during the run (it
+          existed for restoring a sandbox after a crash), so exposing that
+          same durable copy to the frontend meant zero new infrastructure —
+          just a new route that lists and reads the existing R2 keys under
+          that project&rsquo;s prefix.
+        </p>
+
         <h2>Tradeoffs and known gaps</h2>
         <p>Being upfront about what&rsquo;s incomplete, because that&rsquo;s more useful than pretending otherwise:</p>
         <ul>
@@ -87,9 +103,12 @@ export function Architecture() {
             workspace is visible but intentionally disabled rather than faked.
           </li>
           <li>
-            There&rsquo;s no endpoint yet to read a project&rsquo;s live files out of
-            its sandbox, so the workspace&rsquo;s Code tab is an honest placeholder
-            until that exists.
+            The Code tab reads from R2 (the durable, periodically-synced copy
+            of the sandbox&rsquo;s files), not a live sandbox connection — see{" "}
+            <em>Reading code without a live sandbox</em> below. That means it
+            can lag slightly behind the sandbox&rsquo;s actual current state
+            between syncs, in exchange for not depending on the sandbox still
+            being alive.
           </li>
           <li>
             Run state lives in memory on the frontend for this demo — refreshing
