@@ -13,10 +13,12 @@
   --color-muted: #a7b8b2;
   --color-muted-foreground: #7c8d87;
 
-  --color-accent-from: #10b981;
-  --color-accent-to: #2dd4bf;
-  --color-accent: #14b8a6;
-  --color-accent-foreground: #052e2b;
+  /* Accent palette — "Purple & Magenta Heart" is the default; .theme-orange
+     switches to "Red-Orange Heart". Independent of light/dark. */
+  --color-accent-from: #9327db;
+  --color-accent-to: #f722a6;
+  --color-accent: #f722a6;
+  --color-accent-foreground: #fdf4ff;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -37,6 +39,16 @@
       height: 0;
     }
   }
+  @keyframes word-swap {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 /* Dark is the default (matches @theme above); .light on <html> overrides the
@@ -51,11 +63,15 @@
   --color-foreground: #0d1512;
   --color-muted: #44534e;
   --color-muted-foreground: #6c7b76;
+}
 
-  --color-accent-from: #0d9668;
-  --color-accent-to: #0f9c92;
-  --color-accent: #0f9c92;
-  --color-accent-foreground: #f2fbf9;
+/* Accent palette switch — "Red-Orange Heart". Toggled independently of
+   light/dark via a class on <html>, same cascade pattern as .light. */
+.theme-orange {
+  --color-accent-from: #ff3e00;
+  --color-accent-to: #ffb200;
+  --color-accent: #ff3e00;
+  --color-accent-foreground: #1a0a00;
 }
 
 @layer base {
@@ -163,25 +179,7 @@
     font-style: italic;
   }
 
-  /* The soft emerald/teal "aurora" wash behind the home hero — two overlapping
-     blobs low in the viewport, echoing lovable.dev's own blended glow. */
-  .aurora-bg {
-    background:
-      radial-gradient(
-        ellipse 70% 55% at 35% 100%,
-        color-mix(in srgb, var(--color-accent-from) 50%, transparent),
-        transparent 70%
-      ),
-      radial-gradient(
-        ellipse 70% 55% at 68% 92%,
-        color-mix(in srgb, var(--color-accent-to) 45%, transparent),
-        transparent 70%
-      ),
-      radial-gradient(
-        ellipse 90% 40% at 50% 100%,
-        color-mix(in srgb, var(--color-accent) 35%, transparent),
-        transparent 75%
-      ),
-      var(--color-background);
+  .animate-word-swap {
+    animation: word-swap 0.4s ease;
   }
 }

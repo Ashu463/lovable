@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { AccentPicker } from "@/components/ui/accent-picker";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -71,7 +72,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen shrink-0 flex-col border-r border-border bg-surface/40 py-4 transition-[width] duration-150",
+        "flex h-full shrink-0 flex-col border-r border-border bg-surface/40 py-4 transition-[width] duration-150",
         expanded ? "w-60 px-3" : "w-16 items-center",
       )}
     >
@@ -108,6 +109,7 @@ export function Sidebar() {
 
       <div className={cn("flex flex-col gap-1", expanded ? "" : "items-center")}>
         <ThemeToggle expanded={expanded} />
+        <AccentPicker expanded={expanded} />
 
         {session && (
           <DropdownMenu>

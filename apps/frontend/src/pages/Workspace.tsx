@@ -166,7 +166,7 @@ export function Workspace() {
 
   if (!isLive) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
         <p className="text-muted">
           This build session isn&rsquo;t active in this tab anymore — state lives in
           memory for this demo, so a refresh loses it.
@@ -179,7 +179,7 @@ export function Workspace() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col">
       <header className="flex items-center justify-between border-b border-border px-4 py-3">
         <button className="flex items-center gap-2 text-sm font-medium text-muted hover:text-foreground">
           <Sparkles className="h-4 w-4 text-accent" />

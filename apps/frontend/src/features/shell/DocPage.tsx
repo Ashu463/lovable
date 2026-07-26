@@ -12,7 +12,7 @@ export function DocPage({
   children: ReactNode;
 }) {
   return (
-    <div className="min-h-screen">
+    <div className="h-full">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-background/80 px-6 py-4 backdrop-blur">
         <Link to="/" className="flex items-center gap-2 text-sm font-medium">
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-accent">

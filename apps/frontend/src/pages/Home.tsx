@@ -4,6 +4,7 @@ import { Sidebar } from "@/features/shell/Sidebar";
 import { HomeChatBox } from "@/features/build/HomeChatBox";
 import { AboutAuthor } from "@/features/landing/AboutAuthor";
 import { HomeProjectsTabs } from "@/features/landing/HomeProjectsTabs";
+import { AnimatedTagline } from "@/features/landing/AnimatedTagline";
 import { useAuth } from "@/lib/auth";
 
 export function Home() {
@@ -11,10 +12,12 @@ export function Home() {
   const firstName = session?.user.name?.split(" ")[0];
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-full">
       <Sidebar />
 
-      <main className="aurora-bg flex-1 overflow-y-auto">
+      {/* Transparent on purpose — the heart glow now lives once, behind the
+          whole app shell in App.tsx, not re-rendered per page. */}
+      <main className="flex-1 overflow-y-auto">
         <div className="flex min-h-[85vh] flex-col items-center justify-center gap-6 px-6 text-center">
           <Link
             to="/architecture"
@@ -28,6 +31,8 @@ export function Home() {
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             What&rsquo;s on your mind{firstName ? `, ${firstName}` : ""}?
           </h1>
+
+          <AnimatedTagline />
 
           <HomeChatBox />
         </div>
