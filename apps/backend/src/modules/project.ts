@@ -74,11 +74,12 @@ projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
 });
 projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
-    const { name, archived } = req.body;
+    const { name, archived, starred } = req.body;
 
     const data: {
         name?: string;
-        archived?: boolean;
+        isArchived?: boolean;
+        isStarred?: boolean;
     } = {};
 
     if (name !== undefined) {
@@ -86,9 +87,13 @@ projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     }
 
     if (archived !== undefined) {
-        data.archived = archived;
+        data.isArchived = archived;
     }
-    
+
+    if (starred !== undefined) {
+        data.isStarred = starred;
+    }
+
     if (typeof projectId !== "string") {
         return res.status(400).json({
             success: false,
@@ -102,9 +107,7 @@ projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
             return res.status(404).json({message: `Project not found`})
         }
         const dbUpdate = await prisma.project.update({where: {id: projectId}, data: data})
-        if(!dbUpdate){
-            return res.send()
-        }
+        return res.status(200).json({success: true, data: dbUpdate})
     }
     catch(e){
         return res.status(500).json({message: `Internal Server error`})

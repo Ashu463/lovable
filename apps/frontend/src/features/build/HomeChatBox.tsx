@@ -1,5 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUp, ChevronDown, Plus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -18,8 +18,9 @@ export function HomeChatBox() {
   const { session } = useAuth();
   const { submit } = useRun();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState(MODES[0]);
-  const [prompt, setPrompt] = useState("");
+  const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? "");
 
   const handleSubmit = async () => {
     if (!prompt.trim() || !session) return;

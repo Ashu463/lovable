@@ -26,8 +26,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "ignoreDeprecations": "5.0",
-    "esModuleInterop": false,
+    "ignoreDeprecations": "5.0"
+    // "esModuleInterop": false,
 
 
   }

@@ -39,6 +39,25 @@
   }
 }
 
+/* Dark is the default (matches @theme above); .light on <html> overrides the
+   same custom properties so every utility built from them (bg-background,
+   text-foreground, border-border, ...) just follows the cascade. */
+.light {
+  --color-background: #f6faf9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #eaf2f0;
+  --color-border: #dbe7e3;
+  --color-border-hover: #c2d5cf;
+  --color-foreground: #0d1512;
+  --color-muted: #44534e;
+  --color-muted-foreground: #6c7b76;
+
+  --color-accent-from: #0d9668;
+  --color-accent-to: #0f9c92;
+  --color-accent: #0f9c92;
+  --color-accent-foreground: #f2fbf9;
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
@@ -48,11 +67,16 @@
     color-scheme: dark;
   }
 
+  html.light {
+    color-scheme: light;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    transition: background-color 0.15s ease, color 0.15s ease;
   }
 }
 

@@ -3,6 +3,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { Sidebar } from "@/features/shell/Sidebar";
 import { HomeChatBox } from "@/features/build/HomeChatBox";
 import { AboutAuthor } from "@/features/landing/AboutAuthor";
+import { HomeProjectsTabs } from "@/features/landing/HomeProjectsTabs";
 import { useAuth } from "@/lib/auth";
 
 export function Home() {
@@ -31,6 +32,7 @@ export function Home() {
           <HomeChatBox />
         </div>
 
+        <HomeProjectsTabs />
         <AboutAuthor />
 
         <footer className="border-t border-border px-6 py-8 text-center text-xs text-muted-foreground">
