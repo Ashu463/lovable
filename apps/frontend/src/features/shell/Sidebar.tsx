@@ -109,7 +109,7 @@ export function Sidebar() {
 
       <div className={cn("flex flex-col gap-1", expanded ? "" : "items-center")}>
         <ThemeToggle expanded={expanded} />
-        <AccentPicker expanded={expanded} />
+        {expanded && <AccentPicker expanded={expanded} />}
 
         {session && (
           <DropdownMenu>
@@ -119,7 +119,11 @@ export function Sidebar() {
                 expanded ? "px-2 py-2" : "h-10 w-10 justify-center",
               )}
             >
-              <Avatar name={session.user.name ?? session.user.email} className="h-8 w-8 text-sm" />
+              <Avatar
+                name={session.user.name ?? session.user.email}
+                src="/ashutosh.jpg"
+                className="h-8 w-8 text-sm"
+              />
               {expanded && (
                 <span className="truncate text-sm text-foreground">
                   {session.user.name ?? session.user.email}

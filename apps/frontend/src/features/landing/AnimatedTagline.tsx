@@ -13,7 +13,10 @@ export function AnimatedTagline() {
   return (
     <p className="text-lg text-muted">
       Build something{" "}
-      <span key={index} className="animate-word-swap inline-block font-semibold text-gradient-accent">
+      <span
+        key={index}
+        className="animate-word-swap inline-block font-semibold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.65)]"
+      >
         {WORDS[index]}
       </span>
     </p>

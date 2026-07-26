@@ -6,7 +6,7 @@ export function AboutAuthor() {
     <section id="author" className="mx-auto max-w-3xl px-6 py-24">
       <div className="rounded-2xl border border-border bg-surface/60 p-8">
         <div className="flex items-center gap-4">
-          <Avatar name="Ashutosh" className="h-14 w-14 text-lg" />
+          <Avatar name="Ashutosh" src="/ashutosh.jpg" className="h-14 w-14 text-lg" />
           <div>
             <p className="font-semibold">Ashutosh</p>
             <p className="text-sm text-muted-foreground">Builder of this clone</p>
