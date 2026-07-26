@@ -38,3 +38,5 @@ yarn-error.log*
 *.pem
 
 /apps/backend/run.log
+# TypeScript build info
+*.tsbuildinfo

@@ -1,41 +1,28 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/lib/auth";
-import { Nav } from "@/features/landing/Nav";
-import { Hero } from "@/features/landing/Hero";
-import { TrustLogos } from "@/features/landing/TrustLogos";
-import { CommunityGrid } from "@/features/landing/CommunityGrid";
-import { FeaturesGrid } from "@/features/landing/FeaturesGrid";
-import { HowItWorks } from "@/features/landing/HowItWorks";
-import { Testimonials } from "@/features/landing/Testimonials";
-import { PricingCards } from "@/features/landing/PricingCards";
-import { FaqAccordion } from "@/features/landing/FaqAccordion";
-import { FinalCta } from "@/features/landing/FinalCta";
-import { Footer } from "@/features/landing/Footer";
-import { PromptBuilder } from "@/features/build/PromptBuilder";
-
-function scrollToHero() {
-  document.getElementById("top")?.scrollIntoView({ behavior: "smooth" });
-}
+import { RunProvider } from "@/lib/run";
+import { Home } from "@/pages/Home";
+import { Workspace } from "@/pages/Workspace";
+import { Architecture } from "@/pages/Architecture";
+import { Docs } from "@/pages/Docs";
 
 function App() {
   return (
     <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID ?? ""}>
       <AuthProvider>
-        <div className="min-h-screen bg-background text-foreground">
-          <Nav onGetStarted={scrollToHero} />
-          <Hero>
-            <PromptBuilder />
-          </Hero>
-          <TrustLogos />
-          <CommunityGrid />
-          <FeaturesGrid />
-          <HowItWorks />
-          <Testimonials />
-          <PricingCards />
-          <FaqAccordion />
-          <FinalCta onStartBuilding={scrollToHero} />
-          <Footer />
-        </div>
+        <RunProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-background text-foreground">
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/w/:runId" element={<Workspace />} />
+                <Route path="/architecture" element={<Architecture />} />
+                <Route path="/docs" element={<Docs />} />
+              </Routes>
+            </div>
+          </BrowserRouter>
+        </RunProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );
