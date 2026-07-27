@@ -108,11 +108,13 @@ export class MainAgent{
                     }
                     const toolType = response.toolCall.type
                     logger.info(`[MainAgent:${this.runId}] Tool call requested: ${toolType}`)
-                    this.session.push({
+                    const toolRequestLog: Message = {
                         role: 'assistant',
-                        content: `LLM requested tool call for ${toolType}`,
+                        content: `Requested tool call ${toolType} with args ${JSON.stringify(response.toolCall)}`,
                         timestamp: new Date().toISOString()
-                    })
+                    }
+                    this.session.push(toolRequestLog)
+                    iterationLog.push(toolRequestLog)
                     await this.emitter.emit({
                         type: 'main_agent_tool_call',
                         step: this.iterations,
@@ -123,7 +125,7 @@ export class MainAgent{
                         logger.info(`[MainAgent:${this.runId}] Tool call ${toolType} succeeded`)
                         iterationLog.push({
                             role: 'toolCall',
-                            content: JSON.stringify(toolResult),
+                            content: `Result of ${toolType}: ${JSON.stringify(toolResult)}`,
                             timestamp: new Date().toISOString()
                         })
                         if(response.toolCall.writeFile){

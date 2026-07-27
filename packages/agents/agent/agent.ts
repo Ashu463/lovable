@@ -297,6 +297,7 @@ export class OrchestratorAgent{
             }
         }
         else if(data.status === 'select_design'){
+            logger.info(`Waiting to select design for run ${this.runId}`)
             await this.emitter.emit({ type: 'select_design', designs: data.designs })
             return {
                 status: 'select_design',
