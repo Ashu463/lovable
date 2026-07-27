@@ -33,3 +33,9 @@ packages/eslint-config, packages/typescript-config.
 # Git
 Conventional commits scoped to the workspace touched, e.g.
 "frontend: add design variant selector".
+
+# Testing
+Do this only when I explictly say about testing, else neglect it.
+Read the codebase thoroughly and make a workflow in your context set for that session;
+so that you don't hallunicate much. And we'll prefer minimal changes 
+not whole revert of the workflow. 

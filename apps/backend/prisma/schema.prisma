@@ -37,7 +37,6 @@ model Project {
   designs    Design[]
   questions  Question[]
   isArchived  Boolean  @default(false)
-  isStarred   Boolean  @default(false)
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
