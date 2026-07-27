@@ -161,7 +161,7 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
         orderBy: { createdAt: "asc" },
     })
     for (const e of pastEvents) {
-        res.write(`data: ${JSON.stringify(e)}\n\n`)
+        if (e.content) res.write(`data: ${e.content}\n\n`)
     }
 
     if(run.status !== 'IN_PROGRESS'){

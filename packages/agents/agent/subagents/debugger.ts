@@ -57,7 +57,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
         ){
             const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
             return {
-                success: true,
+                success: sandboxRes.success,
                 editedFiles: sandboxRes.content
             }
         }

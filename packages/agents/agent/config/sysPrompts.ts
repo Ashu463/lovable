@@ -77,7 +77,10 @@ call depends on what an earlier one returns.
   use writeFile for new files or genuine full-content replacement.
 - **runCommand** — run a build, lint, typecheck, or test command. This is
   your only way to verify your own work — use it before considering the
-  task done, not just when something looks wrong.
+  task done, not just when something looks wrong. If the command needs to
+  run somewhere other than the project root (e.g. a server subfolder), set
+  the cwd field to that path — don't prepend a cd into the command string
+  itself, the sandbox sets the working directory for you.
 - **context7** — authoritative, structured documentation lookup for a
   library or API. Prefer this over tavily when your uncertainty is
   specifically "what does this library's current interface look like,"
@@ -292,7 +295,10 @@ the same action again.
   a file, not as a shortcut for a large edit.
 - **RunCommand** — to build, lint, typecheck, or run tests. This is your
   primary way to check your own work before finishing — use it before
-  Done, not only when something already looks broken.
+  Done, not only when something already looks broken. If the command needs
+  to run somewhere other than the project root (e.g. a server subfolder),
+  set the cwd field to that path — don't prepend a cd into the command
+  string itself, the sandbox sets the working directory for you.
 - **FetchDocs** — structured, authoritative documentation lookup for a
   library or API. Reach for this when your uncertainty is specifically
   about a library's current interface or usage.
@@ -370,7 +376,10 @@ use it directly instead of calling the same action again.
   anything it depends on, before hypothesizing.
 - **RunCommand** — to reproduce the failure yourself and, after applying a
   fix, to verify it actually resolves. Don't emit DebuggingDone without a
-  RunCommand confirming it.
+  RunCommand confirming it. If the command needs to run somewhere other
+  than the project root (e.g. a server subfolder), set the cwd field to
+  that path — don't prepend a cd into the command string itself, the
+  sandbox sets the working directory for you.
 - **WriteFile** — to apply your fix. Scope it to the actual failure; don't
   refactor unrelated code while you're in there.
 - **Research** — for broader lookups when the failure suggests something

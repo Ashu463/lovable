@@ -121,6 +121,7 @@ class DeleteFile{
 class RunCommand{
     action "runCommand"
     command string
+    cwd string? // path relative to the project root, e.g. "server". Omit to run at the project root — don't prepend `cd ... &&` to command instead, the sandbox sets this directly.
 }
 class EditFile{
     action "editFile"

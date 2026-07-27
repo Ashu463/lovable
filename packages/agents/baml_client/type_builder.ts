@@ -103,7 +103,7 @@ export default class TypeBuilder {
     
     ResearcherSession: ClassViewer<'ResearcherSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
     
-    RunCommand: ClassViewer<'RunCommand', "action" | "command">;
+    RunCommand: ClassViewer<'RunCommand', "action" | "command" | "cwd">;
     
     SessionMap: ClassViewer<'SessionMap', "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert">;
     
@@ -313,7 +313,7 @@ export default class TypeBuilder {
         ]);
         
         this.RunCommand = this.tb.classViewer("RunCommand", [
-          "action","command",
+          "action","command","cwd",
         ]);
         
         this.SessionMap = this.tb.classViewer("SessionMap", [

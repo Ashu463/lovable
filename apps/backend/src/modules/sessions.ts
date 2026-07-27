@@ -25,6 +25,7 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
             id: randomUUIDv7(),
             runId: runId,
             type: event.type,
+            content: JSON.stringify(event),
             createdAt: new Date(),
         }})
 

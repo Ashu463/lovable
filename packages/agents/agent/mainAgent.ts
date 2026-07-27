@@ -299,8 +299,8 @@ export class MainAgent{
 
             case ToolType.RunCommand:
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.runCommand.command}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "runCommand", command: toolCall.runCommand.command})).content
+                logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.runCommand.command} (cwd: ${toolCall.runCommand.cwd ?? "project root"})`)
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.runCommand)).content
 
             case ToolType.GetSkill:
                 if (!toolCall.getSkill) throw new Error("GetSkill tool call missing params")

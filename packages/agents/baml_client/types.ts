@@ -348,6 +348,7 @@ export interface ResearcherSession {
 export interface RunCommand {
   action: "runCommand"
   command: string
+  cwd?: string | null
   
 }
 

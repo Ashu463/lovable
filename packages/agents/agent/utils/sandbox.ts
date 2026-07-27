@@ -1,4 +1,4 @@
-import { Sandbox } from 'e2b'
+import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
 import { SANDBOX_HOME, PROJECT_ROOT } from '../config/systemConfig';
@@ -165,18 +165,15 @@ export class E2BSandbox{
             }
         }
         else if(payload.action === 'runCommand'){
+            const cwd = payload.cwd ? this.resolvePath(payload.cwd) : PROJECT_ROOT
             try{
                 const cmdRes = await this.sandbox.commands.run(payload.command, {
-                    cwd: PROJECT_ROOT,
+                    cwd,
                     timeoutMs: 60000
                 })
-
-                if(cmdRes.exitCode !== 0){
-                    return {
-                        success: false,
-                        content: cmdRes.stderr || cmdRes.stdout
-                    }
-                }
+                // e2b resolves here only on exit 0 — a non-zero exit throws
+                // CommandExitError instead, so this branch is actually dead,
+                // but kept in case that ever changes.
                 return {
                     success: true,
                     content: cmdRes.stderr + cmdRes.stdout,
@@ -185,7 +182,22 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                logger.error(`Failed to run command "${payload.command}": ${e}`)
+                // CommandExitError carries the actual stdout/stderr/exitCode of
+                // the failed command — that's exactly what the coder/debugger
+                // needs to fix it. Surface it as a normal failed ExecuteRes
+                // instead of swallowing it into a generic thrown Error; only
+                // genuinely unexpected errors (sandbox connection lost, etc.)
+                // should still throw.
+                if(e instanceof CommandExitError){
+                    logger.error(`Command "${payload.command}" (cwd: ${cwd}) exited ${e.exitCode}: ${e.stderr || e.stdout}`)
+                    return {
+                        success: false,
+                        content: e.stderr || e.stdout || e.error || `Command exited with code ${e.exitCode}`,
+                        stdout: e.stdout,
+                        stderr: e.stderr
+                    }
+                }
+                logger.error(`Failed to run command "${payload.command}" (cwd: ${cwd}): ${e}`)
                 throw new Error("Error occurred while executing sandbox cmd")
             }
         }

@@ -231,6 +231,7 @@ export namespace partial_types {
     export interface RunCommand {
       action?: "runCommand" | null
       command?: string | null
+      cwd?: string | null
     }
     export interface SessionMap {
       coder?: CoderSession | null

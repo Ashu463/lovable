@@ -44,8 +44,8 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
             ){
                 const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
                 return {
-                    success: true, 
-                    response: sandboxRes.content 
+                    success: sandboxRes.success,
+                    response: sandboxRes.content
                 }
             }
             else if(response.action === 'research'){

@@ -174,15 +174,15 @@ export class OrchestratorAgent{
         const designs = designRes.data.data
         const cachedIsComplex = projectRes.data.data.isComplex
         logger.info(`Fetched ${questions.length} saved question(s) and ${designs.length} saved design(s)`)
-        if(answers){
-            if(answers.length > 0){
-                logger.info(`Answer added to user prompt`)
-                userPrompt += `Answers for these ${questions} are: ${answers}`
-                answers.map((ans) => userPrompt += ans)
-            }
+        const hasRealAnswers = !!answers && answers.length > 0
+        const pastClarificationStage = answers !== undefined
+        if(hasRealAnswers){
+            logger.info(`Answer added to user prompt`)
+            userPrompt += `Answers for these ${questions} are: ${answers}`
+            answers!.map((ans) => userPrompt += ans)
             complexity = true
         }
-        else if(questions.length > 0){
+        else if(!pastClarificationStage && questions.length > 0){
             logger.info(`Reusing previously generated questions, skipping complexity check`)
             return {
                 status: 'clarification_needed',
