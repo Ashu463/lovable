@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS } from '../config/systemConfig';
 import { logger } from './logger';
 
 export interface ExecuteRes{
@@ -169,7 +169,7 @@ export class E2BSandbox{
             try{
                 const cmdRes = await this.sandbox.commands.run(payload.command, {
                     cwd,
-                    timeoutMs: 60000
+                    timeoutMs: RUN_COMMAND_TIMEOUT_MS
                 })
                 // e2b resolves here only on exit 0 — a non-zero exit throws
                 // CommandExitError instead, so this branch is actually dead,

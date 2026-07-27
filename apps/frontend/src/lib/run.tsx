@@ -44,7 +44,21 @@ interface RunContextValue {
   submit: (userPrompt: string, projectId?: string) => Promise<string | null>;
   submitAnswers: (answers: Answers[]) => Promise<string | null>;
   selectDesign: (designId: string) => Promise<string | null>;
+  resume: (runId: string) => Promise<boolean>;
   reset: () => void;
+}
+
+interface RunStateResponse {
+  success: boolean;
+  data: {
+    runId: string;
+    projectId: string;
+    userPrompt: string;
+    status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED" | "STOPPED";
+    pauseEvent: { type: "clarification_needed"; questions: Question[] } | { type: "select_design"; designs: DesignOption[] } | null;
+    completedEvent: { type: "run_completed"; result: CompletedResult } | null;
+    failedEvent: { type: "run_failed"; error: string } | null;
+  };
 }
 
 const RunContext = createContext<RunContextValue | null>(null);
@@ -189,6 +203,42 @@ export function RunProvider({ children }: { children: ReactNode }) {
     [state, attachStream, pushMessage],
   );
 
+  // Reconstructs state for /w/:runId after a refresh — RunProvider state
+  // otherwise only lives in memory for the tab that started the build.
+  const resume = useCallback(
+    async (runId: string) => {
+      try {
+        const res = await api.get<RunStateResponse>(`/api/chat/${runId}/state`);
+        const { projectId, userPrompt, status, pauseEvent, completedEvent, failedEvent } = res.data;
+
+        if (status === "IN_PROGRESS") {
+          attachStream(runId, projectId, userPrompt);
+          return true;
+        }
+        if (status === "CLARIFICATION_NEEDED" && pauseEvent?.type === "clarification_needed") {
+          setState({ status: "clarification_needed", runId, projectId, userPrompt, questions: pauseEvent.questions });
+          return true;
+        }
+        if (status === "AWAITING_DESIGN_SELECTION" && pauseEvent?.type === "select_design") {
+          setState({ status: "select_design", runId, projectId, userPrompt, designs: pauseEvent.designs });
+          return true;
+        }
+        if (status === "COMPLETED" && completedEvent?.type === "run_completed") {
+          setState({ status: "completed", runId, projectId, result: completedEvent.result });
+          return true;
+        }
+        if (status === "FAILED") {
+          setState({ status: "failed", runId, projectId, error: failedEvent?.error ?? "This run failed." });
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    [attachStream],
+  );
+
   const reset = useCallback(() => {
     closeStreamRef.current?.();
     setState({ status: "idle" });
@@ -196,8 +246,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, messages, submit, submitAnswers, selectDesign, reset }),
-    [state, messages, submit, submitAnswers, selectDesign, reset],
+    () => ({ state, messages, submit, submitAnswers, selectDesign, resume, reset }),
+    [state, messages, submit, submitAnswers, selectDesign, resume, reset],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

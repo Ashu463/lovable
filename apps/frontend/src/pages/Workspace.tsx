@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowUp, ChevronDown, Minimize2, Plus, Sparkles, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -157,20 +157,42 @@ function PreviewPane() {
   );
 }
 
+type ResumeStatus = "checking" | "not_found";
+
 export function Workspace() {
   const { runId } = useParams<{ runId: string }>();
-  const { state } = useRun();
+  const { state, resume } = useRun();
+  const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
 
   const isLive = "runId" in state && state.runId === runId;
   const showSplit = state.status === "completed";
 
+  useEffect(() => {
+    if (isLive || !runId) return;
+    setResumeStatus("checking");
+    let cancelled = false;
+    void resume(runId).then((ok) => {
+      if (!cancelled) setResumeStatus(ok ? null : "not_found");
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Only re-attempt when the route's runId changes, not on every state update.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runId]);
+
   if (!isLive) {
+    if (resumeStatus === "checking" || resumeStatus === null) {
+      return (
+        <div className="flex h-full items-center justify-center text-sm text-muted">
+          Reconnecting to this build…
+        </div>
+      );
+    }
+
     return (
       <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-        <p className="text-muted">
-          This build session isn&rsquo;t active in this tab anymore — state lives in
-          memory for this demo, so a refresh loses it.
-        </p>
+        <p className="text-muted">This build session couldn&rsquo;t be found.</p>
         <Link to="/" className="text-accent hover:underline">
           Start a new build
         </Link>

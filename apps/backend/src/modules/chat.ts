@@ -13,6 +13,7 @@ const chatRouter = Router()
 /*
 POST   /chat                          → new project + new run (no projectId given)
 POST   /chat/:projectId               → new run under existing project
+GET    /chat/:runId/state             → reconstructable UI state for a run, by id alone
 GET    /chat/:runId/stream            → SSE for that run
 POST   /chat/:runId/stop              → halt run, release sandbox
 POST   /chat/:projectId/:runId/continue → answers/selectedDesign, resumes the SAME
@@ -86,6 +87,61 @@ async function createRun(req: Request, res: Response){
         projectId: projectId
     })
 }
+
+// Lets the frontend reconstruct a run's UI state from just the runId in the
+// URL (e.g. /w/:runId after a page refresh) — RunProvider's state otherwise
+// only lives in memory for the current tab.
+chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
+    const { runId } = req.params
+    if(typeof runId !== 'string'){
+        return res.status(400).json({success: false, message: `Invalid runId type`})
+    }
+
+    const run = await prisma.run.findUnique({where: {id: runId}})
+    if(!run){
+        return res.status(404).json({success: false, message: `Run not found`})
+    }
+
+    let pauseEvent: unknown = null
+    if(run.status === 'CLARIFICATION_NEEDED' || run.status === 'AWAITING_DESIGN_SELECTION'){
+        const event = await prisma.runEvent.findFirst({
+            where: { runId, type: run.status === 'CLARIFICATION_NEEDED' ? 'clarification_needed' : 'select_design' },
+            orderBy: { createdAt: 'desc' },
+        })
+        pauseEvent = event?.content ? JSON.parse(event.content) : null
+    }
+
+    let completedEvent: unknown = null
+    if(run.status === 'COMPLETED'){
+        const event = await prisma.runEvent.findFirst({
+            where: { runId, type: 'run_completed' },
+            orderBy: { createdAt: 'desc' },
+        })
+        completedEvent = event?.content ? JSON.parse(event.content) : null
+    }
+
+    let failedEvent: unknown = null
+    if(run.status === 'FAILED'){
+        const event = await prisma.runEvent.findFirst({
+            where: { runId, type: 'run_failed' },
+            orderBy: { createdAt: 'desc' },
+        })
+        failedEvent = event?.content ? JSON.parse(event.content) : null
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: {
+            runId: run.id,
+            projectId: run.projectId,
+            userPrompt: run.userPrompt,
+            status: run.status,
+            pauseEvent,
+            completedEvent,
+            failedEvent,
+        },
+    })
+})
 
 chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: Response) => {
     const userId = req.headers.userid
