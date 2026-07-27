@@ -32,11 +32,13 @@ model Project {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   name       String?
   repoTree   String?   @db.Text
+  isComplex  Boolean?  // cached CheckComplexityAndGenerateQuestions verdict, so Bootstrap doesn't re-run that LLM call every time
 
   runs       Run[]
   designs    Design[]
   questions  Question[]
   isArchived  Boolean  @default(false)
+  isStarred   Boolean  @default(false)
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -74,6 +76,7 @@ model Run {
 enum RunStatus {
   IN_PROGRESS
   CLARIFICATION_NEEDED
+  AWAITING_DESIGN_SELECTION
   COMPLETED
   FAILED
   STOPPED

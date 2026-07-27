@@ -74,12 +74,13 @@ projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
 });
 projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
-    const { name, archived, starred } = req.body;
+    const { name, archived, starred, isComplex } = req.body;
 
     const data: {
         name?: string;
         isArchived?: boolean;
         isStarred?: boolean;
+        isComplex?: boolean;
     } = {};
 
     if (name !== undefined) {
@@ -92,6 +93,10 @@ projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
 
     if (starred !== undefined) {
         data.isStarred = starred;
+    }
+
+    if (isComplex !== undefined) {
+        data.isComplex = isComplex;
     }
 
     if (typeof projectId !== "string") {

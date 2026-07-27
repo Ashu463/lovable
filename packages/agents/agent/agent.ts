@@ -163,20 +163,23 @@ export class OrchestratorAgent{
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
         let isComplex
         let complexity: boolean = false
-        // const {data: questions } = await 
         logger.info(`Starting to fetch qeustions and designs`)
-        let [questionRes, designRes] = await Promise.all([
+        let [questionRes, designRes, projectRes] = await Promise.all([
             axios.get<{success: boolean, data: {question: string, options: string[]}[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
-            axios.get<{success: boolean, data: {id: string, htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() })
+            axios.get<{success: boolean, data: {id: string, htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() }),
+            axios.get<{success: boolean, data: {isComplex: boolean | null}}>(`${BACKEND_URL}/api/project/${this.projectId}`, { headers: internalAuthHeader() })
         ])
         const savedQuestions = questionRes.data.data
         const questions: Question[] = savedQuestions.map((q) => ({question: q.question, option: q.options}))
         const designs = designRes.data.data
+        const cachedIsComplex = projectRes.data.data.isComplex
         logger.info(`Fetched ${questions.length} saved question(s) and ${designs.length} saved design(s)`)
         if(answers){
-            logger.info(`Answer added to user prompt`)
-            userPrompt += `Answers for these ${questions} are: ${answers}`
-            answers.map((ans) => userPrompt += ans)
+            if(answers.length > 0){
+                logger.info(`Answer added to user prompt`)
+                userPrompt += `Answers for these ${questions} are: ${answers}`
+                answers.map((ans) => userPrompt += ans)
+            }
             complexity = true
         }
         else if(questions.length > 0){
@@ -186,6 +189,10 @@ export class OrchestratorAgent{
                 questions: questions,
                 alreadySaved: true
             }
+        }
+        else if(cachedIsComplex !== null && cachedIsComplex !== undefined){
+            logger.info(`Reusing cached complexity verdict (${cachedIsComplex}) for project ${this.projectId}, skipping complexity checker LLM call`)
+            complexity = cachedIsComplex
         }
         else{
             try{
@@ -206,15 +213,20 @@ export class OrchestratorAgent{
                 }
             }
             complexity = isComplex.complex
+            try{
+                await axios.patch(`${BACKEND_URL}/api/project/${this.projectId}`, { isComplex: complexity }, { headers: internalAuthHeader() })
+            } catch(e){
+                logger.error(`Failed to cache complexity verdict for project ${this.projectId}: ${e}`)
+            }
             if(isComplex.complex){
-                // db request should hit isnt't it to save the questions 
+                // db request should hit isnt't it to save the questions
                 return {
                     status: 'clarification_needed',
                     questions: isComplex.questions
                 }
             }
         }
-        
+
         let designsHtml: string[] = []
         if(designs.length === 0){
             logger.info(`Generating designs`)

@@ -27,6 +27,22 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
             type: event.type,
             createdAt: new Date(),
         }})
+
+        // The authoritative status write — this endpoint is hit unconditionally
+        // by createBackendEmitter, unlike the redis pub/sub path in chat.ts's SSE
+        // handler, which only updates status if a browser happens to be
+        // connected at the exact moment the event is published.
+        if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed' || event.type === 'select_design'){
+            const status =
+                event.type === 'clarification_needed' ? 'CLARIFICATION_NEEDED' :
+                event.type === 'select_design' ? 'AWAITING_DESIGN_SELECTION' :
+                event.type === 'run_completed' ? 'COMPLETED' : 'FAILED'
+            await prisma.run.update({
+                where: {id: runId},
+                data: { status, endedAt: new Date() }
+            })
+        }
+
         return res.status(200).json({success: true, message: `event saved`})
     } catch(e){
         logger.error(`Failed to save event for run ${runId}: ${e}`)

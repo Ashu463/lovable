@@ -11,13 +11,14 @@ import type { Answers } from "../../../../packages/agents/types/agentTypes";
 
 const chatRouter = Router()
 /*
-POST   /chat                       → new project + new run (no projectId given)
-POST   /chat/:projectId            → new run under existing project
-GET    /chat/:runId/stream         → SSE for that run
-POST   /chat/:runId/stop           → halt run, release sandbox
-POST   /chat/:runId/clarifications → answer + resume
+POST   /chat                          → new project + new run (no projectId given)
+POST   /chat/:projectId               → new run under existing project
+GET    /chat/:runId/stream            → SSE for that run
+POST   /chat/:runId/stop              → halt run, release sandbox
+POST   /chat/:projectId/:runId/continue → answers/selectedDesign, resumes the SAME
+                                          pending run (no new run created)
 
-GET    /chat/:projectId/history    → all past runs' events, for reload
+GET    /chat/:projectId/history       → all past runs' events, for reload
 
 */
 
@@ -29,8 +30,6 @@ async function createRun(req: Request, res: Response){
     let projectId = req.params?.projectId
     const userPrompt = req.body.userPrompt
     const existingSandboxId = req.body?.sandboxId
-    const answers: Answers[] = req.body?.answers
-    const selectedDesignId: string = req.body?.selectedDesignId
 
     if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
         return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
@@ -44,23 +43,23 @@ async function createRun(req: Request, res: Response){
         logger.info(`New Project created`)
     }
     logger.info(`Project id: ${projectId}`)
-    
+
     if(typeof projectId !== 'string'){
         return res.status(400).json({})
     }
-    
+
     // const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
-    
+
     const run = await prisma.run.create({data:{
         id: randomUUIDv7(),
-        projectId: projectId, 
+        projectId: projectId,
         sandboxId: existingSandboxId ? existingSandboxId : null,
         userPrompt: userPrompt,
     }})
     const runId = run.id
     logger.info(`Run created, id: ${run.id}`)
     const user = await prisma.user.findUnique({where: {id: userId}})
-    
+
     // activate after testing, #POST-TESTING
     if(!user){
         return res.status(404).json({success: false, message: `User not found :(`})
@@ -74,8 +73,6 @@ async function createRun(req: Request, res: Response){
             runId: run.id,
             semanticMem: user.semanticMem,
             sandboxId: existingSandboxId ? existingSandboxId : null,
-            answers: answers?.length > 0 ? answers : null,
-            selectedDesignId: selectedDesignId ? selectedDesignId : null
         })
         logger.info(`Added to run queue`)
     } catch(e){
@@ -90,31 +87,33 @@ async function createRun(req: Request, res: Response){
     })
 }
 
-chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Response) =>{
-
+chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: Response) => {
     const userId = req.headers.userid
-    const {projectId} = req.params
-    const { previousRunId, answers } = req.body
-    const existingSandboxId = req.body?.sandboxId
+    const { projectId, runId } = req.params
+    const answers: Answers[] = req.body?.answers ?? []
+    const selectedDesignId: string | undefined = req.body?.selectedDesignId
 
-    if(typeof userId !== 'string' || typeof projectId !== 'string'){
-        return res.status(400).json({message: `Invalid request`})
+    if(typeof userId !== 'string' || typeof projectId !== 'string' || typeof runId !== 'string'){
+        return res.status(400).json({success: false, message: `Invalid params`})
     }
-    const previousRun = await prisma.run.findUnique({where: {id: previousRunId}})
-    if(!previousRun || previousRun.status !== 'CLARIFICATION_NEEDED'){
-        return res.status(404).json({message: `Run with ${previousRunId} not found or clarification not needed for this runid`})
+    if(!Array.isArray(answers)){
+        return res.status(400).json({success: false, message: `answers must be an array (send [] if none)`})
     }
 
-    // const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId)
+    const run = await prisma.run.findFirst({where: {id: runId, projectId}})
+    if(!run){
+        return res.status(404).json({success: false, message: `Run not found`})
+    }
+    if(run.status !== 'CLARIFICATION_NEEDED' && run.status !== 'AWAITING_DESIGN_SELECTION'){
+        return res.status(409).json({success: false, message: `Run ${runId} isn't awaiting input`})
+    }
 
-    const run = await prisma.run.create({data: {
-        id: randomUUIDv7(),
-        projectId: projectId,
-        sandboxId: existingSandboxId ? existingSandboxId : null,
-        userPrompt: previousRun.userPrompt,
-        parentRunId: previousRun.id
-    }})
     const user = await prisma.user.findUnique({where: {id: userId}})
+    if(!user){
+        return res.status(404).json({success: false, message: `User not found :(`})
+    }
+
+    await prisma.run.update({where: {id: runId}, data: {status: 'IN_PROGRESS'}})
 
     try{
         await runQueue.add("run", {
@@ -123,18 +122,20 @@ chatRouter.post('/:projectId/clarifications', auth, async (req: Request, res: Re
             prompt: run.userPrompt,
             runId: run.id,
             semanticMem: user.semanticMem,
-            sandboxId: existingSandboxId ? existingSandboxId : null,
+            sandboxId: run.sandboxId,
             answers,
+            selectedDesignId: selectedDesignId ? selectedDesignId : null,
         })
+        logger.info(`Continuing run ${run.id}`)
     } catch(e){
-        logger.error(`Failed to enqueue run ${run.id}: ${e}`)
-        return res.status(500).json({success: false, message: `Failed to resume run`})
+        logger.error(`Failed to re-enqueue run ${run.id}: ${e}`)
+        return res.status(500).json({success: false, message: `Failed to continue run`})
     }
 
     return res.status(200).json({
         success: true,
         runId: run.id,
-        projectId: projectId
+        projectId
     })
 })
 
@@ -156,7 +157,7 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
     }
 
     const pastEvents = await prisma.runEvent.findMany({
-        where: { runId: runId },
+        where: { runId: runId, type: { notIn: ['clarification_needed', 'select_design'] } },
         orderBy: { createdAt: "asc" },
     })
     for (const e of pastEvents) {
@@ -183,14 +184,11 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
 
         res.write(`data: ${message}\n\n`)
 
-        if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed'){
-            await prisma.run.update({
-                where: {id: run.id},
-                data:{
-                    status: event.type === "clarification_needed" ? "CLARIFICATION_NEEDED" : event.type === 'run_completed' ? "COMPLETED" : 'FAILED',
-                    endedAt: new Date()
-                }
-            })
+        // Status is written durably in sessions.ts's /:runId/events handler,
+        // which createBackendEmitter hits unconditionally — this redis path is
+        // only live if a browser happens to be connected, so it must not be the
+        // only place the DB gets updated. This just closes the stream.
+        if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed' || event.type === 'select_design'){
             res.end()
         }
     }

@@ -150,8 +150,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
       pushMessage("user", answers.map((a) => `${a.question} → ${a.answer}`).join("\n"));
       setState({ status: "submitting" });
       try {
-        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}/clarifications`, {
-          previousRunId: runId,
+        // Continues the same pending runId — no new run is created here.
+        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}/${runId}/continue`, {
           answers,
         });
         attachStream(res.runId, res.projectId, userPrompt);
@@ -169,14 +169,12 @@ export function RunProvider({ children }: { children: ReactNode }) {
   const selectDesign = useCallback(
     async (designId: string) => {
       if (state.status !== "select_design") return null;
-      const { projectId, userPrompt } = state;
+      const { runId, projectId, userPrompt } = state;
       pushMessage("user", "Picked a design direction.");
       setState({ status: "submitting" });
       try {
-        // selectedDesignId travels with the new run request — the orchestrator
-        // marks it selected server-side, no separate PATCH round trip needed.
-        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}`, {
-          userPrompt,
+        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}/${runId}/continue`, {
+          answers: [],
           selectedDesignId: designId,
         });
         attachStream(res.runId, res.projectId, userPrompt);
@@ -184,7 +182,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         const error = messageFor(err, "Failed to continue the build.");
         pushMessage("system", `Failed: ${error}`);
-        setState({ status: "failed", runId: "", projectId, error });
+        setState({ status: "failed", runId, projectId, error });
         return null;
       }
     },
