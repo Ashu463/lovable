@@ -3,8 +3,7 @@ import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/sysPrompts";
 import { Researcher } from "./researcher";
-import { fetchDocs } from "../MCPs/context7";
-import { webScrape } from "../MCPs/apify";
+import { runResearch } from "../utils/research";
 import type { E2BSandbox } from "../utils/sandbox";
 import { SkillStore } from "../skills";
 
@@ -62,20 +61,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             }
         }
         else if(response.action === 'research'){
-            // research agent call
-            let researchResponse: string = ""
-            if(response.searchType.type === 'webSearch'){
-                researchResponse = await this.researcher.WebSearch(response.searchType.query, response.searchType.maxResults)
-            }
-            else if(response.searchType.type === 'webScrape'){
-                researchResponse = await this.researcher.WebScrape(response.searchType.urls, response.searchType.maxPages)
-            }
-            else if(response.searchType.type === 'docsSearch'){
-                researchResponse = await fetchDocs(response.searchType.library, response.searchType.query)
-            }
-            else{
-                throw new Error("Invalid research type")
-            }
+            const researchResponse = await runResearch(this.researcher, response.searchType)
             return {
                 success: true,
                 toolResult: researchResponse

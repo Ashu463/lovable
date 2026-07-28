@@ -4,6 +4,7 @@ import { auth, internalAuth } from "./middleware";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
 import { logger } from "./utils";
+import { badRequest, created, notFound, ok, requireStrings, serverError } from "./http";
 import type { AgentType } from "../../generated/prisma/enums";
 
 const runRouter = Router();
@@ -19,19 +20,13 @@ POST   /projects/:projectId/:runId/todos/:taskId/summary → mark a Todo complet
 */
 
 runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
-    const projectId = req.params.projectId;
-
-    if (typeof projectId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId });
+    if (!params) return;
 
     try {
         const runs = await prisma.run.findMany({
             where: {
-                projectId: projectId,
+                projectId: params.projectId,
             },
             select: {
                 id: true,
@@ -44,31 +39,17 @@ runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
             },
         });
 
-        return res.status(200).json({
-            success: true,
-            data: runs,
-        });
+        return ok(res, runs);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 
 runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Response) => {
-    const { projectId, runId } = req.params;
-
-    if (
-        typeof projectId !== "string" ||
-        typeof runId !== "string"
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, runId: req.params.runId });
+    if (!params) return;
+    const { projectId, runId } = params;
 
     try {
         const run = await prisma.run.findFirst({
@@ -79,36 +60,20 @@ runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Respons
         });
 
         if (!run) {
-            return res.status(404).json({
-                success: false,
-                message: "Run not found",
-            });
+            return notFound(res, "Run not found");
         }
 
-        return res.status(200).json({
-            success: true,
-            data: run,
-        });
+        return ok(res, run);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 
 runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Response) => {
-    const { projectId, runId } = req.params;
-    if (
-        typeof projectId !== "string" ||
-        typeof runId !== "string"
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, runId: req.params.runId });
+    if (!params) return;
+    const { projectId, runId } = params;
 
     try {
         const run = await prisma.run.findFirst({
@@ -119,10 +84,7 @@ runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Respon
         });
 
         if (!run) {
-            return res.status(404).json({
-                success: false,
-                message: "Run not found",
-            });
+            return notFound(res, "Run not found");
         }
 
         const todos = await prisma.todo.findMany({
@@ -137,31 +99,17 @@ runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Respon
             },
         });
 
-        return res.status(200).json({
-            success: true,
-            data: todos,
-        });
+        return ok(res, todos);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 
 runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Response) => {
-    const { projectId, runId } = req.params;
-
-    if (
-        typeof projectId !== "string" ||
-        typeof runId !== "string"
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, runId: req.params.runId });
+    if (!params) return;
+    const { projectId, runId } = params;
 
     try {
         const run = await prisma.run.findFirst({
@@ -172,10 +120,7 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
         });
 
         if (!run) {
-            return res.status(404).json({
-                success: false,
-                message: "Run not found",
-            });
+            return notFound(res, "Run not found");
         }
 
         const summaries = await prisma.taskSummary.findMany({
@@ -199,15 +144,9 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
             },
         });
 
-        return res.status(200).json({
-            success: true,
-            data: summaries,
-        });
+        return ok(res, summaries);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
@@ -215,28 +154,22 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
 runRouter.post("/:projectId/:runId/todos", internalAuth, async (req: Request, res: Response) => {
     logger.info(`Saving todos to the db`)
 
-    const { projectId, runId } = req.params;
     const { todos } = req.body as {
         todos: {id: number, task: string, agent: AgentType, status: "pending" | "completed", dependency: number[], designNeeded?: boolean}[]
     };
 
-    if (typeof projectId !== "string" || typeof runId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, runId: req.params.runId });
+    if (!params) return;
+    const { runId } = params;
+
     if (!Array.isArray(todos) || todos.length === 0) {
-        return res.status(400).json({
-            success: false,
-            message: "todos must be a non-empty array",
-        });
+        return badRequest(res, "todos must be a non-empty array");
     }
 
     try {
     logger.info(`calling promises to save todos`)
 
-        const created = await Promise.all(todos.map((t) =>
+        const createdTodos = await Promise.all(todos.map((t) =>
             prisma.todo.create({
                 data: {
                     id: randomUUIDv7(),
@@ -251,35 +184,27 @@ runRouter.post("/:projectId/:runId/todos", internalAuth, async (req: Request, re
             })
         ));
 
-        return res.status(201).json({
-            success: true,
-            data: created,
-        });
+        return created(res, createdTodos);
     } catch (e) {
         logger.error(`Error occurred while saving todos ${e}`);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 
 runRouter.post("/:projectId/:runId/todos/:taskId/summary", internalAuth, async (req: Request, res: Response) => {
-    const { projectId, runId, taskId } = req.params;
     const { summary } = req.body as { summary: string };
 
-    if (typeof projectId !== "string" || typeof runId !== "string" || typeof taskId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, {
+        projectId: req.params.projectId,
+        runId: req.params.runId,
+        taskId: req.params.taskId,
+    });
+    if (!params) return;
+    const { runId, taskId } = params;
+
     if (typeof summary !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "summary must be a string",
-        });
+        return badRequest(res, "summary must be a string");
     }
 
     try {
@@ -287,10 +212,7 @@ runRouter.post("/:projectId/:runId/todos/:taskId/summary", internalAuth, async (
             where: { runId, taskId: Number(taskId) },
         });
         if (!todo) {
-            return res.status(404).json({
-                success: false,
-                message: `Todo ${taskId} not found for run ${runId}`,
-            });
+            return notFound(res, `Todo ${taskId} not found for run ${runId}`);
         }
 
         await prisma.todo.update({
@@ -303,16 +225,10 @@ runRouter.post("/:projectId/:runId/todos/:taskId/summary", internalAuth, async (
             update: { summary },
         });
 
-        return res.status(201).json({
-            success: true,
-            data: saved,
-        });
+        return created(res, saved);
     } catch (e) {
         logger.error(`Error occurred while saving task summary ${e}`);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 

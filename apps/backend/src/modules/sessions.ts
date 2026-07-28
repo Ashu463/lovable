@@ -2,8 +2,9 @@ import { Router, type Request, type Response } from "express";
 import { internalAuth } from "./middleware";
 import { prisma } from "../prisma";
 import { randomUUIDv7 } from "bun";
-import type { OrchestratorEvent } from "../../../../packages/agents";
+import { isRunSettlingEvent, type OrchestratorEvent } from "../../../../packages/agents";
 import { logger } from "./utils";
+import { ok, requireStrings, serverError } from "./http";
 
 /*
 POST   /internal/sessions/:runId/events
@@ -13,12 +14,11 @@ const sessionRouter = Router();
 
 sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Response) =>{
 
-    const {runId} = req.params
     const event: OrchestratorEvent = req.body
 
-    if(typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid runId type`})
-    }
+    const params = requireStrings(res, {runId: req.params.runId}, `Invalid runId type`)
+    if(!params) return;
+    const {runId} = params
 
     try{
         await prisma.runEvent.create({data: {
@@ -33,7 +33,7 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
         // by createBackendEmitter, unlike the redis pub/sub path in chat.ts's SSE
         // handler, which only updates status if a browser happens to be
         // connected at the exact moment the event is published.
-        if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed' || event.type === 'select_design'){
+        if(isRunSettlingEvent(event)){
             const status =
                 event.type === 'clarification_needed' ? 'CLARIFICATION_NEEDED' :
                 event.type === 'select_design' ? 'AWAITING_DESIGN_SELECTION' :
@@ -44,10 +44,10 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
             })
         }
 
-        return res.status(200).json({success: true, message: `event saved`})
+        return ok(res, undefined, `event saved`)
     } catch(e){
         logger.error(`Failed to save event for run ${runId}: ${e}`)
-        return res.status(500).json({success: false, message: `Internal server error`})
+        return serverError(res)
     }
 })
 
@@ -57,14 +57,13 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
 // must arrive JSON.stringify'd; we don't re-stringify here since that'd
 // double-encode whatever the caller already sent.
 sessionRouter.post('/:runId/state', internalAuth, async (req: Request, res: Response) =>{
-    const {runId} = req.params
     const {context_snapshot, session_snapshot, iteration} = req.body as {
         context_snapshot?: string, session_snapshot?: string, iteration?: number
     }
 
-    if(typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid runId type`})
-    }
+    const params = requireStrings(res, {runId: req.params.runId}, `Invalid runId type`)
+    if(!params) return;
+    const {runId} = params
 
     try{
         await prisma.run.update({
@@ -75,10 +74,10 @@ sessionRouter.post('/:runId/state', internalAuth, async (req: Request, res: Resp
                 currentStep: iteration !== undefined ? String(iteration) : undefined,
             }
         })
-        return res.status(200).json({success: true, message: `session and context state saved`})
+        return ok(res, undefined, `session and context state saved`)
     } catch(e){
         logger.error(`Failed to save session state for run ${runId}: ${e}`)
-        return res.status(500).json({success: false, message: `Internal server error`})
+        return serverError(res)
     }
 })
 

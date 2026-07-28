@@ -17,6 +17,15 @@ export type OrchestratorEvent = MainAgentEvents |
 type MainAgentEvents = 
     | {type : 'main_agent_success'}
     | {type: 'main_agent_tool_call', step: number, toolName: string}
+// Events that settle a run: after one of these the run is no longer
+// in progress (it either finished or is waiting on the user), so both the
+// durable status write and the SSE stream key off the same list.
+const RUN_SETTLING_EVENTS = ['run_completed', 'run_failed', 'clarification_needed', 'select_design'] as const
+
+export function isRunSettlingEvent(event: OrchestratorEvent): event is Extract<OrchestratorEvent, {type: typeof RUN_SETTLING_EVENTS[number]}> {
+    return (RUN_SETTLING_EVENTS as readonly string[]).includes(event.type)
+}
+
 export interface EventEmitter {
   emit(event: OrchestratorEvent): Promise<void>;
 }

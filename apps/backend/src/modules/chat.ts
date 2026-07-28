@@ -6,7 +6,8 @@ import { prisma } from "../prisma";
 import { redis } from "./redis";
 import { logger } from "./utils";
 import { runQueue } from "./worker";
-import type { OrchestratorEvent } from "../../../../packages/agents";
+import { badRequest, conflict, notFound, ok, requireStrings, serverError } from "./http";
+import { isRunSettlingEvent, type OrchestratorEvent } from "../../../../packages/agents";
 import type { Answers } from "../../../../packages/agents/types/agentTypes";
 
 const chatRouter = Router()
@@ -23,6 +24,15 @@ GET    /chat/:projectId/history       → all past runs' events, for reload
 
 */
 
+// Newest persisted event of a given type for a run, already JSON-parsed.
+async function latestEventContent(runId: string, type: string): Promise<unknown> {
+    const event = await prisma.runEvent.findFirst({
+        where: { runId, type },
+        orderBy: { createdAt: 'desc' },
+    })
+    return event?.content ? JSON.parse(event.content) : null
+}
+
 chatRouter.post('/', auth, createRun)
 chatRouter.post('/:projectId', auth, createRun)
 
@@ -33,7 +43,7 @@ async function createRun(req: Request, res: Response){
     const existingSandboxId = req.body?.sandboxId
 
     if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
+        return badRequest(res, `Invalid userid or userPrompt`)
     }
     if(!projectId){
         const project = await prisma.project.create({data: {
@@ -46,7 +56,7 @@ async function createRun(req: Request, res: Response){
     logger.info(`Project id: ${projectId}`)
 
     if(typeof projectId !== 'string'){
-        return res.status(400).json({})
+        return badRequest(res)
     }
 
     // const sandbox = await E2BSandbox.StartSandbox(userId, projectId, existingSandboxId )
@@ -63,7 +73,7 @@ async function createRun(req: Request, res: Response){
 
     // activate after testing, #POST-TESTING
     if(!user){
-        return res.status(404).json({success: false, message: `User not found :(`})
+        return notFound(res, `User not found :(`)
     }
 
     try{
@@ -78,7 +88,7 @@ async function createRun(req: Request, res: Response){
         logger.info(`Added to run queue`)
     } catch(e){
         logger.error(`Failed to enqueue run ${run.id}: ${e}`)
-        return res.status(500).json({success: false, message: `Failed to start run`})
+        return serverError(res, `Failed to start run`)
     }
 
     return res.status(200).json({
@@ -92,46 +102,22 @@ async function createRun(req: Request, res: Response){
 // URL (e.g. /w/:runId after a page refresh) — RunProvider's state otherwise
 // only lives in memory for the current tab.
 chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
-    const { runId } = req.params
-    if(typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid runId type`})
-    }
+    const params = requireStrings(res, { runId: req.params.runId }, `Invalid runId type`)
+    if(!params) return;
+    const { runId } = params
 
     const run = await prisma.run.findUnique({where: {id: runId}})
     if(!run){
-        return res.status(404).json({success: false, message: `Run not found`})
+        return notFound(res, `Run not found`)
     }
 
-    let pauseEvent: unknown = null
-    if(run.status === 'CLARIFICATION_NEEDED' || run.status === 'AWAITING_DESIGN_SELECTION'){
-        const event = await prisma.runEvent.findFirst({
-            where: { runId, type: run.status === 'CLARIFICATION_NEEDED' ? 'clarification_needed' : 'select_design' },
-            orderBy: { createdAt: 'desc' },
-        })
-        pauseEvent = event?.content ? JSON.parse(event.content) : null
-    }
+    const pauseEvent = run.status === 'CLARIFICATION_NEEDED' || run.status === 'AWAITING_DESIGN_SELECTION'
+        ? await latestEventContent(runId, run.status === 'CLARIFICATION_NEEDED' ? 'clarification_needed' : 'select_design')
+        : null
+    const completedEvent = run.status === 'COMPLETED' ? await latestEventContent(runId, 'run_completed') : null
+    const failedEvent = run.status === 'FAILED' ? await latestEventContent(runId, 'run_failed') : null
 
-    let completedEvent: unknown = null
-    if(run.status === 'COMPLETED'){
-        const event = await prisma.runEvent.findFirst({
-            where: { runId, type: 'run_completed' },
-            orderBy: { createdAt: 'desc' },
-        })
-        completedEvent = event?.content ? JSON.parse(event.content) : null
-    }
-
-    let failedEvent: unknown = null
-    if(run.status === 'FAILED'){
-        const event = await prisma.runEvent.findFirst({
-            where: { runId, type: 'run_failed' },
-            orderBy: { createdAt: 'desc' },
-        })
-        failedEvent = event?.content ? JSON.parse(event.content) : null
-    }
-
-    return res.status(200).json({
-        success: true,
-        data: {
+    return ok(res, {
             runId: run.id,
             projectId: run.projectId,
             userPrompt: run.userPrompt,
@@ -139,34 +125,36 @@ chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
             pauseEvent,
             completedEvent,
             failedEvent,
-        },
     })
 })
 
 chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: Response) => {
-    const userId = req.headers.userid
-    const { projectId, runId } = req.params
     const answers: Answers[] = req.body?.answers ?? []
     const selectedDesignId: string | undefined = req.body?.selectedDesignId
 
-    if(typeof userId !== 'string' || typeof projectId !== 'string' || typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid params`})
-    }
+    const params = requireStrings(res, {
+        userId: req.headers.userid,
+        projectId: req.params.projectId,
+        runId: req.params.runId,
+    }, `Invalid params`)
+    if(!params) return;
+    const { userId, projectId, runId } = params
+
     if(!Array.isArray(answers)){
-        return res.status(400).json({success: false, message: `answers must be an array (send [] if none)`})
+        return badRequest(res, `answers must be an array (send [] if none)`)
     }
 
     const run = await prisma.run.findFirst({where: {id: runId, projectId}})
     if(!run){
-        return res.status(404).json({success: false, message: `Run not found`})
+        return notFound(res, `Run not found`)
     }
     if(run.status !== 'CLARIFICATION_NEEDED' && run.status !== 'AWAITING_DESIGN_SELECTION'){
-        return res.status(409).json({success: false, message: `Run ${runId} isn't awaiting input`})
+        return conflict(res, `Run ${runId} isn't awaiting input`)
     }
 
     const user = await prisma.user.findUnique({where: {id: userId}})
     if(!user){
-        return res.status(404).json({success: false, message: `User not found :(`})
+        return notFound(res, `User not found :(`)
     }
 
     await prisma.run.update({where: {id: runId}, data: {status: 'IN_PROGRESS'}})
@@ -185,7 +173,7 @@ chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: R
         logger.info(`Continuing run ${run.id}`)
     } catch(e){
         logger.error(`Failed to re-enqueue run ${run.id}: ${e}`)
-        return res.status(500).json({success: false, message: `Failed to continue run`})
+        return serverError(res, `Failed to continue run`)
     }
 
     return res.status(200).json({
@@ -197,10 +185,9 @@ chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: R
 
 // SSE frontend --> Backend
 chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
-    const {runId} = req.params
-    if(typeof runId !== 'string'){
-        return res.status(400).json({message: 'runId should be of string type'})
-    }
+    const params = requireStrings(res, {runId: req.params.runId}, 'runId should be of string type')
+    if(!params) return;
+    const {runId} = params
 
     // Validate + fetch before committing to SSE headers, so a bad/missing
     // runId (e.g. a stale reconnect after the run was deleted) gets a clean
@@ -209,7 +196,7 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
     // rejection that takes the whole process down mid-reconnect.
     const run = await prisma.run.findUnique({where: {id: runId}})
     if(!run){
-        return res.status(404).json({message: `Run not found`})
+        return notFound(res, `Run not found`)
     }
 
     res.setHeader("content-type", "text/event-stream")
@@ -249,7 +236,7 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
         // which createBackendEmitter hits unconditionally — this redis path is
         // only live if a browser happens to be connected, so it must not be the
         // only place the DB gets updated. This just closes the stream.
-        if(event.type === 'run_completed' || event.type === 'run_failed' || event.type === 'clarification_needed' || event.type === 'select_design'){
+        if(isRunSettlingEvent(event)){
             res.end()
         }
     }
@@ -270,18 +257,14 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
 
 chatRouter.get('/:projectId/history', auth, async (req: Request, res: Response) =>{
 
-    const {projectId} = req.params
-    if(typeof projectId !== 'string'){
-        return res.status(400).json({message: `Invalid projectId type`})
-    }
+    const params = requireStrings(res, {projectId: req.params.projectId}, `Invalid projectId type`)
+    if(!params) return;
+
     const runs = await prisma.run.findMany({
-        where: { projectId: projectId },
+        where: { projectId: params.projectId },
         orderBy: { startedAt: 'desc' },
     })
-    return res.status(200).json({
-        success: true,
-        data: runs
-    })
+    return ok(res, runs)
 })
 
 export default chatRouter
