@@ -1,6 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import { redis } from "./redis";
 import { logger } from "./utils";
+import { prisma } from "../prisma";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
 import { AgentCall } from "../../../../packages/agents";
 
@@ -9,14 +10,19 @@ export const runQueue = new Queue(
 );
 const worker = new Worker("run-agent", async (job) => {
     const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId } = job.data;
-    // Reconnect to the sandbox chat.ts already started for this run instead of
-    // booting a second one.
     let sandbox;
     if(sandboxId){
         sandbox = await E2BSandbox.StartSandbox(userId, projectId, sandboxId);
     } else {
         sandbox = await E2BSandbox.StartSandbox(userId, projectId);
     }
+
+    if(sandbox.sandboxId !== sandboxId){
+        await prisma.run.update({where: {id: runId}, data: {sandboxId: sandbox.sandboxId}}).catch((e) => {
+            logger.error(`Failed to persist sandboxId for run ${runId}: ${e}`)
+        })
+    }
+
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
       await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);

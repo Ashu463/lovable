@@ -29,8 +29,6 @@ export async function AgentCall(
     return result
   } catch (err) {
     await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })
-  } finally {
-    sandbox.Release()
   }
 }
 

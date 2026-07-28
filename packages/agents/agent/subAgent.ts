@@ -5,7 +5,7 @@ import { Researcher } from "./subagents/researcher";
 import { TesterAgent, type TesterResponse } from "./subagents/tester";
 
 import type { BaseAgent } from "./subagents/baseAgent";
-import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS } from "./config/systemConfig";
+import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS, SUBAGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_TOOL_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
@@ -72,6 +72,35 @@ export class SubAgent<T extends keyof ContextMap> {
         return String(res.action ?? 'unknown')
     }
 
+    // Bounded retry for a single call — a BAML parse failure or a transient
+    // tool error isn't the agent making a bad decision, it's the call itself
+    // not completing, and re-attempting it (not burning an `iteration`) is
+    // usually enough. Only once attempts are exhausted does it rethrow, for
+    // the caller to turn into a graceful task failure instead of a crash.
+    private async withRetry<T>(label: string, maxAttempts: number, fn: () => Promise<T>): Promise<T> {
+        let lastError: unknown
+        for(let attempt = 1; attempt <= maxAttempts; attempt++){
+            try{
+                return await fn()
+            }
+            catch(e){
+                lastError = e
+                logger.warn(`${label} failed (attempt ${attempt}/${maxAttempts}) for ${this.agentType} task ${this.taskId}: ${e instanceof Error ? e.message : String(e)}`)
+                if(attempt < maxAttempts){
+                    await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
+                }
+            }
+        }
+        throw lastError
+    }
+
+    private async haltTask(reason: string): Promise<SubAgentResponse> {
+        logger.error(`${this.agentType} task ${this.taskId} halted: ${reason}`)
+        this.pushSession('assistant', 'halted', { reason })
+        await this.SaveSessionState()
+        return { success: false, summary: await this.BuildSummary() }
+    }
+
     async runLoop(): Promise<SubAgentResponse> {
         this.context = await this.BuildInitialContext()
         let success = true
@@ -79,12 +108,12 @@ export class SubAgent<T extends keyof ContextMap> {
         logger.info(`calling LLM for ${this.agentType}`)
         console.log("logger instance", logger.level);
         while (true) {
+            let res
             try{
-                var res = await this.agentInstance.callLLM(this.input, this.context)
+                res = await this.withRetry('LLM call', SUBAGENT_LLM_RETRY_ATTEMPTS, () => this.agentInstance.callLLM(this.input, this.context))
             }
             catch(e){
-                logger.error(`Error occurred while LLM generated response ${e}`)
-                throw new Error
+                return await this.haltTask(`LLM call failed after ${SUBAGENT_LLM_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
             }
             console.log(JSON.stringify(res, null, 2), " is the LLM response of subagent, ", this.agentType)
             logger.info(
@@ -96,7 +125,13 @@ export class SubAgent<T extends keyof ContextMap> {
               );
             if (this.isSingleShotAgent() || res.action === 'done') {
                 logger.info(`${this.agentType} done`)
-                const toolRes = await this.agentInstance.executeFunction(res)
+                let toolRes
+                try{
+                    toolRes = await this.withRetry('tool call', SUBAGENT_TOOL_RETRY_ATTEMPTS, () => this.agentInstance.executeFunction(res))
+                }
+                catch(e){
+                    return await this.haltTask(`Final tool call failed after ${SUBAGENT_TOOL_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
+                }
                 this.pushSession('assistant', 'done', toolRes)
                 await this.SaveSessionState()
                 break
@@ -110,12 +145,12 @@ export class SubAgent<T extends keyof ContextMap> {
                 break;
             }
             // logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
+            let toolRes
             try{
-                var toolRes = await this.agentInstance.executeFunction(res)
+                toolRes = await this.withRetry('tool call', SUBAGENT_TOOL_RETRY_ATTEMPTS, () => this.agentInstance.executeFunction(res))
             }
             catch(e){
-                logger.error(`Error occurred while making tool call ${e}`)
-                throw new Error
+                return await this.haltTask(`Tool call failed after ${SUBAGENT_TOOL_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
             }
             logger.info(`${JSON.stringify(toolRes, null, 2)} is the tool response`)
             this.pushSession('assistant', 'in_progress', res)

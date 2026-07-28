@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS } from '../config/systemConfig';
 import { logger } from './logger';
 
 export interface ExecuteRes{
@@ -36,14 +36,14 @@ export class E2BSandbox{
         if (sandboxId) {
             try {
                 sandbox = await Sandbox.connect(sandboxId)
-                await sandbox.setTimeout(60 * 60 * 1000)
+                await sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
             } catch (e) {
                 sandbox = null
             }
         }
-        
+
         if (!sandbox) {
-            sandbox = await Sandbox.create('react-sandbox-node22')
+            sandbox = await Sandbox.create('react-sandbox-node22', { timeoutMs: SANDBOX_TIMEOUT_MS })
         }
 
         const instance = new E2BSandbox(sandbox, userId, projectId)
@@ -249,18 +249,23 @@ export class E2BSandbox{
 
     async GetPreviewUrl(): Promise<string>{
         try{
-            await this.sandbox.commands.run("npm run dev", {
-                cwd: PROJECT_ROOT,
-                background: true,
-            });
-            
-            // Get the public URL for the port your app is running on
-            const previewUrl = this.sandbox.getHost(3000); // or 5173, 8080, etc.
-            return previewUrl
+            const probe = await this.sandbox.commands.run(
+                "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 || true",
+                { cwd: PROJECT_ROOT }
+            )
+            if(probe.stdout.trim() === '000'){
+                await this.sandbox.commands.run("npm run dev", {
+                    cwd: PROJECT_ROOT,
+                    background: true,
+                });
+                await new Promise((resolve) => setTimeout(resolve, 3000))
+            }
+
+            return `https://${this.sandbox.getHost(3000)}` // or 5173, 8080, etc.
 
         }catch(e){
             logger.error(`Error occurred while running server ${e}`)
-            throw new Error
+            throw new Error(`Error occurred while starting the preview server: ${e instanceof Error ? e.message : String(e)}`)
         }
     }
     Release(){
