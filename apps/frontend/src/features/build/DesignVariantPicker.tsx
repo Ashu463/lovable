@@ -17,8 +17,8 @@ export function DesignVariantPicker({
 
   return (
     <Card className="w-full max-w-4xl p-6 text-left">
-      <p className="mb-1 text-xs tracking-widest text-muted-foreground">DESIGN</p>
-      <h3 className="mb-5 font-semibold">Pick a starting point</h3>
+      <p className="mb-1 font-mono text-xs tracking-widest text-accent">DESIGN</p>
+      <h3 className="mb-5 font-display font-semibold">Pick a starting point</h3>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {designs.map((design, i) => (

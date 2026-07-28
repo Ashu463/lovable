@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowUp, ChevronDown, Minimize2, Plus, Sparkles, Square } from "lucide-react";
+import { ArrowUp, ChevronDown, Minimize2, Plus, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { useRun } from "@/lib/run";
+import { StatusLine, StatusItem, StatusSep } from "@/features/shell/StatusLine";
+import { BrandMark } from "@/features/shell/BrandMark";
+import { PipelineStrip } from "@/features/build/PipelineStrip";
+import { useWorkspacePipeline } from "@/features/build/useWorkspacePipeline";
 import { ClarifyingQuestions } from "@/features/build/ClarifyingQuestions";
 import { DesignVariantPicker } from "@/features/build/DesignVariantPicker";
 import { CodeViewer } from "@/features/build/CodeViewer";
@@ -41,8 +45,8 @@ function WorkspaceInput() {
   };
 
   return (
-    <div className="border-t border-border bg-background px-6 py-4">
-      <div className="mx-auto max-w-3xl rounded-2xl border border-border bg-surface/80 p-3">
+    <div className="border-t border-border bg-surface px-6 py-4">
+      <div className="mx-auto max-w-3xl rounded-2xl border border-border-hover bg-background p-3">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -58,7 +62,7 @@ function WorkspaceInput() {
           </button>
           <div className="flex items-center gap-2">
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground">
+              <DropdownMenuTrigger className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 font-mono text-xs text-muted transition-colors hover:text-foreground">
                 {mode}
                 <ChevronDown className="h-3.5 w-3.5" />
               </DropdownMenuTrigger>
@@ -95,31 +99,31 @@ function WorkspaceInput() {
   );
 }
 
-function ChatLog() {
+function ChatLog({ wide }: { wide: boolean }) {
   const { state, messages, submitAnswers, selectDesign } = useRun();
 
   return (
-    <div className="mx-auto flex max-w-3xl flex-1 flex-col gap-4 overflow-y-auto px-6 py-8">
+    <div className={cn("mx-auto flex flex-1 flex-col gap-3.5 overflow-y-auto px-6 py-6", wide ? "max-w-3xl" : "")}>
       {messages.map((m) =>
         m.role === "user" ? (
           <div
             key={m.id}
-            className="self-end whitespace-pre-wrap rounded-2xl border border-border bg-surface px-4 py-2.5 text-sm"
+            className="self-end whitespace-pre-wrap rounded-2xl rounded-br-sm border border-border-hover bg-surface px-4 py-2.5 text-sm"
           >
             {m.content}
           </div>
         ) : (
-          <p key={m.id} className="whitespace-pre-wrap text-sm text-muted">
-            {m.content}
+          <p key={m.id} className="flex gap-2.5 text-sm leading-relaxed text-muted">
+            <span className="shrink-0 pt-0.5 font-mono text-[11px] text-ok">sys</span>
+            <span className="whitespace-pre-wrap">{m.content}</span>
           </p>
         ),
       )}
 
       {(state.status === "running" || state.status === "submitting") && (
-        <div className="flex items-center gap-2 text-sm text-muted">
+        <div className="flex items-center gap-2 pl-[30px] font-mono text-xs text-muted">
           <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            <span className="status-dot absolute inline-flex h-full w-full rounded-full bg-accent" />
           </span>
           Building…
         </div>
@@ -141,11 +145,12 @@ function PreviewPane() {
 
   return (
     <Tabs defaultValue="preview" className="flex h-full flex-col">
-      <div className="flex items-center border-b border-border px-4 py-2">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <TabsList>
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="code">Code</TabsTrigger>
         </TabsList>
+        <span className="font-mono text-[11px] text-muted-foreground">reads from R2</span>
       </div>
       <TabsContent value="preview" className="flex-1">
         <iframe title="Live preview" src={state.result.previewUrl} className="h-full w-full bg-white" />
@@ -163,6 +168,7 @@ export function Workspace() {
   const { runId } = useParams<{ runId: string }>();
   const { state, resume } = useRun();
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
+  const { stages, agents } = useWorkspacePipeline(state);
 
   const isLive = "runId" in state && state.runId === runId;
   const showSplit = state.status === "completed";
@@ -184,7 +190,8 @@ export function Workspace() {
   if (!isLive) {
     if (resumeStatus === "checking" || resumeStatus === null) {
       return (
-        <div className="flex h-full items-center justify-center text-sm text-muted">
+        <div className="flex h-full items-center justify-center gap-2.5 font-mono text-sm text-muted">
+          <BrandMark className="h-6 w-6" />
           Reconnecting to this build…
         </div>
       );
@@ -200,22 +207,39 @@ export function Workspace() {
     );
   }
 
+  const isFailed = state.status === "failed";
+
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between border-b border-border px-4 py-3">
-        <button className="flex items-center gap-2 text-sm font-medium text-muted hover:text-foreground">
-          <Sparkles className="h-4 w-4 text-accent" />
+      <StatusLine>
+        <StatusItem label="run" value={state.runId.slice(0, 8)} />
+        <StatusSep />
+        <StatusItem
+          label="status"
+          live={!isFailed && state.status !== "completed"}
+          value={
+            <span className={cn(isFailed && "text-danger", state.status === "completed" && "text-ok")}>
+              {state.status.replace(/_/g, " ")}
+            </span>
+          }
+        />
+      </StatusLine>
+
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <span className={cn("h-2 w-2 rounded-sm", isFailed ? "bg-danger" : state.status === "completed" ? "bg-ok" : "bg-accent")} />
           Untitled project
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
+        </div>
         <Link to="/" title="Back to home" className="text-muted hover:text-foreground">
           <Minimize2 className="h-4 w-4" />
         </Link>
-      </header>
+      </div>
+
+      <PipelineStrip stages={stages} agents={agents} />
 
       <div className={cn("flex flex-1 overflow-hidden", showSplit && "divide-x divide-border")}>
-        <div className={cn("flex flex-col", showSplit ? "w-[420px] shrink-0" : "flex-1")}>
-          <ChatLog />
+        <div className={cn("flex flex-col", showSplit ? "w-[400px] shrink-0" : "flex-1")}>
+          <ChatLog wide={!showSplit} />
           <WorkspaceInput />
         </div>
 

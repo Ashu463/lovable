@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 const SWATCHES: { id: Accent; label: string; from: string; to: string }[] = [
   { id: "purple", label: "Purple & Magenta", from: "#9327DB", to: "#F722A6" },
-  { id: "orange", label: "Red-Orange", from: "#FF3E00", to: "#FFB200" },
+  { id: "neon", label: "Neon Blue & Green", from: "#00FFFF", to: "#39FF14" },
 ];
 
 export function AccentPicker({ expanded = false }: { expanded?: boolean }) {

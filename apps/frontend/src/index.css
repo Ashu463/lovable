@@ -1,24 +1,32 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
 
-  --color-background: #070b0a;
-  --color-surface: #101715;
-  --color-surface-hover: #182220;
-  --color-border: #22302b;
-  --color-border-hover: #314540;
-  --color-foreground: #f3f8f6;
-  --color-muted: #a7b8b2;
-  --color-muted-foreground: #7c8d87;
+  /* Control Room — instrument-panel dark. No light mode: the whole design
+     language (status line, telemetry, hairline grid) is dark-first and
+     doesn't have a coherent light counterpart. */
+  --color-background: #08080b;
+  --color-surface: #0e0e13;
+  --color-surface-hover: #14141b;
+  --color-border: #1c1c25;
+  --color-border-hover: #262633;
+  --color-foreground: #f4f4f7;
+  --color-muted: #8b8b9a;
+  --color-muted-foreground: #5a5a68;
 
-  /* Accent palette — "Purple & Magenta Heart" is the default; .theme-orange
-     switches to "Red-Orange Heart". Independent of light/dark. */
+  /* Accent = signal color, not decoration — marks the active nav item, the
+     live pipeline stage, the running event. Two switchable palettes. */
   --color-accent-from: #9327db;
   --color-accent-to: #f722a6;
   --color-accent: #f722a6;
   --color-accent-foreground: #fdf4ff;
+
+  --color-ok: #3ecf8e;
+  --color-danger: #ff5c5c;
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
@@ -39,39 +47,33 @@
       height: 0;
     }
   }
-  @keyframes word-swap {
-    from {
-      opacity: 0;
-      transform: translateY(4px);
-    }
-    to {
+  @keyframes pulse-dot {
+    0%,
+    100% {
       opacity: 1;
-      transform: translateY(0);
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+  @keyframes ticker-scroll {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes blink-caret {
+    50% {
+      opacity: 0;
     }
   }
 }
 
-/* Dark is the default (matches @theme above); .light on <html> overrides the
-   same custom properties so every utility built from them (bg-background,
-   text-foreground, border-border, ...) just follows the cascade. */
-.light {
-  --color-background: #f6faf9;
-  --color-surface: #ffffff;
-  --color-surface-hover: #eaf2f0;
-  --color-border: #dbe7e3;
-  --color-border-hover: #c2d5cf;
-  --color-foreground: #0d1512;
-  --color-muted: #44534e;
-  --color-muted-foreground: #6c7b76;
-}
-
-/* Accent palette switch — "Red-Orange Heart". Toggled independently of
-   light/dark via a class on <html>, same cascade pattern as .light. */
-.theme-orange {
-  --color-accent-from: #ff3e00;
-  --color-accent-to: #ffb200;
-  --color-accent: #ff3e00;
-  --color-accent-foreground: #1a0a00;
+/* Neon Blue & Green — second accent palette. Toggled via a class on <html>. */
+.theme-neon {
+  --color-accent-from: #00ffff;
+  --color-accent-to: #39ff14;
+  --color-accent: #39ff14;
+  --color-accent-foreground: #04120a;
 }
 
 @layer base {
@@ -83,23 +85,18 @@
     color-scheme: dark;
   }
 
-  html.light {
-    color-scheme: light;
-  }
-
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
-    transition: background-color 0.15s ease, color 0.15s ease;
   }
 }
 
 @layer utilities {
   .text-gradient-accent {
     background-image: linear-gradient(
-      90deg,
+      120deg,
       var(--color-accent-from),
       var(--color-accent-to)
     );
@@ -110,18 +107,32 @@
 
   .bg-gradient-accent {
     background-image: linear-gradient(
-      90deg,
+      120deg,
       var(--color-accent-from),
       var(--color-accent-to)
     );
   }
 
-  .hero-glow {
-    background: radial-gradient(
-      ellipse 60% 50% at 50% 0%,
-      color-mix(in srgb, var(--color-accent) 22%, transparent),
-      transparent 70%
-    );
+  /* Hairline instrument grid — the Control Room signature backdrop. Used
+     sparingly (landing hero, architecture schematic), not globally. */
+  .grid-panel {
+    background-image:
+      linear-gradient(var(--color-border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-border) 1px, transparent 1px);
+    background-size: 44px 44px;
+    background-position: center;
+  }
+
+  .status-dot {
+    animation: pulse-dot 1.8s infinite;
+  }
+
+  .ticker-track {
+    animation: ticker-scroll 28s linear infinite;
+  }
+
+  .console-caret {
+    animation: blink-caret 1.1s steps(1) infinite;
   }
 
   .doc-content h2 {
@@ -179,7 +190,12 @@
     font-style: italic;
   }
 
-  .animate-word-swap {
-    animation: word-swap 0.4s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-dot,
+  .ticker-track,
+  .console-caret {
+    animation: none !important;
   }
 }

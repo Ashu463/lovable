@@ -36,7 +36,7 @@ export function Search() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search your projects…"
-          className="pl-9"
+          className="pl-9 font-mono text-sm"
         />
       </div>
 
@@ -48,10 +48,10 @@ export function Search() {
 
       <div className="space-y-2">
         {results.map((p) => (
-          <Card key={p.id} className="px-4 py-3">
+          <Card key={p.id} className="flex items-center justify-between px-4 py-3">
             <p className="font-medium">{p.name ?? "Untitled project"}</p>
-            <p className="text-xs text-muted-foreground">
-              Created {new Date(p.createdAt).toLocaleDateString()}
+            <p className="font-mono text-[11px] text-muted-foreground">
+              {new Date(p.createdAt).toLocaleDateString()}
             </p>
           </Card>
         ))}

@@ -20,8 +20,8 @@ export function ClarifyingQuestions({
 
   return (
     <Card className="w-full max-w-xl p-6 text-left">
-      <p className="mb-1 text-xs tracking-widest text-muted-foreground">BEFORE WE START</p>
-      <h3 className="mb-5 font-semibold">A couple of things to nail down</h3>
+      <p className="mb-1 font-mono text-xs tracking-widest text-accent">BEFORE WE START</p>
+      <h3 className="mb-5 font-display font-semibold">A couple of things to nail down</h3>
 
       <div className="space-y-5">
         {questions.map((q, i) => (

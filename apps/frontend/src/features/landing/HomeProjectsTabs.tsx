@@ -39,8 +39,8 @@ function MyProjects() {
       {projects.map((p) => (
         <Card key={p.id} className="p-5">
           <h3 className="font-medium">{p.name ?? "Untitled project"}</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Created {new Date(p.createdAt).toLocaleDateString()}
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+            {new Date(p.createdAt).toLocaleDateString()}
           </p>
         </Card>
       ))}
@@ -51,13 +51,14 @@ function MyProjects() {
 export function HomeProjectsTabs() {
   return (
     <section className="mx-auto max-w-6xl px-6 py-16">
+      <h2 className="mb-6 font-display text-xl font-semibold tracking-tight">Your projects</h2>
       <Tabs defaultValue="projects">
         <div className="mb-6 flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="projects">My projects</TabsTrigger>
             <TabsTrigger value="templates">Lovable templates</TabsTrigger>
           </TabsList>
-          <Link to="/projects" className="text-sm text-muted transition-colors hover:text-foreground">
+          <Link to="/projects" className="font-mono text-xs text-muted transition-colors hover:text-foreground">
             View all →
           </Link>
         </div>

@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Star } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
-import { Card } from "@/components/ui/card";
 import { api, ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -47,15 +46,16 @@ export function Projects() {
   return (
     <PageShell
       title="Projects"
+      subtitle="Every build you've started — click a row to reopen it."
       actions={
-        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-surface p-1">
+        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-surface p-1 font-mono text-xs">
           {(["all", "starred"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setSearchParams(tab === "all" ? {} : { filter: tab })}
               className={cn(
-                "rounded-full px-4 py-1.5 text-sm capitalize transition-colors",
-                filter === tab ? "bg-foreground text-background" : "text-muted",
+                "rounded-md px-3.5 py-1.5 capitalize transition-colors",
+                filter === tab ? "bg-surface-hover text-foreground" : "text-muted",
               )}
             >
               {tab === "all" ? "All projects" : "Starred"}
@@ -72,16 +72,22 @@ export function Projects() {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {visible.map((project) => (
-          <Card key={project.id} className="p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h3 className="font-medium">{project.name ?? "Untitled project"}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Created {new Date(project.createdAt).toLocaleDateString()}
-                </p>
-              </div>
+      {visible.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-border">
+          <div className="grid grid-cols-[1fr_auto_auto] gap-4 border-b border-border bg-surface px-5 py-2.5 font-mono text-[10.5px] tracking-[0.12em] text-muted-foreground uppercase">
+            <span>project</span>
+            <span>created</span>
+            <span />
+          </div>
+          {visible.map((project) => (
+            <div
+              key={project.id}
+              className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-border px-5 py-3.5 text-sm transition-colors last:border-b-0 hover:bg-surface"
+            >
+              <span className="truncate font-medium">{project.name ?? "Untitled project"}</span>
+              <span className="font-mono text-xs text-muted-foreground">
+                {new Date(project.createdAt).toLocaleDateString()}
+              </span>
               <button onClick={() => toggleStar(project)} title={project.isStarred ? "Unstar" : "Star"}>
                 <Star
                   className={cn(
@@ -91,9 +97,9 @@ export function Projects() {
                 />
               </button>
             </div>
-          </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </PageShell>
   );
 }

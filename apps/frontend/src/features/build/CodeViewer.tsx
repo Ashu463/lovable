@@ -57,7 +57,7 @@ export function CodeViewer({ projectId }: { projectId: string }) {
             key={f.path}
             onClick={() => setSelected(f.path)}
             className={cn(
-              "flex w-full items-center gap-2 truncate px-3 py-1.5 text-left text-xs text-muted transition-colors hover:text-foreground",
+              "flex w-full items-center gap-2 truncate px-3 py-1.5 text-left font-mono text-xs text-muted transition-colors hover:text-foreground",
               selected === f.path && "bg-surface-hover text-foreground",
             )}
             title={f.path}
@@ -67,7 +67,7 @@ export function CodeViewer({ projectId }: { projectId: string }) {
           </button>
         ))}
       </div>
-      <pre className="flex-1 overflow-auto p-4 text-xs leading-relaxed text-foreground/90">
+      <pre className="flex-1 overflow-auto bg-background p-4 font-mono text-xs leading-relaxed text-foreground/90">
         <code>{active?.content ?? "Select a file"}</code>
       </pre>
     </div>
