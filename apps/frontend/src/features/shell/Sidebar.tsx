@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Avatar } from "@/components/ui/avatar";
 import { AccentPicker } from "@/components/ui/accent-picker";
-import { BrandMark } from "@/features/shell/BrandMark";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -87,19 +86,20 @@ export function Sidebar() {
       <div
         className={cn(
           "flex h-[46px] shrink-0 items-center border-b border-border",
-          expanded ? "justify-between px-3.5" : "flex-col justify-center gap-2 py-2",
+          expanded ? "justify-between px-3.5" : "justify-center",
         )}
       >
-        <button onClick={() => navigate("/")} className="flex items-center gap-2.5" title="Dashboard">
-          <BrandMark className="h-[26px] w-[26px]" />
-          {expanded && <span className="font-display text-[15px] font-semibold tracking-tight">Lovable</span>}
-        </button>
+        {expanded && (
+          <button onClick={() => navigate("/")} className="font-display text-[16px] font-semibold tracking-tight">
+            Lovable
+          </button>
+        )}
         <button
           onClick={toggle}
           title={expanded ? "Collapse sidebar" : "Expand sidebar"}
-          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
         >
-          {expanded ? <PanelLeftClose className="h-3.5 w-3.5" /> : <PanelLeftOpen className="h-3.5 w-3.5" />}
+          {expanded ? <PanelLeftClose className="h-[18px] w-[18px]" /> : <PanelLeftOpen className="h-[18px] w-[18px]" />}
         </button>
       </div>
 

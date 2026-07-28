@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Star } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
 import { api, ApiError } from "@/lib/api";
@@ -13,12 +13,19 @@ interface ProjectRow {
   createdAt: string;
 }
 
+interface RunRow {
+  id: string;
+}
+
 export function Projects() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get("filter") === "starred" ? "starred" : "all";
 
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+  const [openError, setOpenError] = useState<string | null>(null);
 
   useEffect(() => {
     api
@@ -38,6 +45,26 @@ export function Projects() {
       setProjects((prev) =>
         prev?.map((p) => (p.id === project.id ? { ...p, isStarred: project.isStarred } : p)) ?? null,
       );
+    }
+  };
+
+  const openProject = async (project: ProjectRow) => {
+    setOpenError(null);
+    setOpeningId(project.id);
+    try {
+      // The history endpoint returns runs newest-first — the latest run's id
+      // is what /w/:runId needs, since the workspace is keyed by run, not project.
+      const res = await api.get<{ success: boolean; data: RunRow[] }>(`/api/chat/${project.id}/history`);
+      const latest = res.data[0];
+      if (!latest) {
+        setOpenError("This project doesn't have a build yet.");
+        return;
+      }
+      navigate(`/w/${latest.id}`);
+    } catch (err) {
+      setOpenError(err instanceof ApiError ? err.message : "Couldn't open this project.");
+    } finally {
+      setOpeningId(null);
     }
   };
 
@@ -65,6 +92,7 @@ export function Projects() {
       }
     >
       {error && <p className="text-sm text-red-400">{error}</p>}
+      {openError && <p className="mb-4 text-sm text-red-400">{openError}</p>}
       {!error && !projects && <p className="text-sm text-muted-foreground">Loading…</p>}
       {!error && projects && visible.length === 0 && (
         <p className="text-sm text-muted-foreground">
@@ -80,23 +108,34 @@ export function Projects() {
             <span />
           </div>
           {visible.map((project) => (
-            <div
+            <button
               key={project.id}
-              className="grid grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-border px-5 py-3.5 text-sm transition-colors last:border-b-0 hover:bg-surface"
+              onClick={() => openProject(project)}
+              disabled={openingId === project.id}
+              className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-border px-5 py-3.5 text-left text-sm transition-colors last:border-b-0 hover:bg-surface disabled:opacity-60"
             >
-              <span className="truncate font-medium">{project.name ?? "Untitled project"}</span>
+              <span className="truncate font-medium">
+                {openingId === project.id ? "Opening…" : (project.name ?? "Untitled project")}
+              </span>
               <span className="font-mono text-xs text-muted-foreground">
                 {new Date(project.createdAt).toLocaleDateString()}
               </span>
-              <button onClick={() => toggleStar(project)} title={project.isStarred ? "Unstar" : "Star"}>
+              <span
+                role="button"
+                title={project.isStarred ? "Unstar" : "Star"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleStar(project);
+                }}
+              >
                 <Star
                   className={cn(
                     "h-4 w-4 transition-colors",
                     project.isStarred ? "fill-accent text-accent" : "text-muted hover:text-foreground",
                   )}
                 />
-              </button>
-            </div>
+              </span>
+            </button>
           ))}
         </div>
       )}

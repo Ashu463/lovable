@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { useRun } from "@/lib/run";
+import { getStoredSession } from "@/lib/session";
 import { GoogleLoginButton } from "@/features/auth/GoogleLoginButton";
 
 const MODES = ["Build", "Plan"];
@@ -21,9 +22,13 @@ export function HomeChatBox() {
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState(MODES[0]);
   const [prompt, setPrompt] = useState(() => searchParams.get("prompt") ?? "");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    if (!prompt.trim() || !session) return;
+    // Reads localStorage directly rather than the `session` above — this can
+    // run right after a Google login resolves, before this component's own
+    // re-render lands, so the closed-over `session` would still read stale.
+    if (!prompt.trim() || !getStoredSession()) return;
     const text = prompt.trim();
     setPrompt("");
     const runId = await submit(text);
@@ -87,7 +92,10 @@ export function HomeChatBox() {
                 <ArrowUp className="h-4 w-4" />
               </button>
             ) : (
-              <GoogleLoginButton onSuccess={() => prompt.trim() && handleSubmit()} />
+              <GoogleLoginButton
+                onSuccess={() => prompt.trim() && handleSubmit()}
+                onError={setAuthError}
+              />
             )}
           </div>
         </div>
@@ -95,7 +103,7 @@ export function HomeChatBox() {
 
       {!session && (
         <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
-          Sign in with Google to start building.
+          {authError ?? "Sign in with Google to start building."}
         </p>
       )}
     </div>

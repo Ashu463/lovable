@@ -1,64 +1,86 @@
 import { useRef } from "react";
 import type { RunState } from "@/lib/run";
-import type { PipelineStage, PipelineAgent } from "@/features/build/PipelineStrip";
+import type { PipelineStage, PipelineAgent, StageState } from "@/features/build/PipelineStrip";
 
-const STAGES: { key: string; label: string }[] = [
-  { key: "prompt", label: "prompt" },
-  { key: "clarify", label: "clarify" },
-  { key: "design", label: "design" },
-  { key: "build", label: "plan DAG · agents" },
-  { key: "sandbox", label: "sandbox" },
-  { key: "preview", label: "preview" },
-];
+const STAGE_ORDER = ["prompt", "clarify", "design", "build", "sandbox", "preview"] as const;
+type StageKey = (typeof STAGE_ORDER)[number];
 
-const AGENT_NAMES = ["coder", "debuggerr", "tester", "researcher", "uiExpert"] as const;
+const STAGE_LABEL: Record<StageKey, string> = {
+  prompt: "prompt",
+  clarify: "clarify",
+  design: "design",
+  build: "plan DAG · agents",
+  sandbox: "sandbox",
+  preview: "preview",
+};
 
-// There's no discrete "sandbox ready" event surfaced to the frontend today
-// (see the architecture page's known gaps), so that stage only ever reads
-// as done once the run completes — not fabricated in between.
-function stageIndexFor(status: RunState["status"]): number {
+// Bootstrap() picks either a single generalist MainAgent loop or the full
+// coder/tester/researcher/... DAG depending on request complexity — "main"
+// is what lights up for the simple path, since the others never fire then.
+const AGENT_NAMES = ["main", "coder", "debuggerr", "tester", "researcher", "uiExpert"] as const;
+
+function currentActiveStage(status: RunState["status"]): StageKey | null {
   switch (status) {
     case "clarification_needed":
-      return 1;
+      return "clarify";
     case "select_design":
-      return 2;
+      return "design";
     case "running":
-      return 3;
-    case "completed":
-      return 5;
+      return "build";
     default:
-      return 0;
+      return null;
   }
 }
 
-// Derives the pipeline visualization from the real RunState — no per-run
-// history is persisted, so a ref tracks the furthest stage reached this run
-// (reset when the runId changes) to keep earlier stages showing as "done"
-// once the run has moved on, and to freeze at the failure point on error.
+// Derives the pipeline visualization entirely from real signals: a ref
+// tracks which statuses this run has actually passed through (reset when
+// the runId changes), so a stage only ever reads "done" if it was genuinely
+// visited — not fabricated from where the run currently happens to be.
 export function useWorkspacePipeline(state: RunState): { stages: PipelineStage[]; agents: PipelineAgent[] } {
-  const maxSeenRef = useRef(0);
+  const visitedRef = useRef<Set<RunState["status"]>>(new Set());
   const runIdRef = useRef<string | null>(null);
 
   const runId = "runId" in state ? state.runId : null;
   if (runId !== runIdRef.current) {
     runIdRef.current = runId;
-    maxSeenRef.current = 0;
+    visitedRef.current = new Set();
   }
-  if (state.status !== "failed") {
-    maxSeenRef.current = Math.max(maxSeenRef.current, stageIndexFor(state.status));
-  }
+  visitedRef.current.add(state.status);
 
-  const current = stageIndexFor(state.status);
-  const stages: PipelineStage[] = STAGES.map((s, i) => {
-    if (state.status === "completed") return { ...s, state: "done" };
-    if (state.status === "failed") {
-      if (i < maxSeenRef.current) return { ...s, state: "done" };
-      if (i === maxSeenRef.current) return { ...s, state: "failed" };
-      return { ...s, state: "pending" };
+  const isCompleted = state.status === "completed";
+  const isFailed = state.status === "failed";
+  const activeStage = currentActiveStage(state.status);
+
+  // A stage counts as "done" only if this run's status set actually proves
+  // it happened — not inferred from where the run currently is.
+  const reached: Record<StageKey, boolean> = {
+    prompt: true,
+    clarify: visitedRef.current.has("clarification_needed"),
+    design: visitedRef.current.has("select_design"),
+    build: visitedRef.current.has("running"),
+    sandbox: isCompleted,
+    preview: isCompleted,
+  };
+
+  // On failure, the failure point is the most-advanced stage this run
+  // actually reached without finishing — everything after it never happened.
+  // `reached.prompt` is always true, so this always finds a stage.
+  const failStage: StageKey | null = isFailed
+    ? ([...STAGE_ORDER].reverse().find((key) => reached[key]) as StageKey)
+    : null;
+
+  const stages: PipelineStage[] = STAGE_ORDER.map((key) => {
+    let stageState: StageState;
+    if (isCompleted) {
+      stageState = "done";
+    } else if (isFailed) {
+      stageState = key === failStage ? "failed" : reached[key] ? "done" : "pending";
+    } else if (key === activeStage) {
+      stageState = "active";
+    } else {
+      stageState = reached[key] ? "done" : "pending";
     }
-    if (i < current) return { ...s, state: "done" };
-    if (i === current) return { ...s, state: "active" };
-    return { ...s, state: "pending" };
+    return { key, label: STAGE_LABEL[key], state: stageState };
   });
 
   const seenAgents = new Set<string>();
@@ -66,6 +88,12 @@ export function useWorkspacePipeline(state: RunState): { stages: PipelineStage[]
     for (const event of state.feed) {
       if (event.type === "subagent_progress" || event.type === "subagent_completed") {
         seenAgents.add(event.agent);
+      } else if (
+        event.type === "main_agent_progress" ||
+        event.type === "main_agent_tool_call" ||
+        event.type === "main_agent_success"
+      ) {
+        seenAgents.add("main");
       }
     }
   }

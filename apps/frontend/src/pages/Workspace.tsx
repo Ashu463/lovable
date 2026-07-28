@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowUp, ChevronDown, Minimize2, Plus, Square } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowUp, ChevronDown, Home, Plus, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -164,9 +164,20 @@ function PreviewPane() {
 
 type ResumeStatus = "checking" | "not_found";
 
+// Placeholder title until projects get real LLM-generated names — first 10
+// characters of the prompt that started this run. Read from the message log
+// rather than RunState directly — the completed/failed variants don't carry
+// userPrompt, but the first user message is always there regardless of status.
+function projectTitle(userPrompt: string | undefined): string {
+  const trimmed = userPrompt?.trim();
+  if (!trimmed) return "Untitled project";
+  return trimmed.length > 10 ? `${trimmed.slice(0, 10)}…` : trimmed;
+}
+
 export function Workspace() {
   const { runId } = useParams<{ runId: string }>();
-  const { state, resume } = useRun();
+  const navigate = useNavigate();
+  const { state, messages, resume, reset } = useRun();
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
   const { stages, agents } = useWorkspacePipeline(state);
 
@@ -228,11 +239,27 @@ export function Workspace() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span className={cn("h-2 w-2 rounded-sm", isFailed ? "bg-danger" : state.status === "completed" ? "bg-ok" : "bg-accent")} />
-          Untitled project
+          {projectTitle(messages.find((m) => m.role === "user")?.content)}
         </div>
-        <Link to="/" title="Back to home" className="text-muted hover:text-foreground">
-          <Minimize2 className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-1">
+          <button
+            title="New chat"
+            onClick={() => {
+              reset();
+              navigate("/");
+            }}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <Link
+            to="/"
+            title="Back to dashboard — the build keeps running in the background"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground"
+          >
+            <Home className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       <PipelineStrip stages={stages} agents={agents} />
