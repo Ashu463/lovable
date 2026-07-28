@@ -27,9 +27,15 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
             message: "Invalid projectId",
         });
     }
+    if (!Array.isArray(designs) || designs.some((d) => typeof d !== "string")) {
+        return res.status(400).json({
+            success: false,
+            message: "designs must be an array of html strings",
+        });
+    }
     let result
     try{
-        console.log(`Saving designs to the db`)
+        logger.info(`Saving designs to the db`)
         result = await Promise.all(designs.map((design: string) =>
             prisma.design.create({
                 data:{
@@ -66,12 +72,13 @@ designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Respo
                 projectId: projectId,
             },
         });
-        logger.info(`Designs are: ${designs}`)
+        logger.info(`Found ${designs.length} design(s) for project ${projectId}`)
         return res.status(200).json({
             success: true,
             data: designs,
         });
     } catch (e) {
+        logger.error(`Failed to list designs for project ${projectId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -110,6 +117,7 @@ designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: R
             data: design,
         });
     } catch (e) {
+        logger.error(`Failed to fetch selected design for project ${projectId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -170,6 +178,7 @@ designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, r
             data: selectedDesign,
         });
     } catch (e) {
+        logger.error(`Failed to select design ${designId} for project ${projectId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",

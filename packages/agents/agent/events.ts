@@ -3,6 +3,7 @@ import type { Question } from '../baml_client/types';
 import axios from 'axios';
 import { BACKEND_URL, REDIS_HOST, REDIS_PORT } from './config/systemConfig';
 import IORedis from "ioredis";
+import { logger } from "./utils/logger";
 export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
     | { type: "clarification_needed"; questions: Question[] }
@@ -37,8 +38,10 @@ export function createBackendEmitter(runId: string): EventEmitter{
                     timeout: 5000,
                 })
             } catch(err){
-                console.error(`Failed to emit event for run ${runId}:`, err)
-
+                // Event persistence is best-effort — losing a progress event
+                // must not abort the run — but it also drives run status, so it
+                // has to be loud.
+                logger.error(`Failed to emit ${event.type} event for run ${runId}: ${err instanceof Error ? err.message : String(err)}`)
             }
         }
     }
@@ -50,13 +53,19 @@ const redisPublisher = new IORedis({
     maxRetriesPerRequest: null
 });
 
+// Without a listener ioredis' 'error' events become unhandled and take the
+// whole worker process down.
+redisPublisher.on("error", (err) => {
+    logger.error(`Redis publisher error: ${err instanceof Error ? err.message : String(err)}`)
+});
+
 export function createRedisEmitter(runId: string): EventEmitter{
     return {
         async emit(event: OrchestratorEvent){
             try{
                 await redisPublisher.publish(`run:${runId}`, JSON.stringify(event))
             } catch(err){
-                console.error(`Failed to publish event for run ${runId}:`, err)
+                logger.error(`Failed to publish ${event.type} event for run ${runId}: ${err instanceof Error ? err.message : String(err)}`)
             }
         }
     }

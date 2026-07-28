@@ -38,6 +38,7 @@ export class E2BSandbox{
                 sandbox = await Sandbox.connect(sandboxId)
                 await sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
             } catch (e) {
+                logger.warn(`Could not reconnect to sandbox ${sandboxId}, creating a new one: ${e instanceof Error ? e.message : String(e)}`)
                 sandbox = null
             }
         }
@@ -110,7 +111,7 @@ export class E2BSandbox{
         }
         catch(e){
             logger.error(`Failed to generate repo tree: ${e}`)
-            throw new Error(`Error occurred while generating repository tree`)
+            throw new Error(`Failed to generate repository tree: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
         }
     }
     
@@ -128,7 +129,7 @@ export class E2BSandbox{
             }
             catch(e){
                 logger.error(`Failed to read ${path}: ${e}`)
-                throw new Error("Error occured while reading from sandbox file")
+                throw new Error(`Failed to read ${path} from sandbox: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
             }
         }
         else if(payload.action === 'writeFile'){
@@ -143,7 +144,7 @@ export class E2BSandbox{
             }
             catch(e){
                 logger.error(`Failed to write ${path}: ${e}`)
-                throw new Error("Error occurred while executing write sandbox file")
+                throw new Error(`Failed to write ${path} in sandbox: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
             }
         }
         else if(payload.action === 'editFile'){
@@ -161,7 +162,7 @@ export class E2BSandbox{
             }
             catch(e){
                 logger.error(`Failed to delete ${path}: ${e}`)
-                throw new Error("Error occurred while executing deleting sandbox file")
+                throw new Error(`Failed to delete ${path} in sandbox: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
             }
         }
         else if(payload.action === 'runCommand'){
@@ -198,13 +199,12 @@ export class E2BSandbox{
                     }
                 }
                 logger.error(`Failed to run command "${payload.command}" (cwd: ${cwd}): ${e}`)
-                throw new Error("Error occurred while executing sandbox cmd")
+                throw new Error(`Failed to run "${payload.command}" in sandbox: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
             }
         }
-        return {
-            success: false,
-            content: "Unknown error occurred"
-        }
+        // Every known action returns above, so reaching here means the caller
+        // sent an action this sandbox doesn't implement.
+        throw new Error(`Unsupported sandbox action: ${(payload as {action?: string}).action}`)
     }
 
      /* Steps: 
@@ -268,8 +268,15 @@ export class E2BSandbox{
             throw new Error(`Error occurred while starting the preview server: ${e instanceof Error ? e.message : String(e)}`)
         }
     }
-    Release(){
-        this.sandbox.kill()
+    async Release(){
+        try{
+            await this.sandbox.kill()
+        }
+        catch(e){
+            // Worth knowing about (it leaks a paid sandbox) but never worth
+            // failing a finished run over.
+            logger.error(`Failed to kill sandbox ${this.sandboxId}: ${e instanceof Error ? e.message : String(e)}`)
+        }
     }
 }
 

@@ -3,6 +3,7 @@ import type { Answers, OrchestratorResponse } from "../types/agentTypes"
 import { OrchestratorAgent } from "./agent"
 import { createRunEmitter, type EventEmitter } from "./events";
 import { E2BSandbox } from "./utils/sandbox"
+import { logger } from "./utils/logger"
 
 // export async function SpinUpSandbox(userId: string, projectId: string): Promise<string>{
 
@@ -20,7 +21,7 @@ export async function AgentCall(
   semanticMem: string,
   answers?: Answers[],
   selectedDesignId?: string
-): Promise<any> {
+): Promise<OrchestratorResponse> {
 
   const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem)
 
@@ -28,7 +29,11 @@ export async function AgentCall(
     const result = await orchestrator.Orchestrate(userPrompt, answers, selectedDesignId)
     return result
   } catch (err) {
-    await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })
+    // The event is only for the UI — the job itself must still fail so BullMQ
+    // marks it failed instead of completed with an undefined result.
+    logger.error(`AgentCall failed for run ${runId}: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
+    await createRunEmitter(runId).emit({ type: "run_failed", error: err instanceof Error ? err.message : String(err) })
+    throw err
   }
 }
 

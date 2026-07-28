@@ -33,6 +33,26 @@ const worker = new Worker("run-agent", async (job) => {
     },{connection: redis, lockDuration: 60_000, stalledInterval: 30_000, maxStalledCount: 1, concurrency: 5}
 );
 
-worker.on("failed", (job, err) => {
-  logger.error(`Job ${job?.id} failed: ${err.message}`);
+worker.on("failed", async (job, err) => {
+  logger.error(`Job ${job?.id} failed: ${err.stack ?? err.message}`);
+
+  // A job can die before the agent ever runs (sandbox boot, bad payload), in
+  // which case no run_failed event was emitted and the run would sit
+  // IN_PROGRESS forever.
+  const runId: unknown = job?.data?.runId;
+  if (typeof runId !== "string") return;
+  if (job && job.attemptsMade < (job.opts.attempts ?? 1)) return;
+
+  try {
+    await prisma.run.update({
+      where: { id: runId },
+      data: { status: "FAILED", endedAt: new Date() },
+    });
+  } catch (e) {
+    logger.error(`Failed to mark run ${runId} as FAILED after job failure: ${e}`);
+  }
+});
+
+worker.on("error", (err) => {
+  logger.error(`Run worker error: ${err instanceof Error ? err.message : String(err)}`);
 });

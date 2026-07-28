@@ -49,6 +49,7 @@ runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
             data: runs,
         });
     } catch (e) {
+        logger.error(`Failed to list runs for project ${projectId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -90,6 +91,7 @@ runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Respons
             data: run,
         });
     } catch (e) {
+        logger.error(`Failed to fetch run ${runId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -142,6 +144,7 @@ runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Respon
             data: todos,
         });
     } catch (e) {
+        logger.error(`Failed to fetch todos for run ${runId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -204,6 +207,7 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
             data: summaries,
         });
     } catch (e) {
+        logger.error(`Failed to fetch summaries for run ${runId}: ${e}`);
         return res.status(500).json({
             success: false,
             message: "Internal server error",

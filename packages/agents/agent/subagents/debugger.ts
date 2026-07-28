@@ -44,7 +44,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             return response
         }
         catch(e){
-            throw new Error(`Debugger call failed: ${e instanceof Error ? e.message : String(e)}`)
+            throw new Error(`Debugger call failed: ${e instanceof Error ? e.message : String(e)}`, { cause: e })
         }
     }
     override async executeFunction(response: DebuggerLLMResponse): Promise<DebuggerAgentResponse | null> {
@@ -104,7 +104,8 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
         else{
             return {
                 success: false,
-                editedFiles: []
+                editedFiles: [],
+                toolResult: `Debugger returned an unhandled action: ${(response as {action?: string}).action}`
             }
         }
     }

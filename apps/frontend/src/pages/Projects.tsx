@@ -40,11 +40,13 @@ export function Projects() {
     );
     try {
       await api.patch(`/api/project/${project.id}`, { starred: !project.isStarred });
-    } catch {
-      // revert on failure
+    } catch (err) {
+      // revert on failure, and say so — the star silently snapping back looked
+      // like a UI bug
       setProjects((prev) =>
         prev?.map((p) => (p.id === project.id ? { ...p, isStarred: project.isStarred } : p)) ?? null,
       );
+      setOpenError(err instanceof ApiError ? err.message : "Couldn't update this project.");
     }
   };
 
