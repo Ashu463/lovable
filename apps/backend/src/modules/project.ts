@@ -17,18 +17,19 @@ const projectRouter = Router();
 const r2 = new R2();
 
 projectRouter.get("/", auth, async (req: AuthRequest, res: Response) => {
-    const userId = req.user.id
+    const userId = req.user?.id
     if(!userId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
+        return res.status(401).json({success: false, message: `UserId not given`})
     }
-    await prisma.project.findMany({where: {userId: userId}})
-    const projects = await prisma.project.findMany({where: {userId: userId}})
 
-    if(!projects){
-        res.status(404).json({success: false, message: `Projects not found`})
+    try{
+        const projects = await prisma.project.findMany({where: {userId: userId}})
+        return res.status(200).json({success: true, data: projects})
     }
-    res.status(200).json({success: true, data: projects})
+    catch(e){
+        logger.error(`Failed to list projects for user ${userId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal server error`})
+    }
 });
 
 projectRouter.post("/", async (req: Request, res: Response) => {
@@ -53,24 +54,30 @@ projectRouter.post("/", async (req: Request, res: Response) => {
         }
         return res.status(201).json({success: true, message: `project created`, data: saveIntoDB})
     }catch(e){
-        return res.json(500).json({message: `Internal server error`})
+        logger.error(`Failed to create project for user ${userId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal server error`})
     }
 })
 projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
     const projectId = req.params.projectId
-    if(!projectId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
-    }
-    if (typeof projectId !== "string") {
+    if (typeof projectId !== "string" || !projectId) {
         return res.status(400).json({
             success: false,
             message: "Invalid projectId",
         });
     }
-    const projects = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
 
-    res.status(200).json({success: true, data: projects})
+    try{
+        const project = await prisma.project.findUnique({where: {id: projectId}})
+        if(!project){
+            return res.status(404).json({success: false, message: `Project not found`})
+        }
+        return res.status(200).json({success: true, data: project})
+    }
+    catch(e){
+        logger.error(`Failed to fetch project ${projectId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal server error`})
+    }
 });
 projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
@@ -106,36 +113,37 @@ projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
         });
     }
     try{
-        const project = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
+        const project = await prisma.project.findUnique({where: {id: projectId}})
 
         if(!project){
-            return res.status(404).json({message: `Project not found`})
+            return res.status(404).json({success: false, message: `Project not found`})
         }
         const dbUpdate = await prisma.project.update({where: {id: projectId}, data: data})
         return res.status(200).json({success: true, data: dbUpdate})
     }
     catch(e){
-        return res.status(500).json({message: `Internal Server error`})
+        logger.error(`Failed to update project ${projectId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal Server error`})
     }
 })
 
 projectRouter.delete('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
-    if(!projectId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
-    }
-    if (typeof projectId !== "string") {
+    if (typeof projectId !== "string" || !projectId) {
         return res.status(400).json({
             success: false,
             message: "Invalid projectId",
         });
     }
-    const dbUpdate = await prisma.project.delete({where: {id: projectId}})
-    if(!dbUpdate){
-        return res.send(500).json({success: false, message: `Failed to update DB`})
+
+    try{
+        await prisma.project.delete({where: {id: projectId}})
+        return res.status(200).json({success: true})
     }
-    res.status(200).json({success: true})
+    catch(e){
+        logger.error(`Failed to delete project ${projectId}: ${e}`)
+        return res.status(500).json({success: false, message: `Failed to delete project`})
+    }
 });
 
 // Files are synced sandbox -> R2 by E2BSandbox.SyncR2() during the run, so this

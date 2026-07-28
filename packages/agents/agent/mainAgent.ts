@@ -52,6 +52,8 @@ export class MainAgent{
 
     async runLoop(): Promise<MainAgentResponse>{
         logger.info(`[MainAgent:${this.runId}] runLoop starting, maxIterations=${MAIN_AGENT_MAX_ITERATIONS}`)
+        let completed = false
+        let aborted = false
         try{
             const updatedSystemPrompt = MAIN_AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
             while(this.iterations < MAIN_AGENT_MAX_ITERATIONS){
@@ -76,6 +78,7 @@ export class MainAgent{
                         timestamp: new Date().toISOString()
                     })
                     shouldBreak = true
+                    completed = true
                 }
                 if(response.stopReason === 'aborted'){
                     logger.warn(`[MainAgent:${this.runId}] LLM call aborted at iteration ${this.iterations}`)
@@ -85,6 +88,7 @@ export class MainAgent{
                         timestamp: new Date().toISOString()
                     })
                     shouldBreak = true
+                    aborted = true
                 }
     
                 // if(response.stopReason === 'QnA'){
@@ -160,7 +164,7 @@ export class MainAgent{
                     logger.info(`[MainAgent:${this.runId}] runLoop breaking after iteration ${this.iterations}`)
                     break
                 }
-                this.saveSessionState()   // write to Postgres — failure recovery
+                void this.saveSessionState()   // write to Postgres — failure recovery
                 this.iterations++
             }
         }
@@ -172,9 +176,20 @@ export class MainAgent{
             }
         }
         logger.info(`[MainAgent:${this.runId}] runLoop finished after ${this.iterations} iterations, building summary`)
+        const summary = await this.BuildSummary()
+        if(aborted){
+            logger.error(`[MainAgent:${this.runId}] runLoop ended on an aborted LLM call`)
+            return { success: false, summary: `Main agent aborted: ${summary}` }
+        }
+        if(!completed){
+            // Ran out of iterations without the LLM ever signalling completion —
+            // reporting that as success hid unfinished builds.
+            logger.error(`[MainAgent:${this.runId}] runLoop hit the ${MAIN_AGENT_MAX_ITERATIONS} iteration cap without completing`)
+            return { success: false, summary: `Main agent hit the ${MAIN_AGENT_MAX_ITERATIONS} iteration cap without completing: ${summary}` }
+        }
         return {
             success: true,
-            summary: await this.BuildSummary()
+            summary
         }
     }
 

@@ -1,7 +1,9 @@
 import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, BootstrapResponse, DesignOption } from "../types/agentTypes"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
-import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
+// Aliased: baml's `Error` model would otherwise shadow the global Error
+// constructor in this file.
+import {type ComplexityLevel, type Error as TaskError, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
 import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
@@ -37,10 +39,10 @@ type OrchestratorContext = {
 type OrchestratorState = {
     screenId: string | null // last most scrreen
     screenIdByTaskId: Map<number, string> // taskId (uiExpert) -> screenId, for dependency-specific lookups
-    lastTestErrors: Error[]
+    lastTestErrors: TaskError[]
     lastToolResult: ToolResult | null
-    lastError: Error | null
-    errorsByTaskId: Map<number, Error[]> // taskId (tester) -> errors, if debugger needs a specific tester's output
+    lastError: TaskError | null
+    errorsByTaskId: Map<number, TaskError[]> // taskId (tester) -> errors, if debugger needs a specific tester's output
 }
 
 
@@ -287,14 +289,28 @@ export class OrchestratorAgent{
     async Orchestrate(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<OrchestratorResponse>{
         logger.info(`Running orchestrator`)
         if(selectedDesignId){
-            await axios.patch(`${BACKEND_URL}/api/design/${this.projectId}/designs/${selectedDesignId}`, {}, { headers: internalAuthHeader() })
+            try{
+                await axios.patch(`${BACKEND_URL}/api/design/${this.projectId}/designs/${selectedDesignId}`, {}, { headers: internalAuthHeader() })
+            }
+            catch(e){
+                // Without a persisted selection Bootstrap would just ask for a
+                // design again, so fail the run loudly instead of looping.
+                const reason = `Failed to persist design selection ${selectedDesignId}: ${e instanceof Error ? e.message : String(e)}`
+                logger.error(reason)
+                await this.emitter.emit({ type: 'run_failed', error: reason })
+                return {
+                    status: 'error',
+                    reason
+                }
+            }
         }
         var data;
         try{
             data = await this.Bootstrap(userPrompt, answers);
         }
         catch(e){
-            const reason = `Bootstrap failed with error ${e}`
+            const reason = `Bootstrap failed with error ${e instanceof Error ? e.message : String(e)}`
+            logger.error(`Bootstrap failed for run ${this.runId}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
             await this.emitter.emit({ type: 'run_failed', error: reason })
             return {
                 status: 'error',
@@ -305,7 +321,20 @@ export class OrchestratorAgent{
         if(data.status === 'clarification_needed'){
             if(!data.alreadySaved){
                 logger.info(`LLM generated questions, saving them`)
-                await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
+                try{
+                    await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
+                }
+                catch(e){
+                    // Unsaved questions can't be answered later (the answers
+                    // endpoint resolves them by id), so this can't be a warning.
+                    const reason = `Failed to save clarifying questions: ${e instanceof Error ? e.message : String(e)}`
+                    logger.error(reason)
+                    await this.emitter.emit({ type: 'run_failed', error: reason })
+                    return {
+                        status: 'error',
+                        reason
+                    }
+                }
             }
             await this.emitter.emit({ type: 'clarification_needed', questions: data.questions })
             return {
@@ -337,6 +366,10 @@ export class OrchestratorAgent{
 
             const mainResult = await mainAgent.runLoop()
             if(!mainResult.success){
+                // Without this the run stays IN_PROGRESS forever: run status is
+                // only persisted off emitted events.
+                logger.error(`Main agent failed for run ${this.runId}: ${mainResult.summary}`)
+                await this.emitter.emit({ type: 'run_failed', error: mainResult.summary })
                 return {
                     status: 'error',
                     reason: mainResult.summary
@@ -388,13 +421,21 @@ export class OrchestratorAgent{
                 }
 
                 let testsPassing: boolean | null = null;
-                let lastErrors = null
+                let lastErrors: TaskError | null = null
                 let testResults
                 if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
                     logger.info(`Starting tester debugger loop`)
                     testsPassing = false;
                     testResults = await this.TesterDebuggerLoop(this.semanticMem)
                     if(testResults.success) testsPassing = true
+                    else {
+                        // A coder task whose code never builds isn't a success —
+                        // carry that (and the last error) into the orchestrator
+                        // context so later tasks and the summary see it.
+                        lastErrors = testResults.lastError ?? null
+                        logger.error(`Tester/debugger loop could not get task ${todo.id} building: ${JSON.stringify(lastErrors)}`)
+                        summaries.push(...testResults.summaries)
+                    }
                 }
                 // this.shouldBatchTest()
 
@@ -402,8 +443,10 @@ export class OrchestratorAgent{
                     taskId: todo.id,
                     task: todo.task,
                     agentAssigned: agentType,
-                    summary: result.summary,
-                    success: result.success
+                    summary: testsPassing === false
+                        ? `${result.summary}\nTests/build still failing: ${lastErrors ? `${lastErrors.fileName}: ${lastErrors.error}` : 'unknown error'}`
+                        : result.summary,
+                    success: result.success && testsPassing !== false
                 });
             }
             // FIX: this.state/context in place of summaries. => done, kept subagents summary short and avoided LLM call.
@@ -425,8 +468,10 @@ export class OrchestratorAgent{
             return result;
         }
         catch(e){
+            const reason = `Failed to expose preview url: ${e instanceof Error ? e.message : String(e)}`
             logger.error(`Error occurred while hosting ${e}`)
-            throw new Error
+            await this.emitter.emit({ type: 'run_failed', error: reason })
+            throw new Error(reason, { cause: e })
         }
         // Deploy if only user says this explictily
         // #TEST: replace with appropriate path of project directory
@@ -460,7 +505,7 @@ export class OrchestratorAgent{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
     }
     // that tester <-> debugger loop
-    async TesterDebuggerLoop(semanticMem: string, ): Promise<{success: true | false, summaries: string[], lastError?: Error}>{
+    async TesterDebuggerLoop(semanticMem: string, ): Promise<{success: true | false, summaries: string[], lastError?: TaskError}>{
         let loopCount = 0;
         let summaries: string[] = []
         let lastError
@@ -481,9 +526,20 @@ export class OrchestratorAgent{
                 const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
 
                 const testerRes: TesterResponse = await tester.testCodebase(testerContext)
-                const error: Error = {
-                    fileName: testerRes.errorRes!.file,
-                    error: testerRes.errorRes!.error + testerRes.errorRes!.line
+                if(!testerRes.errorRes){
+                    // Nothing for the debugger to act on: dereferencing errorRes
+                    // here used to throw a TypeError that the catch below turned
+                    // into a bare `success: false`, hiding why the loop ended.
+                    logger.warn(`Tester returned success=${testerRes.success} with no error payload while build check still failing, ending tester/debugger loop`)
+                    return {
+                        success: false,
+                        summaries: summaries,
+                        lastError: lastError ?? { fileName: 'TESTER_NO_ERROR', error: 'Build check failed but tester reported no error' }
+                    }
+                }
+                const error: TaskError = {
+                    fileName: testerRes.errorRes.file,
+                    error: testerRes.errorRes.error + testerRes.errorRes.line
                 }
                 // #CRITICAL: halt only after the debugger has had 2 attempts at the same
                 // error signature with no progress, not on the first repeat.
@@ -528,17 +584,23 @@ export class OrchestratorAgent{
                 deployReady = await this.preDeployCheck()
                 loopCount++;
             }
+            if(!deployReady){
+                logger.error(`Tester/debugger loop exhausted ${TESTER_DEBUGGER_LOOP_MAX_ITERATIONS} iteration(s) with the build still failing`)
+            }
             return {
-                success: true,
+                // Falling out of the loop on the iteration cap is a failure, not
+                // a pass — only a green pre-deploy check counts as success.
+                success: deployReady,
                 summaries: summaries, 
                 lastError: lastError
             }
         }
         catch(e){
-            logger.error(`TesterDebuggerLoop failed: ${e}`)
+            logger.error(`TesterDebuggerLoop failed: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
             return{
                 success: false,
                 summaries,
+                lastError: lastError ?? { fileName: 'TESTER_DEBUGGER_LOOP', error: e instanceof Error ? e.message : String(e) }
             }
         }
     }

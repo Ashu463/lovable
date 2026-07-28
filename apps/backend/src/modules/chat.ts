@@ -26,6 +26,26 @@ GET    /chat/:projectId/history       → all past runs' events, for reload
 chatRouter.post('/', auth, createRun)
 chatRouter.post('/:projectId', auth, createRun)
 
+// Event rows are written by the agent worker; a corrupt/truncated one must not
+// take down the whole state response.
+function parseEventContent(content: string | null, runId: string): unknown {
+    if(!content) return null
+    try{
+        return JSON.parse(content)
+    } catch(e){
+        logger.error(`Failed to parse stored event content for run ${runId}: ${e}`)
+        return null
+    }
+}
+
+async function markRunFailed(runId: string){
+    try{
+        await prisma.run.update({where: {id: runId}, data: {status: 'FAILED', endedAt: new Date()}})
+    } catch(e){
+        logger.error(`Failed to mark run ${runId} as FAILED: ${e}`)
+    }
+}
+
 async function createRun(req: Request, res: Response){
     const userId = req.headers.userid
     let projectId = req.params?.projectId
@@ -78,6 +98,9 @@ async function createRun(req: Request, res: Response){
         logger.info(`Added to run queue`)
     } catch(e){
         logger.error(`Failed to enqueue run ${run.id}: ${e}`)
+        // The Run row already exists — leaving it IN_PROGRESS would have the
+        // frontend waiting on a stream for a job that was never queued.
+        await markRunFailed(run.id)
         return res.status(500).json({success: false, message: `Failed to start run`})
     }
 
@@ -108,7 +131,7 @@ chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
             where: { runId, type: run.status === 'CLARIFICATION_NEEDED' ? 'clarification_needed' : 'select_design' },
             orderBy: { createdAt: 'desc' },
         })
-        pauseEvent = event?.content ? JSON.parse(event.content) : null
+        pauseEvent = parseEventContent(event?.content ?? null, runId)
     }
 
     let completedEvent: unknown = null
@@ -117,7 +140,7 @@ chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
             where: { runId, type: 'run_completed' },
             orderBy: { createdAt: 'desc' },
         })
-        completedEvent = event?.content ? JSON.parse(event.content) : null
+        completedEvent = parseEventContent(event?.content ?? null, runId)
     }
 
     let failedEvent: unknown = null
@@ -126,7 +149,7 @@ chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
             where: { runId, type: 'run_failed' },
             orderBy: { createdAt: 'desc' },
         })
-        failedEvent = event?.content ? JSON.parse(event.content) : null
+        failedEvent = parseEventContent(event?.content ?? null, runId)
     }
 
     return res.status(200).json({
@@ -185,6 +208,9 @@ chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: R
         logger.info(`Continuing run ${run.id}`)
     } catch(e){
         logger.error(`Failed to re-enqueue run ${run.id}: ${e}`)
+        // Status was flipped to IN_PROGRESS just above, so it has to be undone
+        // or the run is stuck awaiting a job that doesn't exist.
+        await markRunFailed(run.id)
         return res.status(500).json({success: false, message: `Failed to continue run`})
     }
 

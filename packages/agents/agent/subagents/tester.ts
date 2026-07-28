@@ -51,7 +51,11 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             }
         }
         catch(e){
-            logger.error(`testCodebase failed: ${e}`)
+            logger.error(`testCodebase failed: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
+            // The dev server is only left running on the success path; on the
+            // way out with an error it would otherwise hold the port for the
+            // next tester iteration.
+            await handle.kill().catch((killErr) => logger.warn(`Failed to kill dev server after tester error: ${killErr}`))
             throw e
         }
 

@@ -27,6 +27,7 @@ questionRouter.get('/:projectId/getQuestions', auth, async (req: Request, res: R
         return res.status(200).json({success: true, data: questions})
     }
     catch(e){
+        logger.error(`Failed to fetch questions for project ${projectId}: ${e}`)
         return res.status(500).json({
             success: false,
             message: "Internal server error",
@@ -42,24 +43,34 @@ questionRouter.post('/:projectId/:runId', internalAuth, async (req: Request, res
     if(typeof projectId !== 'string' || typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Bad types of the params`})
     }
-    const result = await Promise.all(
-        questionsObj.map((question: IncomingQuestion) =>
-            prisma.question.create({
-                data: {
-                    id: randomUUIDv7(),
-                    runId,
-                    projectId,
-                    question: question.question,
-                    options: question.option,
-                    createdAt: new Date(),
-                },
-            })
-        )
-    );
-    return res.status(201).json({
-        success: true,
-        data: result
-    });
+    if(!Array.isArray(questionsObj) || questionsObj.length === 0){
+        return res.status(400).json({success: false, message: `questionsObj must be a non-empty array`})
+    }
+
+    try{
+        const result = await Promise.all(
+            questionsObj.map((question: IncomingQuestion) =>
+                prisma.question.create({
+                    data: {
+                        id: randomUUIDv7(),
+                        runId,
+                        projectId,
+                        question: question.question,
+                        options: question.option,
+                        createdAt: new Date(),
+                    },
+                })
+            )
+        );
+        return res.status(201).json({
+            success: true,
+            data: result
+        });
+    }
+    catch(e){
+        logger.error(`Failed to save questions for run ${runId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal server error`})
+    }
 })
 
 questionRouter.post('/:projectId/:runId/answers', auth, async (req: Request, res: Response) =>{

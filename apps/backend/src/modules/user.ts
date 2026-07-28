@@ -24,7 +24,7 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
         return res.status(400).json({ success: false, message: "Invalid email" });
     }
     if (!isValidPassword(password)) {
-        logger.error(`Password is not valid: ${password}`);
+        logger.warn(`Rejected signup for ${email}: password does not meet requirements`);
         return res.status(400).json({
             success: false,
             message: "Password must be at least 8 characters",
@@ -50,7 +50,8 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
         console.log("Token created");
         return res.status(201).json({ success: true, data: { token, user: toPublicUser(user) } });
     } catch (e) {
-        return res.status(500).json({ success: false, message: `Internal server error: ${e}` });
+        logger.error(`Signup failed for ${email}: ${e}`);
+        return res.status(500).json({ success: false, message: "Internal server error" });
     }
 });
 
@@ -83,6 +84,7 @@ userRouter.post("/login", async (req: Request, res: Response) => {
             .status(200)
             .json({ success: true, data: { token, user: toPublicUser(user) } });
     } catch (e) {
+        logger.error(`Login failed for ${email}: ${e}`);
         return res
             .status(500)
             .json({ success: false, message: "Internal server error" });
@@ -98,9 +100,17 @@ userRouter.post("/google", async (req: Request, res: Response) => {
             .json({ success: false, message: "Missing idToken" });
     }
 
+    let profile: Awaited<ReturnType<typeof verifyGoogleIdToken>>;
     try {
-        const profile = await verifyGoogleIdToken(idToken);
+        profile = await verifyGoogleIdToken(idToken);
+    } catch (e) {
+        logger.warn(`Google id token verification failed: ${e}`);
+        return res
+            .status(401)
+            .json({ success: false, message: "Invalid Google token" });
+    }
 
+    try {
         let user = await prisma.user.findUnique({
             where: { googleId: profile.googleId },
         });
@@ -132,10 +142,13 @@ userRouter.post("/google", async (req: Request, res: Response) => {
             .status(200)
             .json({ success: true, data: { token, user: toPublicUser(user) } });
     } catch (e) {
-        console.error("Google sign-in failed:", e);
+        // The token itself already verified above, so anything here is our
+        // problem, not a bad credential — a 401 sent the user back to the login
+        // screen for what was really a database failure.
+        logger.error(`Google sign-in failed after token verification: ${e}`);
         return res
-            .status(401)
-            .json({ success: false, message: "Invalid Google token" });
+            .status(500)
+            .json({ success: false, message: "Internal server error" });
     }
 });
 
@@ -155,7 +168,7 @@ userRouter.get("/me", auth, async (req: AuthRequest, res: Response) => {
         console.log(toPublicUser(user));
         return res.status(200).json({ success: true, data: toPublicUser(user) });
     } catch (e) {
-        console.error(`Error getting user: ${e}`);
+        logger.error(`Error getting user: ${e}`);
         return res
             .status(500)
             .json({ success: false, message: "Internal server error" });

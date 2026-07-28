@@ -94,7 +94,10 @@ export function RunProvider({ children }: { children: ReactNode }) {
           let event: OrchestratorEvent;
           try {
             event = JSON.parse(raw);
-          } catch {
+          } catch (err) {
+            // Skipping one malformed frame is fine, silently dropping every
+            // frame of a broken stream is not.
+            console.error("Discarded unparseable run event", { runId, raw, err });
             return;
           }
 
@@ -231,8 +234,18 @@ export function RunProvider({ children }: { children: ReactNode }) {
           setState({ status: "failed", runId, projectId, error: failedEvent?.error ?? "This run failed." });
           return true;
         }
+        // A run we can't map to a UI state (e.g. still PENDING) isn't a
+        // failure, but callers can only see "false" so leave a trace.
+        console.warn(`No resumable UI state for run ${runId} (status ${status})`);
         return false;
-      } catch {
+      } catch (err) {
+        console.error(`Failed to resume run ${runId}`, err);
+        setState({
+          status: "failed",
+          runId,
+          projectId: "",
+          error: messageFor(err, "Couldn't load this build."),
+        });
         return false;
       }
     },
