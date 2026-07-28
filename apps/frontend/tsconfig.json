@@ -6,7 +6,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "types": ["vite/client", "node"],
+    "types": ["vite/client", "node", "bun"],
     "baseUrl": ".",
     "ignoreDeprecations": "5.0",
     "paths": {
