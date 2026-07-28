@@ -5,8 +5,22 @@ import type { Request, Response } from "express";
 import { randomUUID } from "bullmq";
 import { randomUUIDv5, randomUUIDv7 } from "bun";
 import { logger } from "./utils";
+import { created, notFound, ok, requireStrings, serverError } from "./http";
 
 const designRouter = Router();
+
+// Exactly one design per project may be selected, so selecting always means
+// clearing the project's flags first.
+async function markDesignSelected(projectId: string, designId: string) {
+    await prisma.design.updateMany({
+        where: { projectId },
+        data: { isSelected: false },
+    });
+    return prisma.design.update({
+        where: { id: designId },
+        data: { isSelected: true },
+    });
+}
 
 /*Routes:
 GET    /projects/:projectId/designs               → list Design rows
@@ -18,15 +32,12 @@ POST   /projects/:projectId/assets                → upload reference files/ima
 */
 // save all designs to the db
 designRouter.post("/:projectId", internalAuth, async( req: Request, res: Response) =>{
-    const {projectId} = req.params;
     const {designs} = req.body
 
-    if (typeof projectId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId });
+    if (!params) return;
+    const { projectId } = params;
+
     let result
     try{
         console.log(`Saving designs to the db`)
@@ -43,22 +54,17 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
         ))
     } catch(e){
         logger.error(`Error occurred while saving design ${e}`)
-        return res.status(500).json({message: `Internal server error`})
+        return serverError(res)
     }
     // Echo the created rows back (with ids) so callers can hand a design id
     // to the frontend instead of routing full htmlContent through every hop.
-    return res.status(201).json({success: true, data: result})
+    return created(res, result)
 })
 // get all designs
 designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Response) => {
-    const projectId = req.params.projectId;
-
-    if (typeof projectId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId });
+    if (!params) return;
+    const { projectId } = params;
 
     try {
         const designs = await prisma.design.findMany({
@@ -67,28 +73,17 @@ designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Respo
             },
         });
         logger.info(`Designs are: ${designs}`)
-        return res.status(200).json({
-            success: true,
-            data: designs,
-        });
+        return ok(res, designs);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 // get selected design
 designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: Response) => {
-    const projectId = req.params.projectId;
-
-    if (typeof projectId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId });
+    if (!params) return;
+    const { projectId } = params;
 
     try {
         const design = await prisma.design.findFirst({
@@ -99,37 +94,20 @@ designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: R
         });
 
         if (!design) {
-            return res.status(404).json({
-                success: false,
-                message: "Selected design not found",
-            });
+            return notFound(res, "Selected design not found");
         }
 
-        return res.status(200).json({
-            success: true,
-            data: design,
-        });
+        return ok(res, design);
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 
 designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Response) => {
-    const { projectId, designId } = req.params;
-
-    if (
-        typeof projectId !== "string" ||
-        typeof designId !== "string"
-    ) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, designId: req.params.designId });
+    if (!params) return;
+    const { projectId, designId } = params;
 
     try {
         const design = await prisma.design.findFirst({
@@ -140,53 +118,23 @@ designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, r
         });
 
         if (!design) {
-            return res.status(404).json({
-                success: false,
-                message: "Design not found",
-            });
+            return notFound(res, "Design not found");
         }
 
-        await prisma.design.updateMany({
-            where: {
-                projectId: projectId,
-            },
-            data: {
-                isSelected: false,
-            },
-        });
+        const selectedDesign = await markDesignSelected(projectId, designId);
 
-        const selectedDesign = await prisma.design.update({
-            where: {
-                id: designId,
-            },
-            data: {
-                isSelected: true,
-            },
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Design selected",
-            data: selectedDesign,
-        });
+        return ok(res, selectedDesign, "Design selected");
     } catch (e) {
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 
 designRouter.post("/:projectId/selectDesign", auth, async (req: Request, res: Response) => {
-    const { projectId } = req.params;
     const { htmlContent } = req.body;
 
-    if (typeof projectId !== "string" || typeof htmlContent !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid params",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId, htmlContent });
+    if (!params) return;
+    const { projectId } = params;
 
     try {
         const design = await prisma.design.findFirst({
@@ -197,33 +145,15 @@ designRouter.post("/:projectId/selectDesign", auth, async (req: Request, res: Re
         });
 
         if (!design) {
-            return res.status(404).json({
-                success: false,
-                message: "Design not found",
-            });
+            return notFound(res, "Design not found");
         }
 
-        await prisma.design.updateMany({
-            where: { projectId },
-            data: { isSelected: false },
-        });
+        const selectedDesign = await markDesignSelected(projectId, design.id);
 
-        const selectedDesign = await prisma.design.update({
-            where: { id: design.id },
-            data: { isSelected: true },
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Design selected",
-            data: selectedDesign,
-        });
+        return ok(res, selectedDesign, "Design selected");
     } catch (e) {
         logger.error(`Error occurred while selecting design ${e}`)
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res);
     }
 });
 

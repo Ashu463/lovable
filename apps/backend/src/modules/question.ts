@@ -7,41 +7,35 @@ import { auth, internalAuth } from "./middleware";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
 import { logger } from "./utils";
+import { badRequest, created, ok, requireStrings, serverError } from "./http";
 
 type IncomingQuestion = {question: string, option: string[]}
 
 export const questionRouter = Router();
 
 questionRouter.get('/:projectId/getQuestions', auth, async (req: Request, res: Response) =>{
-    const projectId = req.params.projectId
-    if(typeof projectId !== 'string'){
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
-    }
+    const params = requireStrings(res, { projectId: req.params.projectId })
+    if(!params) return;
+    const { projectId } = params
 
     try{
         logger.info(`Fetching questions`)
         const questions = await prisma.question.findMany({where: {projectId, clarification: null}})
-        return res.status(200).json({success: true, data: questions})
+        return ok(res, questions)
     }
     catch(e){
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error",
-        });
+        return serverError(res)
     }
     
 })
 
 questionRouter.post('/:projectId/:runId', internalAuth, async (req: Request, res: Response) =>{
-    const {projectId, runId} = req.params
     const {questionsObj} = req.body
 
-    if(typeof projectId !== 'string' || typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Bad types of the params`})
-    }
+    const params = requireStrings(res, {projectId: req.params.projectId, runId: req.params.runId}, `Bad types of the params`)
+    if(!params) return;
+    const {projectId, runId} = params
+
     const result = await Promise.all(
         questionsObj.map((question: IncomingQuestion) =>
             prisma.question.create({
@@ -56,21 +50,18 @@ questionRouter.post('/:projectId/:runId', internalAuth, async (req: Request, res
             })
         )
     );
-    return res.status(201).json({
-        success: true,
-        data: result
-    });
+    return created(res, result);
 })
 
 questionRouter.post('/:projectId/:runId/answers', auth, async (req: Request, res: Response) =>{
-    const {projectId, runId} = req.params
     const {answers} = req.body as {answers: {questionId: string, answer: string}[]}
 
-    if(typeof projectId !== 'string' || typeof runId !== 'string'){
-        return res.status(400).json({success: false, message: `Bad types of the params`})
-    }
+    const params = requireStrings(res, {projectId: req.params.projectId, runId: req.params.runId}, `Bad types of the params`)
+    if(!params) return;
+    const {projectId, runId} = params
+
     if(!Array.isArray(answers) || answers.length === 0){
-        return res.status(400).json({success: false, message: `answers must be a non-empty array`})
+        return badRequest(res, `answers must be a non-empty array`)
     }
 
     try{
@@ -97,8 +88,8 @@ questionRouter.post('/:projectId/:runId/answers', auth, async (req: Request, res
         }))
     } catch(e){
         logger.error(`Error occurred while saving answers ${e}`)
-        return res.status(500).json({success: false, message: `Internal server error`})
+        return serverError(res)
     }
 
-    return res.status(201).json({success: true})
+    return created(res)
 })

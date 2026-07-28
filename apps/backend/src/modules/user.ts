@@ -5,6 +5,7 @@ import { auth, type AuthRequest } from "./middleware";
 import {isValidEmail, isValidPassword, signUserToken,toPublicUser} from "./user.helpers";
 import { verifyGoogleIdToken } from "./google";
 import { logger } from "./utils";
+import { badRequest, conflict, created, notFound, ok, serverError, unauthorized } from "./http";
 /*Routes:
 POST /users/signup                                → email/password signup
 POST /users/login                                 → email/password login
@@ -21,21 +22,18 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
 
     if (!isValidEmail(email)) {
         console.error(`Invalid email: ${email}`);
-        return res.status(400).json({ success: false, message: "Invalid email" });
+        return badRequest(res, "Invalid email");
     }
     if (!isValidPassword(password)) {
         logger.error(`Password is not valid: ${password}`);
-        return res.status(400).json({
-            success: false,
-            message: "Password must be at least 8 characters",
-        });
+        return badRequest(res, "Password must be at least 8 characters");
     }
 
     try {
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
             console.error(`Email already registered: ${email}`);
-            return res.status(409).json({ success: false, message: "Email already registered" });
+            return conflict(res, "Email already registered");
         }
         const passwordHash = await Bun.password.hash(password);
         const user = await prisma.user.create({
@@ -48,9 +46,9 @@ userRouter.post("/signup", async (req: Request, res: Response) => {
         const token = signUserToken(user);
         
         console.log("Token created");
-        return res.status(201).json({ success: true, data: { token, user: toPublicUser(user) } });
+        return created(res, { token, user: toPublicUser(user) });
     } catch (e) {
-        return res.status(500).json({ success: false, message: `Internal server error: ${e}` });
+        return serverError(res, `Internal server error: ${e}`);
     }
 });
 
@@ -58,34 +56,24 @@ userRouter.post("/login", async (req: Request, res: Response) => {
     const { email, password } = req.body ?? {};
 
     if (!isValidEmail(email) || typeof password !== "string") {
-        return res
-            .status(400)
-            .json({ success: false, message: "Invalid email or password" });
+        return badRequest(res, "Invalid email or password");
     }
 
     try {
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user || !user.password) {
-            return res
-                .status(401)
-                .json({ success: false, message: "Invalid email or password" });
+            return unauthorized(res, "Invalid email or password");
         }
 
         const valid = await Bun.password.verify(password, user.password);
         if (!valid) {
-            return res
-                .status(401)
-                .json({ success: false, message: "Invalid email or password" });
+            return unauthorized(res, "Invalid email or password");
         }
 
         const token = signUserToken(user);
-        return res
-            .status(200)
-            .json({ success: true, data: { token, user: toPublicUser(user) } });
+        return ok(res, { token, user: toPublicUser(user) });
     } catch (e) {
-        return res
-            .status(500)
-            .json({ success: false, message: "Internal server error" });
+        return serverError(res);
     }
 });
 
@@ -93,9 +81,7 @@ userRouter.post("/google", async (req: Request, res: Response) => {
     const { idToken } = req.body ?? {};
 
     if (typeof idToken !== "string" || !idToken) {
-        return res
-            .status(400)
-            .json({ success: false, message: "Missing idToken" });
+        return badRequest(res, "Missing idToken");
     }
 
     try {
@@ -128,14 +114,10 @@ userRouter.post("/google", async (req: Request, res: Response) => {
         }
 
         const token = signUserToken(user);
-        return res
-            .status(200)
-            .json({ success: true, data: { token, user: toPublicUser(user) } });
+        return ok(res, { token, user: toPublicUser(user) });
     } catch (e) {
         console.error("Google sign-in failed:", e);
-        return res
-            .status(401)
-            .json({ success: false, message: "Invalid Google token" });
+        return unauthorized(res, "Invalid Google token");
     }
 });
 
@@ -147,23 +129,19 @@ userRouter.get("/me", auth, async (req: AuthRequest, res: Response) => {
             where: { id: req.user!.id },
         });
         if (!user) {
-            return res
-                .status(404)
-                .json({ success: false, message: "User not found" });
+            return notFound(res, "User not found");
         }
         console.log("User found");
         console.log(toPublicUser(user));
-        return res.status(200).json({ success: true, data: toPublicUser(user) });
+        return ok(res, toPublicUser(user));
     } catch (e) {
         console.error(`Error getting user: ${e}`);
-        return res
-            .status(500)
-            .json({ success: false, message: "Internal server error" });
+        return serverError(res);
     }
 });
 
 userRouter.post( "/logout",auth, async (req: AuthRequest, res: Response) => {
-        return res.status(200).json({ success: true, message: "Logged out" });
+        return ok(res, undefined, "Logged out");
     }
 );
 
