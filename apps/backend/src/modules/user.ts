@@ -132,6 +132,7 @@ userRouter.post("/google", async (req: Request, res: Response) => {
             .status(200)
             .json({ success: true, data: { token, user: toPublicUser(user) } });
     } catch (e) {
+        console.error("Google sign-in failed:", e);
         return res
             .status(401)
             .json({ success: false, message: "Invalid Google token" });

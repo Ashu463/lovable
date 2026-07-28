@@ -6,51 +6,37 @@ import {
   type ReactNode,
 } from "react";
 
-type Mode = "light" | "dark";
-export type Accent = "purple" | "orange";
+// Control Room is dark-first by design — the instrument-panel aesthetic
+// (status line, telemetry, hairline grid) has no coherent light variant, so
+// there's only one axis left to manage: which accent signals "live".
+export type Accent = "purple" | "neon";
 
-const MODE_KEY = "lovable.theme";
 const ACCENT_KEY = "lovable.accent";
 
 interface ThemeContextValue {
-  theme: Mode;
-  toggle: () => void;
   accent: Accent;
   setAccent: (accent: Accent) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getInitialMode(): Mode {
-  const stored = localStorage.getItem(MODE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-}
-
 function getInitialAccent(): Accent {
   const stored = localStorage.getItem(ACCENT_KEY);
-  return stored === "orange" ? "orange" : "purple";
+  return stored === "neon" ? "neon" : "purple";
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Mode>(getInitialMode);
   const [accent, setAccentState] = useState<Accent>(getInitialAccent);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("light", theme === "light");
-    localStorage.setItem(MODE_KEY, theme);
-  }, [theme]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("theme-orange", accent === "orange");
+    document.documentElement.classList.toggle("theme-neon", accent === "neon");
     localStorage.setItem(ACCENT_KEY, accent);
   }, [accent]);
 
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
   const setAccent = (next: Accent) => setAccentState(next);
 
   return (
-    <ThemeContext.Provider value={{ theme, toggle, accent, setAccent }}>
+    <ThemeContext.Provider value={{ accent, setAccent }}>
       {children}
     </ThemeContext.Provider>
   );

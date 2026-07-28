@@ -212,13 +212,18 @@ export class OrchestratorAgent{
                     error: `Error occurred while generating`
                 }
             }
+            logger.info(`Complexity checker result: complex=${isComplex.complex}, questions=${JSON.stringify(isComplex.complex ? isComplex.questions : [])}`)
             complexity = isComplex.complex
             try{
                 await axios.patch(`${BACKEND_URL}/api/project/${this.projectId}`, { isComplex: complexity }, { headers: internalAuthHeader() })
             } catch(e){
                 logger.error(`Failed to cache complexity verdict for project ${this.projectId}: ${e}`)
             }
-            if(isComplex.complex){
+            if(isComplex.complex && isComplex.questions.length === 0){
+                logger.error(`Complexity checker returned complex=true with zero questions for project ${this.projectId} — proceeding without clarification`)
+                complexity = false
+            }
+            if(isComplex.complex && isComplex.questions.length > 0){
                 // db request should hit isnt't it to save the questions
                 return {
                     status: 'clarification_needed',

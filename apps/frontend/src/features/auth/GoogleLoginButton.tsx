@@ -1,7 +1,13 @@
 import { GoogleLogin } from "@react-oauth/google";
 import { useAuth } from "@/lib/auth";
 
-export function GoogleLoginButton({ onSuccess }: { onSuccess?: () => void }) {
+export function GoogleLoginButton({
+  onSuccess,
+  onError,
+}: {
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+}) {
   const { signInWithGoogle } = useAuth();
 
   return (
@@ -9,10 +15,15 @@ export function GoogleLoginButton({ onSuccess }: { onSuccess?: () => void }) {
       theme="filled_black"
       shape="pill"
       onSuccess={(credential) => {
-        if (!credential.credential) return;
-        void signInWithGoogle(credential.credential).then(onSuccess);
+        if (!credential.credential) {
+          onError?.("Google didn't return a credential — try again.");
+          return;
+        }
+        signInWithGoogle(credential.credential)
+          .then(onSuccess)
+          .catch(() => onError?.("Sign-in failed — the backend rejected that Google token."));
       }}
-      onError={() => console.error("Google sign-in failed")}
+      onError={() => onError?.("Google sign-in failed.")}
     />
   );
 }

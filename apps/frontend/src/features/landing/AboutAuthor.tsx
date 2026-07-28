@@ -4,12 +4,16 @@ import { Link } from "react-router-dom";
 export function AboutAuthor() {
   return (
     <section id="author" className="mx-auto max-w-3xl px-6 py-24">
-      <div className="rounded-2xl border border-border bg-surface/60 p-8">
+      <p className="mb-4 flex items-center gap-3 font-mono text-xs tracking-[0.24em] text-accent uppercase">
+        <span className="h-px w-7 bg-accent" />
+        who built this
+      </p>
+      <div className="rounded-2xl border border-border bg-surface p-8">
         <div className="flex items-center gap-4">
-          <Avatar name="Ashutosh" src="/ashutosh.jpg" className="h-14 w-14 text-lg" />
+          <Avatar name="Ashutosh" src="/ashutosh.jpg" className="h-16 w-16 rounded-xl text-lg" />
           <div>
-            <p className="font-semibold">Ashutosh</p>
-            <p className="text-sm text-muted-foreground">Builder of this clone</p>
+            <p className="font-display text-lg font-semibold tracking-tight">Ashutosh Kasaudhan</p>
+            <p className="font-mono text-xs text-accent">backend & AI systems · built this alone</p>
           </div>
         </div>
 

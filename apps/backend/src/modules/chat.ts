@@ -197,20 +197,25 @@ chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: R
 
 // SSE frontend --> Backend
 chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
-    res.setHeader("content-type", "text/event-stream")
-    res.setHeader("cache-control", "no-cache")
-    res.setHeader("Connection", "keep-alive")
-    res.flushHeaders()
-
     const {runId} = req.params
     if(typeof runId !== 'string'){
         return res.status(400).json({message: 'runId should be of string type'})
     }
 
-    const run = await prisma.run.findUniqueOrThrow({where: {id: runId}})
+    // Validate + fetch before committing to SSE headers, so a bad/missing
+    // runId (e.g. a stale reconnect after the run was deleted) gets a clean
+    // JSON 404 instead of a half-open SSE response with a JSON body stuffed
+    // into it. findUnique (not OrThrow) so this can't become an unhandled
+    // rejection that takes the whole process down mid-reconnect.
+    const run = await prisma.run.findUnique({where: {id: runId}})
     if(!run){
         return res.status(404).json({message: `Run not found`})
     }
+
+    res.setHeader("content-type", "text/event-stream")
+    res.setHeader("cache-control", "no-cache")
+    res.setHeader("Connection", "keep-alive")
+    res.flushHeaders()
 
     const pastEvents = await prisma.runEvent.findMany({
         where: { runId: runId, type: { notIn: ['clarification_needed', 'select_design'] } },
@@ -267,10 +272,13 @@ chatRouter.get('/:projectId/history', auth, async (req: Request, res: Response) 
 
     const {projectId} = req.params
     if(typeof projectId !== 'string'){
-        return res.send(400).json({message: `Invalid projectId type`})
+        return res.status(400).json({message: `Invalid projectId type`})
     }
-    const runs = await prisma.run.findMany({where: {projectId: projectId}})
-    return res.status(200).send({
+    const runs = await prisma.run.findMany({
+        where: { projectId: projectId },
+        orderBy: { startedAt: 'desc' },
+    })
+    return res.status(200).json({
         success: true,
         data: runs
     })
