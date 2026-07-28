@@ -6,29 +6,43 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 type ServerConfig = {
     command: string, 
     args: string[],
-    env?: string
+    // Names (not values) of the env vars this server needs — only these are
+    // forwarded, so a third-party MCP process never sees our DB URL, JWT
+    // secret, R2 keys or other providers' tokens.
+    envKeys?: string[]
+}
+
+const BASE_ENV_KEYS = ["PATH", "HOME", "NODE_ENV", "TMPDIR"]
+
+function serverEnv(envKeys: string[] = []): Record<string, string>{
+    const env: Record<string, string> = {}
+    for(const key of [...BASE_ENV_KEYS, ...envKeys]){
+        const value = process.env[key]
+        if(value !== undefined) env[key] = value
+    }
+    return env
 }
 
 const SERVER_CONFIGS: Record<string, ServerConfig> = {
     tavily:{
         command: "npx",
         args: ["-y", "tavily-mcp@latest"],
-        env: process.env.TAVILY_API_KEY
+        envKeys: ["TAVILY_API_KEY"]
     },
     figma: {
         command: "npmx",
         args: ["-y", "figma-developer-mcp", "--studio"],
-        env: process.env.FIGMA_API_KEY
+        envKeys: ["FIGMA_API_KEY"]
     },
     context7: {
         command: "npx",
         args: ["-y", "@upstash/context-7-mcp@latest"],
-        env: process.env.CONTEXT7_API_KEY
+        envKeys: ["CONTEXT7_API_KEY"]
     },
     stitch: {
         command: "node",
         args: ["./services/stitch-server.js"],
-        env: process.env.STITCH_API_KEY
+        envKeys: ["STITCH_API_KEY"]
     },
     apify:{
         command: "npx",
@@ -37,7 +51,7 @@ const SERVER_CONFIGS: Record<string, ServerConfig> = {
     vercel: {
         command: "npx",
         args: ["-y", "vercel-mcp-server"],
-        env: process.env.VERCEL_TOKEN
+        envKeys: ["VERCEL_TOKEN"]
     }
 }
 const clients : Map<string, Client> = new Map()
@@ -50,9 +64,7 @@ async function getClient(serverName: string) : Promise<Client>{
     const transport = new StdioClientTransport({
         command: config.command,
         args: config.args,
-        env:  {
-            ...process.env as Record<string, string>
-        }
+        env: serverEnv(config.envKeys)
     })
     const client = new Client({
         name: `${serverName}-client`, 

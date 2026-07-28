@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma";
-import { auth, internalAuth } from "./middleware";
+import { auth, internalAuth, type AuthRequest } from "./middleware";
+import { authorizeProject } from "./authz";
 import type { Request, Response } from "express";
 import { randomUUID } from "bullmq";
 import { randomUUIDv5, randomUUIDv7 } from "bun";
@@ -27,9 +28,15 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
             message: "Invalid projectId",
         });
     }
+    if (!Array.isArray(designs) || designs.some((d) => typeof d !== "string")) {
+        return res.status(400).json({
+            success: false,
+            message: "designs must be an array of strings",
+        });
+    }
     let result
     try{
-        console.log(`Saving designs to the db`)
+        logger.info(`Saving designs to the db`)
         result = await Promise.all(designs.map((design: string) =>
             prisma.design.create({
                 data:{
@@ -50,7 +57,7 @@ designRouter.post("/:projectId", internalAuth, async( req: Request, res: Respons
     return res.status(201).json({success: true, data: result})
 })
 // get all designs
-designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Response) => {
+designRouter.get("/:projectId/getDesigns", auth, async (req: AuthRequest, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -58,6 +65,9 @@ designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Respo
             success: false,
             message: "Invalid projectId",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -80,7 +90,7 @@ designRouter.get("/:projectId/getDesigns", auth, async (req: Request, res: Respo
 });
 
 // get selected design
-designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: Response) => {
+designRouter.get("/:projectId/selectedDesign", auth, async (req: AuthRequest, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -88,6 +98,9 @@ designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: R
             success: false,
             message: "Invalid projectId",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -118,7 +131,7 @@ designRouter.get("/:projectId/selectedDesign", auth, async (req: Request, res: R
 });
 
 
-designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, res: Response) => {
+designRouter.patch("/:projectId/designs/:designId", auth, async (req: AuthRequest, res: Response) => {
     const { projectId, designId } = req.params;
 
     if (
@@ -129,6 +142,9 @@ designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, r
             success: false,
             message: "Invalid params",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -177,15 +193,18 @@ designRouter.patch("/:projectId/designs/:designId", auth, async (req: Request, r
     }
 });
 
-designRouter.post("/:projectId/selectDesign", auth, async (req: Request, res: Response) => {
+designRouter.post("/:projectId/selectDesign", auth, async (req: AuthRequest, res: Response) => {
     const { projectId } = req.params;
-    const { htmlContent } = req.body;
+    const { htmlContent } = req.body ?? {};
 
     if (typeof projectId !== "string" || typeof htmlContent !== "string") {
         return res.status(400).json({
             success: false,
             message: "Invalid params",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {

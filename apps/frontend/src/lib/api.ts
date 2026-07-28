@@ -25,9 +25,6 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     const session = getStoredSession();
     if (session) {
       finalHeaders.set("Authorization", `Bearer ${session.token}`);
-      // chat.ts's createRun reads the user id off a raw `userid` header rather
-      // than the JWT payload auth() already decoded — send both until that's unified.
-      finalHeaders.set("userid", session.user.id);
     }
   }
 
