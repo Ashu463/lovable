@@ -2,7 +2,7 @@ import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
-import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS } from "./config/systemConfig"
+import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
 import { webSearch } from "./MCPs/tavily"
@@ -50,6 +50,23 @@ export class MainAgent{
         return `${global}\n\n${role}\n\n${taskCatalog}`
     }
 
+    private async withRetry<T>(label: string, maxAttempts: number, fn: () => Promise<T>): Promise<T> {
+        let lastError: unknown
+        for(let attempt = 1; attempt <= maxAttempts; attempt++){
+            try{
+                return await fn()
+            }
+            catch(e){
+                lastError = e
+                logger.warn(`[MainAgent:${this.runId}] ${label} failed (attempt ${attempt}/${maxAttempts}): ${e instanceof Error ? e.message : String(e)}`)
+                if(attempt < maxAttempts){
+                    await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
+                }
+            }
+        }
+        throw lastError
+    }
+
     async runLoop(): Promise<MainAgentResponse>{
         logger.info(`[MainAgent:${this.runId}] runLoop starting, maxIterations=${MAIN_AGENT_MAX_ITERATIONS}`)
         try{
@@ -59,7 +76,11 @@ export class MainAgent{
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
                 let shouldBreak = false
 
-                const response: LLMResponse = await this.callLLM(updatedSystemPrompt, this.userPrompt);
+                const response: LLMResponse = await this.withRetry(
+                    'MainLLMCall',
+                    MAIN_AGENT_LLM_RETRY_ATTEMPTS,
+                    () => this.callLLM(updatedSystemPrompt, this.userPrompt),
+                );
                 logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM stopReason=${response.stopReason}`)
 
                 iterationLog.push({

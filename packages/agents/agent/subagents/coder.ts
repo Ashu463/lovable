@@ -89,7 +89,7 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
             }
         }
         catch(e){
-            throw new Error("Error occurred in coder agent tool call")
+            throw new Error(`Coder agent tool call (${response.action}) failed: ${e instanceof Error ? e.message : String(e)}`)
         }
         return {
             success: false,

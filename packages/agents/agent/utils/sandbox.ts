@@ -127,8 +127,9 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                logger.error(`Failed to read ${path}: ${e}`)
-                throw new Error("Error occured while reading from sandbox file")
+                const reason = e instanceof Error ? e.message : String(e)
+                logger.error(`Failed to read ${path}: ${reason}`)
+                throw new Error(`Failed to read ${path}: ${reason}`)
             }
         }
         else if(payload.action === 'writeFile'){
@@ -142,8 +143,9 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                logger.error(`Failed to write ${path}: ${e}`)
-                throw new Error("Error occurred while executing write sandbox file")
+                const reason = e instanceof Error ? e.message : String(e)
+                logger.error(`Failed to write ${path}: ${reason}`)
+                throw new Error(`Failed to write ${path}: ${reason}`)
             }
         }
         else if(payload.action === 'editFile'){
@@ -160,8 +162,9 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                logger.error(`Failed to delete ${path}: ${e}`)
-                throw new Error("Error occurred while executing deleting sandbox file")
+                const reason = e instanceof Error ? e.message : String(e)
+                logger.error(`Failed to delete ${path}: ${reason}`)
+                throw new Error(`Failed to delete ${path}: ${reason}`)
             }
         }
         else if(payload.action === 'runCommand'){
