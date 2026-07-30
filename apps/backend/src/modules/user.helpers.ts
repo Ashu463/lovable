@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { requireJwtSecret } from "./middleware";
 
 export interface PublicUser {
   id: string;
@@ -20,7 +21,7 @@ export function isValidPassword(password: unknown): password is string {
 export function signUserToken(user: { id: string; email: string }): string {
   return jwt.sign(
     { id: user.id, email: user.email },
-    process.env.JWT_SECRET!,
+    requireJwtSecret(),
     { expiresIn: "7d" }
   );
 }

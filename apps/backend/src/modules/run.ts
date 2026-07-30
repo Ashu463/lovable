@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../prisma";
-import { auth, internalAuth } from "./middleware";
+import { auth, internalAuth, type AuthRequest } from "./middleware";
+import { authorizeProject } from "./authz";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
 import { logger } from "./utils";
@@ -18,7 +19,7 @@ POST   /projects/:projectId/:runId/todos/:taskId/summary → mark a Todo complet
 
 */
 
-runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs", auth, async (req: AuthRequest, res: Response) => {
     const projectId = req.params.projectId;
 
     if (typeof projectId !== "string") {
@@ -26,6 +27,9 @@ runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
             success: false,
             message: "Invalid projectId",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -57,7 +61,7 @@ runRouter.get("/:projectId/runs", auth, async (req: Request, res: Response) => {
 });
 
 
-runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/runs/:runId", auth, async (req: AuthRequest, res: Response) => {
     const { projectId, runId } = req.params;
 
     if (
@@ -68,6 +72,9 @@ runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Respons
             success: false,
             message: "Invalid params",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -98,7 +105,7 @@ runRouter.get("/:projectId/runs/:runId", auth, async (req: Request, res: Respons
 });
 
 
-runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/:runId/todos", auth, async (req: AuthRequest, res: Response) => {
     const { projectId, runId } = req.params;
     if (
         typeof projectId !== "string" ||
@@ -108,6 +115,9 @@ runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Respon
             success: false,
             message: "Invalid params",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
@@ -150,7 +160,7 @@ runRouter.get("/:projectId/:runId/todos", auth, async (req: Request, res: Respon
 });
 
 
-runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Response) => {
+runRouter.get("/:projectId/:runId/summaries", auth, async (req: AuthRequest, res: Response) => {
     const { projectId, runId } = req.params;
 
     if (
@@ -161,6 +171,9 @@ runRouter.get("/:projectId/:runId/summaries", auth, async (req: Request, res: Re
             success: false,
             message: "Invalid params",
         });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {

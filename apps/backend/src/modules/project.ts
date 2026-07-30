@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { prisma } from "../prisma";
 import { auth, type AuthRequest } from "./middleware";
-import type { Request, Response } from "express";
+import { authorizeProject, requireUserId } from "./authz";
+import type { Response } from "express";
 import { randomUUID } from "node:crypto";
 import { R2 } from "../../../../packages/agents/agent/services/file-storage/fileStorage";
 import { logger } from "./utils";
@@ -17,28 +18,26 @@ const projectRouter = Router();
 const r2 = new R2();
 
 projectRouter.get("/", auth, async (req: AuthRequest, res: Response) => {
-    const userId = req.user.id
+    const userId = requireUserId(req, res)
     if(!userId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
+        return
     }
-    await prisma.project.findMany({where: {userId: userId}})
     const projects = await prisma.project.findMany({where: {userId: userId}})
 
-    if(!projects){
-        res.status(404).json({success: false, message: `Projects not found`})
-    }
     res.status(200).json({success: true, data: projects})
 });
 
-projectRouter.post("/", async (req: Request, res: Response) => {
-    
-    const userId = req.body.userId
+projectRouter.post("/", auth, async (req: AuthRequest, res: Response) => {
+    // The owner comes from the verified token, never from the request body.
+    const userId = requireUserId(req, res)
+    if(!userId){
+        return
+    }
     // I could give it a name but another LLM call happens, 
     // rather do this: make this name field optional and 
     // while generating summary of whole task, ask LLM for the title 
     // and then update it.
-    const name = req.body.name 
+    const name = typeof req.body?.name === "string" ? req.body.name : null
 
     try{
         const saveIntoDB = await prisma.project.create({
@@ -53,28 +52,28 @@ projectRouter.post("/", async (req: Request, res: Response) => {
         }
         return res.status(201).json({success: true, message: `project created`, data: saveIntoDB})
     }catch(e){
-        return res.json(500).json({message: `Internal server error`})
+        logger.error(`Failed to create project: ${e}`)
+        return res.status(500).json({success: false, message: `Internal server error`})
     }
 })
-projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
+projectRouter.get("/:projectId", auth, async (req: AuthRequest, res: Response) => {
     const projectId = req.params.projectId
-    if(!projectId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
-    }
     if (typeof projectId !== "string") {
         return res.status(400).json({
             success: false,
             message: "Invalid projectId",
         });
     }
-    const projects = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
+    if(!(await authorizeProject(req, res, projectId))){
+        return
+    }
+    const project = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
 
-    res.status(200).json({success: true, data: projects})
+    res.status(200).json({success: true, data: project})
 });
-projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
+projectRouter.patch('/:projectId', auth, async (req: AuthRequest, res: Response) =>{
     const projectId = req.params.projectId
-    const { name, archived, starred, isComplex } = req.body;
+    const { name, archived, starred, isComplex } = req.body ?? {};
 
     const data: {
         name?: string;
@@ -83,57 +82,70 @@ projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
         isComplex?: boolean;
     } = {};
 
+    if (typeof projectId !== "string") {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid projectId",
+        });
+    }
+
     if (name !== undefined) {
+        if (typeof name !== "string") {
+            return res.status(400).json({success: false, message: "name must be a string"})
+        }
         data.name = name;
     }
 
     if (archived !== undefined) {
+        if (typeof archived !== "boolean") {
+            return res.status(400).json({success: false, message: "archived must be a boolean"})
+        }
         data.isArchived = archived;
     }
 
     if (starred !== undefined) {
+        if (typeof starred !== "boolean") {
+            return res.status(400).json({success: false, message: "starred must be a boolean"})
+        }
         data.isStarred = starred;
     }
 
     if (isComplex !== undefined) {
+        if (typeof isComplex !== "boolean") {
+            return res.status(400).json({success: false, message: "isComplex must be a boolean"})
+        }
         data.isComplex = isComplex;
     }
 
-    if (typeof projectId !== "string") {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid projectId",
-        });
+    if(!(await authorizeProject(req, res, projectId))){
+        return
     }
     try{
-        const project = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
-
-        if(!project){
-            return res.status(404).json({message: `Project not found`})
-        }
         const dbUpdate = await prisma.project.update({where: {id: projectId}, data: data})
         return res.status(200).json({success: true, data: dbUpdate})
     }
     catch(e){
-        return res.status(500).json({message: `Internal Server error`})
+        logger.error(`Failed to update project ${projectId}: ${e}`)
+        return res.status(500).json({success: false, message: `Internal Server error`})
     }
 })
 
-projectRouter.delete('/:projectId', auth, async (req: Request, res: Response) =>{
+projectRouter.delete('/:projectId', auth, async (req: AuthRequest, res: Response) =>{
     const projectId = req.params.projectId
-    if(!projectId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
-    }
     if (typeof projectId !== "string") {
         return res.status(400).json({
             success: false,
             message: "Invalid projectId",
         });
     }
-    const dbUpdate = await prisma.project.delete({where: {id: projectId}})
-    if(!dbUpdate){
-        return res.send(500).json({success: false, message: `Failed to update DB`})
+    if(!(await authorizeProject(req, res, projectId))){
+        return
+    }
+    try{
+        await prisma.project.delete({where: {id: projectId}})
+    } catch(e){
+        logger.error(`Failed to delete project ${projectId}: ${e}`)
+        return res.status(500).json({success: false, message: `Failed to update DB`})
     }
     res.status(200).json({success: true})
 });
@@ -142,19 +154,18 @@ projectRouter.delete('/:projectId', auth, async (req: Request, res: Response) =>
 // reads the durable copy rather than reconnecting to a possibly-dead sandbox.
 projectRouter.get("/:projectId/files", auth, async (req: AuthRequest, res: Response) => {
     const { projectId } = req.params;
-    const userId = req.user.id;
 
     if (typeof projectId !== "string") {
         return res.status(400).json({ success: false, message: "Invalid projectId" });
+    }
+    if (!(await authorizeProject(req, res, projectId))) {
+        return;
     }
 
     try {
         const project = await prisma.project.findUnique({ where: { id: projectId } });
         if (!project) {
             return res.status(404).json({ success: false, message: "Project not found" });
-        }
-        if (project.userId !== userId) {
-            return res.status(403).json({ success: false, message: "Not your project" });
         }
 
         const prefix = r2.filesPrefix(project.userId, projectId);

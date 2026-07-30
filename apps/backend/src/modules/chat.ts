@@ -1,6 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { auth } from "./middleware";
+import { auth, type AuthRequest } from "./middleware";
+import { authorizeProject, authorizeRun, requireUserId } from "./authz";
 import { randomUUIDv7 } from "bun";
 import { prisma } from "../prisma";
 import { redis } from "./redis";
@@ -26,14 +27,29 @@ GET    /chat/:projectId/history       → all past runs' events, for reload
 chatRouter.post('/', auth, createRun)
 chatRouter.post('/:projectId', auth, createRun)
 
-async function createRun(req: Request, res: Response){
-    const userId = req.headers.userid
+async function createRun(req: AuthRequest, res: Response){
+    // Identity comes from the verified JWT, not a client-supplied header.
+    const userId = requireUserId(req, res)
+    if(!userId){
+        return
+    }
     let projectId = req.params?.projectId
-    const userPrompt = req.body.userPrompt
+    const userPrompt = req.body?.userPrompt
     const existingSandboxId = req.body?.sandboxId
 
-    if(typeof userId !== 'string' || typeof userPrompt !== 'string'){
-        return res.status(400).json({success: false, message: `Invalid userid or userPrompt`})
+    if(typeof userPrompt !== 'string' || userPrompt.length === 0){
+        return res.status(400).json({success: false, message: `Invalid userPrompt`})
+    }
+    if(existingSandboxId !== undefined && existingSandboxId !== null && typeof existingSandboxId !== 'string'){
+        return res.status(400).json({success: false, message: `Invalid sandboxId`})
+    }
+    if(projectId !== undefined){
+        if(typeof projectId !== 'string'){
+            return res.status(400).json({success: false, message: `Invalid projectId`})
+        }
+        if(!(await authorizeProject(req, res, projectId))){
+            return
+        }
     }
     if(!projectId){
         const project = await prisma.project.create({data: {
@@ -91,10 +107,13 @@ async function createRun(req: Request, res: Response){
 // Lets the frontend reconstruct a run's UI state from just the runId in the
 // URL (e.g. /w/:runId after a page refresh) — RunProvider's state otherwise
 // only lives in memory for the current tab.
-chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
+chatRouter.get('/:runId/state', auth, async (req: AuthRequest, res: Response) => {
     const { runId } = req.params
     if(typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Invalid runId type`})
+    }
+    if(!(await authorizeRun(req, res, runId))){
+        return
     }
 
     const run = await prisma.run.findUnique({where: {id: runId}})
@@ -143,17 +162,26 @@ chatRouter.get('/:runId/state', auth, async (req: Request, res: Response) => {
     })
 })
 
-chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: Response) => {
-    const userId = req.headers.userid
+chatRouter.post('/:projectId/:runId/continue', auth, async (req: AuthRequest, res: Response) => {
+    const userId = requireUserId(req, res)
+    if(!userId){
+        return
+    }
     const { projectId, runId } = req.params
     const answers: Answers[] = req.body?.answers ?? []
     const selectedDesignId: string | undefined = req.body?.selectedDesignId
 
-    if(typeof userId !== 'string' || typeof projectId !== 'string' || typeof runId !== 'string'){
+    if(typeof projectId !== 'string' || typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Invalid params`})
     }
     if(!Array.isArray(answers)){
         return res.status(400).json({success: false, message: `answers must be an array (send [] if none)`})
+    }
+    if(selectedDesignId !== undefined && typeof selectedDesignId !== 'string'){
+        return res.status(400).json({success: false, message: `Invalid selectedDesignId`})
+    }
+    if(!(await authorizeProject(req, res, projectId))){
+        return
     }
 
     const run = await prisma.run.findFirst({where: {id: runId, projectId}})
@@ -196,10 +224,13 @@ chatRouter.post('/:projectId/:runId/continue', auth, async (req: Request, res: R
 })
 
 // SSE frontend --> Backend
-chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
+chatRouter.get('/:runId/stream', auth, async (req: AuthRequest, res: Response) =>{
     const {runId} = req.params
     if(typeof runId !== 'string'){
         return res.status(400).json({message: 'runId should be of string type'})
+    }
+    if(!(await authorizeRun(req, res, runId))){
+        return
     }
 
     // Validate + fetch before committing to SSE headers, so a bad/missing
@@ -268,11 +299,14 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
 
 })
 
-chatRouter.get('/:projectId/history', auth, async (req: Request, res: Response) =>{
+chatRouter.get('/:projectId/history', auth, async (req: AuthRequest, res: Response) =>{
 
     const {projectId} = req.params
     if(typeof projectId !== 'string'){
         return res.status(400).json({message: `Invalid projectId type`})
+    }
+    if(!(await authorizeProject(req, res, projectId))){
+        return
     }
     const runs = await prisma.run.findMany({
         where: { projectId: projectId },

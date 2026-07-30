@@ -1,12 +1,13 @@
 import { E2BSandbox } from './sandbox'
 
-console.log("E2B:", process.env.E2B_API_KEY);
+// Presence only — never print credential values, even truncated.
 console.log({
-  account: process.env.R2_ACCOUNT_ID,
-  endpoint: process.env.R2_ENDPOINT,
-  bucket: process.env.R2_BUCKET_NAME,
-  access: process.env.R2_ACCESS_KEY_ID,
-  secret: process.env.R2_SECRET_ACCESS_KEY?.slice(0, 5) + "...",
+  e2bKey: Boolean(process.env.E2B_API_KEY),
+  r2Account: Boolean(process.env.R2_ACCOUNT_ID),
+  r2Endpoint: Boolean(process.env.R2_ENDPOINT),
+  r2Bucket: Boolean(process.env.R2_BUCKET_NAME),
+  r2AccessKey: Boolean(process.env.R2_ACCESS_KEY_ID),
+  r2SecretKey: Boolean(process.env.R2_SECRET_ACCESS_KEY),
 });
 const sanbox: E2BSandbox = await E2BSandbox.StartSandbox("ashu2", "p1")
 // console.log(await sanbox.Execute(sanbox.sandboxId, {action: 'runCommand', command: "cd /home/user && find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' 2>/dev/null | sort"}))

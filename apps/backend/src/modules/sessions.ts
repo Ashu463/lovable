@@ -19,6 +19,9 @@ sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Res
     if(typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Invalid runId type`})
     }
+    if(typeof event?.type !== 'string'){
+        return res.status(400).json({success: false, message: `Event needs a type`})
+    }
 
     try{
         await prisma.runEvent.create({data: {
@@ -64,6 +67,13 @@ sessionRouter.post('/:runId/state', internalAuth, async (req: Request, res: Resp
 
     if(typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Invalid runId type`})
+    }
+    if(
+        (context_snapshot !== undefined && typeof context_snapshot !== 'string') ||
+        (session_snapshot !== undefined && typeof session_snapshot !== 'string') ||
+        (iteration !== undefined && typeof iteration !== 'number')
+    ){
+        return res.status(400).json({success: false, message: `Invalid snapshot payload`})
     }
 
     try{

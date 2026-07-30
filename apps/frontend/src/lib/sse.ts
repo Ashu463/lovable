@@ -15,9 +15,7 @@ export function openEventStream(path: string, handlers: SSEHandlers): () => void
   (async () => {
     try {
       const res = await fetch(path, {
-        headers: session
-          ? { Authorization: `Bearer ${session.token}`, userid: session.user.id }
-          : {},
+        headers: session ? { Authorization: `Bearer ${session.token}` } : {},
         signal: controller.signal,
       });
       if (!res.ok || !res.body) {

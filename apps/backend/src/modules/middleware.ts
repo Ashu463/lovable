@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { timingSafeEqual } from "node:crypto";
 import jwt from "jsonwebtoken";
 
 export interface AuthRequest extends Request {
@@ -6,6 +7,35 @@ export interface AuthRequest extends Request {
     id: string;
     email: string;
   };
+  // Set for trusted service-to-service calls (agent worker), which have no
+  // end user in context and therefore skip per-user ownership checks.
+  isInternal?: boolean;
+}
+
+function constantTimeEquals(a: string, b: string): boolean {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) {
+    return false;
+  }
+  return timingSafeEqual(aBuf, bBuf);
+}
+
+function isInternalToken(token: string): boolean {
+  const expected = process.env.INTERNAL_SERVICE_TOKEN;
+  if (!expected) {
+    return false;
+  }
+  return constantTimeEquals(token, expected);
+}
+
+function bearerToken(req: Request): string | undefined {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return undefined;
+  }
+  const token = authHeader.slice("Bearer ".length).trim();
+  return token.length > 0 ? token : undefined;
 }
 
 export function auth(
@@ -13,25 +43,24 @@ export function auth(
   res: Response,
   next: NextFunction
 ) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  const token = bearerToken(req);
+  if (!token) {
     return res.status(401).json({
       message: "Unauthorized",
     });
   }
 
-  const token = authHeader.split(" ")[1];
-
   // The agent worker calls these same /api/* routes as a trusted system
   // caller (no end user in context) — a shared secret instead of a JWT.
-  if (token === process.env.INTERNAL_SERVICE_TOKEN) {
+  if (isInternalToken(token)) {
+    req.isInternal = true;
     return next();
   }
 
   try {
     const payload = jwt.verify(
       token,
-      process.env.JWT_SECRET!
+      requireJwtSecret()
     ) as {
       id: string;
       email: string;
@@ -50,18 +79,37 @@ export function auth(
 // For service-to-service calls from the agent worker (session state/event
 // persistence) — a shared secret, not a user JWT.
 export function internalAuth(
-  req: Request,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : undefined;
+  const token = bearerToken(req);
 
-  if (!token || token !== process.env.INTERNAL_SERVICE_TOKEN) {
+  if (!token || !isInternalToken(token)) {
     return res.status(401).json({
       message: "Unauthorized",
     });
   }
 
+  req.isInternal = true;
   next();
+}
+
+export function requireJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not configured");
+  }
+  return secret;
+}
+
+// Fail fast on boot rather than silently serving an unauthenticatable API
+// (missing JWT_SECRET) or one whose internal routes can never be reached.
+export function assertAuthConfig() {
+  const missing = ["JWT_SECRET", "INTERNAL_SERVICE_TOKEN"].filter(
+    (key) => !process.env[key],
+  );
+  if (missing.length > 0) {
+    throw new Error(`Missing required auth env vars: ${missing.join(", ")}`);
+  }
 }
