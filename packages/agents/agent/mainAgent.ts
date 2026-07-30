@@ -2,7 +2,7 @@ import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
-import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
+import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
 import { webSearch } from "./MCPs/tavily"
@@ -50,11 +50,11 @@ export class MainAgent{
         return `${global}\n\n${role}\n\n${taskCatalog}`
     }
 
-    private async withRetry<T>(label: string, maxAttempts: number, fn: () => Promise<T>): Promise<T> {
+    private async withRetry<T>(label: string, maxAttempts: number, fn: (priorError?: string) => Promise<T>): Promise<T> {
         let lastError: unknown
         for(let attempt = 1; attempt <= maxAttempts; attempt++){
             try{
-                return await fn()
+                return await fn(lastError instanceof Error ? lastError.message : lastError !== undefined ? String(lastError) : undefined)
             }
             catch(e){
                 lastError = e
@@ -79,13 +79,13 @@ export class MainAgent{
                 const response: LLMResponse = await this.withRetry(
                     'MainLLMCall',
                     MAIN_AGENT_LLM_RETRY_ATTEMPTS,
-                    () => this.callLLM(updatedSystemPrompt, this.userPrompt),
+                    (priorError) => this.callLLM(updatedSystemPrompt, this.userPrompt, priorError),
                 );
                 logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM stopReason=${response.stopReason}`)
 
                 iterationLog.push({
                     role: "assistant",
-                    content: response.content,
+                    content: response.content ?? "",
                     timestamp: new Date().toISOString()
                 })
 
@@ -199,10 +199,20 @@ export class MainAgent{
         }
     }
 
-    async callLLM(systemPrompt: string, userPrompt: string): Promise<LLMResponse>{
+    async callLLM(systemPrompt: string, userPrompt: string, priorError?: string): Promise<LLMResponse>{
         try{
+            // Feed the previous attempt's validation failure back in as a one-off
+            // correction — appended here, not to this.context, so a successful
+            // retry doesn't leave a permanent "I messed up" note in history.
+            const context = priorError
+                ? [...this.context, {
+                    role: 'system' as const,
+                    content: `Your previous response failed schema validation: ${priorError}. Correct this in your next response — e.g. if you are making a tool call, "content" can be left unset, it does not need to be a non-empty string.`,
+                    timestamp: new Date().toISOString(),
+                }]
+                : this.context
 
-            const response: LLMResponse = await b.MainLLMCall(systemPrompt, userPrompt, this.context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
+            const response: LLMResponse = await b.MainLLMCall(systemPrompt, userPrompt, context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
             return response
         }
         catch(e){
@@ -234,8 +244,13 @@ export class MainAgent{
         return MainAgent.encoder.encode(context.map(m => m.content).join('')).length
     }
 
+    private r2Key(path: string): string {
+        const abs = path.startsWith('/') ? path : `${PROJECT_ROOT}/${path.replace(/^\.\//, '')}`
+        return this.r2.filesPrefix(this.userId, this.projectId) + abs.replace(SANDBOX_HOME, '')
+    }
+
     async syncToR2(data: SyncR2Request){
-        const key = this.r2.filesPrefix(this.userId, this.projectId)
+        const key = this.r2Key(data.path)
 
         if(data.action === 'write'){
             try{

@@ -282,7 +282,7 @@ export interface ItemRes {
 
 export interface LLMResponse {
   stopReason: "completed" | "aborted" | "toolCall"
-  content: string
+  content?: string | null
   toolCall?: ToolCall | null
   questions?: Question[] | null
   

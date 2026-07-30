@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS } from '../config/systemConfig';
 import { logger } from './logger';
 
 export interface ExecuteRes{
@@ -64,6 +64,19 @@ export class E2BSandbox{
                     path: `${SANDBOX_HOME}${relativePath}`,
                     content
                 })
+            }
+            const hasDeps = await this.sandbox.commands.run(
+                `test -d ${PROJECT_ROOT}/node_modules && echo yes || echo no`
+            )
+            if(hasDeps.stdout.trim() === 'no'){
+                logger.info('node_modules missing after restore, installing dependencies')
+                const install = await this.sandbox.commands.run('npm install', {
+                    cwd: PROJECT_ROOT,
+                    timeoutMs: RUN_COMMAND_TIMEOUT_MS
+                })
+                if(install.exitCode !== 0){
+                    logger.error(`npm install after restore failed: ${install.stderr}`)
+                }
             }
 
             logger.info('Restore complete')
@@ -250,22 +263,60 @@ export class E2BSandbox{
         }
     }
 
+    // Probes with the public E2B hostname in the Host header, which is what the
+    // browser's iframe actually sends. Probing plain localhost is misleading:
+    // vite always allows localhost, so it answers 200 even while rejecting the
+    // proxied host with a 403. Returns '000' when nothing is listening.
+    private async probePreviewStatus(): Promise<string>{
+        const probe = await this.sandbox.commands.run(
+            `curl -s -o /dev/null -w '%{http_code}' -H 'Host: ${this.sandbox.getHost(PREVIEW_PORT)}' http://localhost:${PREVIEW_PORT} || true`,
+            { cwd: PROJECT_ROOT }
+        )
+        return probe.stdout.trim()
+    }
+
+    private isServing(status: string): boolean {
+        return status !== '' && status !== '000' && status !== '403'
+    }
+
     async GetPreviewUrl(): Promise<string>{
+        const url = `https://${this.sandbox.getHost(PREVIEW_PORT)}`
         try{
-            const probe = await this.sandbox.commands.run(
-                "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000 || true",
-                { cwd: PROJECT_ROOT }
-            )
-            if(probe.stdout.trim() === '000'){
-                await this.sandbox.commands.run("npm run dev", {
-                    cwd: PROJECT_ROOT,
-                    background: true,
-                });
-                await new Promise((resolve) => setTimeout(resolve, 3000))
+            const status = await this.probePreviewStatus()
+            if(this.isServing(status)) return url
+
+            // A 403 means a dev server is up but was started without the
+            // allowedHosts env var below (e.g. by the agent itself, or by an
+            // earlier run) — it will never accept the proxied host, so replace it.
+            if(status === '403'){
+                logger.info('Dev server is rejecting the proxied host, restarting it with allowedHosts set')
+                await this.sandbox.commands.run('pkill -f vite || true', { cwd: PROJECT_ROOT })
             }
 
-            return `https://${this.sandbox.getHost(3000)}` // or 5173, 8080, etc.
+            // --host is required because vite's default bind (127.0.0.1) is
+            // unreachable through E2B's proxy. The env var is vite's own escape
+            // hatch for proxied setups: without it server.allowedHosts answers
+            // the E2B hostname with a 403 "This host is not allowed", which
+            // renders as a blank preview. A leading dot allows all subdomains,
+            // covering every sandbox id and port without editing vite.config.ts.
+            // --strictPort so a leftover listener surfaces as a startup failure
+            // instead of vite silently drifting to 5174 and away from getHost().
+            await this.sandbox.commands.run(
+                `npm run dev -- --host 0.0.0.0 --strictPort`,
+                {
+                    cwd: PROJECT_ROOT,
+                    background: true,
+                    envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' }
+                }
+            )
 
+            const deadline = Date.now() + MAX_BOOT_WAIT_MS
+            while(Date.now() < deadline){
+                await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+                if(this.isServing(await this.probePreviewStatus())) return url
+            }
+
+            throw new Error(`dev server did not start listening on port ${PREVIEW_PORT} within ${MAX_BOOT_WAIT_MS}ms`)
         }catch(e){
             logger.error(`Error occurred while running server ${e}`)
             throw new Error(`Error occurred while starting the preview server: ${e instanceof Error ? e.message : String(e)}`)

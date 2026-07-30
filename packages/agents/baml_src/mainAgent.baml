@@ -46,10 +46,10 @@ class Tavily {
 }
 class LLMResponse{
     stopReason "completed" | "aborted" | "toolCall"
-    content string
+    content string? // narration — leave unset on a pure tool call, no need to force empty string
     toolCall ToolCall?
     questions Question[]?
-}   
+}
 
 function MainLLMCall(
   systemPrompt: string, 

@@ -412,8 +412,9 @@ export class OrchestratorAgent{
         }
         // Start your dev server first (e.g. npm run dev)
         try{
-
+            logger.info(`trying to hit sandbox preview url`)
             const previewUrl = await this.sandbox.GetPreviewUrl()
+            logger.info(``)
             const result: OrchestratorResponse = {
                 status: "completed",
                 design: this.selectedDesign,

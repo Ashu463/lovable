@@ -1,8 +1,11 @@
 export const PORT = 3000
 export const SANDBOX_HOME = '/home/user'
 export const PROJECT_ROOT = `${SANDBOX_HOME}/app`
-export const MAX_BOOT_WAIT_MS = 20000
+export const MAX_BOOT_WAIT_MS = 60000
 export const POLL_INTERVAL_MS = 500
+// react-template's `dev` script is a bare `vite`, whose own default port is
+// 5173 — this just names that default, it doesn't force a different one.
+export const PREVIEW_PORT = 5173
 export const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:3000`
 export const REDIS_HOST = process.env.REDIS_HOST ?? "redis"
 export const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6379)

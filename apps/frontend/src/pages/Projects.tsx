@@ -13,8 +13,11 @@ interface ProjectRow {
   createdAt: string;
 }
 
-interface RunRow {
+interface OpenedProject {
   id: string;
+  latestRunId: string | null;
+  sandboxId: string | null;
+  previewUrl: string | null;
 }
 
 export function Projects() {
@@ -52,15 +55,15 @@ export function Projects() {
     setOpenError(null);
     setOpeningId(project.id);
     try {
-      // The history endpoint returns runs newest-first — the latest run's id
-      // is what /w/:runId needs, since the workspace is keyed by run, not project.
-      const res = await api.get<{ success: boolean; data: RunRow[] }>(`/api/chat/${project.id}/history`);
-      const latest = res.data[0];
-      if (!latest) {
+      // Boots the project's sandbox back up (restoring files from R2 if it died)
+      // and refreshes its preview URL before we land on the workspace, which is
+      // keyed by runId rather than projectId.
+      const res = await api.get<{ success: boolean; data: OpenedProject }>(`/api/project/${project.id}/session`);
+      if (!res.data.latestRunId) {
         setOpenError("This project doesn't have a build yet.");
         return;
       }
-      navigate(`/w/${latest.id}`);
+      navigate(`/w/${res.data.latestRunId}`);
     } catch (err) {
       setOpenError(err instanceof ApiError ? err.message : "Couldn't open this project.");
     } finally {

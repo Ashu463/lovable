@@ -4,11 +4,13 @@ import { auth, type AuthRequest } from "./middleware";
 import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import { R2 } from "../../../../packages/agents/agent/services/file-storage/fileStorage";
+import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
 import { logger } from "./utils";
 /*Routes:
 GET    /projects                                  → list projects for authed user
 POST   /projects                                  → create project
-GET    /projects/:projectId                       → project metadata
+GET    /projects/:projectId                       → project metadata (cheap, also used internally)
+GET    /projects/:projectId/session               → boots sandbox + live previewUrl
 PATCH  /projects/:projectId                       → rename/archive
 DELETE /projects/:projectId
 GET    /projects/:projectId/files                 → flat list of {path, content} synced from the sandbox
@@ -56,21 +58,92 @@ projectRouter.post("/", async (req: Request, res: Response) => {
         return res.json(500).json({message: `Internal server error`})
     }
 })
-projectRouter.get("/:projectId", auth, async (req: Request, res: Response) => {
+
+// Plain metadata — must stay cheap. The orchestrator hits this on every run's
+// Bootstrap() via internalAuthHeader to read the cached isComplex verdict, so no
+// sandbox work belongs here; that lives in GET /:projectId/session below.
+projectRouter.get("/:projectId", auth, async (req: AuthRequest, res: Response) => {
     const projectId = req.params.projectId
-    if(!projectId){
-        
-        res.status(401).json({success: false, message: `UserId not given`})
-    }
+
     if (typeof projectId !== "string") {
         return res.status(400).json({
             success: false,
             message: "Invalid projectId",
         });
     }
-    const projects = await prisma.project.findUniqueOrThrow({where: {id: projectId}})
 
-    res.status(200).json({success: true, data: projects})
+    const project = await prisma.project.findUnique({where: {id: projectId}})
+    if(!project){
+        return res.status(404).json({success: false, message: `Project not found`})
+    }
+    if(req.user && project.userId !== req.user.id){
+        return res.status(403).json({success: false, message: `Not your project`})
+    }
+
+    res.status(200).json({success: true, data: project})
+});
+
+projectRouter.get("/:projectId/session", auth, async (req: AuthRequest, res: Response) => {
+    const projectId = req.params.projectId
+    const userId = req.user?.id
+
+    if (typeof projectId !== "string") {
+        return res.status(400).json({ success: false, message: "Invalid projectId" });
+    }
+
+    const project = await prisma.project.findUnique({where: {id: projectId}})
+    if(!project){
+        return res.status(404).json({success: false, message: `Project not found`})
+    }
+    if(userId && project.userId !== userId){
+        return res.status(403).json({success: false, message: `Not your project`})
+    }
+
+    const latestRun = await prisma.run.findFirst({
+        where: { projectId },
+        orderBy: { startedAt: 'desc' },
+    })
+
+    let previewUrl: string | null = null
+    let sandboxId: string | null = latestRun?.sandboxId ?? null
+
+    try{
+        const sandbox = await E2BSandbox.StartSandbox(project.userId, projectId, latestRun?.sandboxId ?? undefined)
+        sandboxId = sandbox.sandboxId
+        previewUrl = await sandbox.GetPreviewUrl()
+
+        if(latestRun && sandbox.sandboxId !== latestRun.sandboxId){
+            await prisma.run.update({where: {id: latestRun.id}, data: {sandboxId: sandbox.sandboxId}})
+        }
+
+        // Keep the stored run_completed event in sync so /chat/:runId/state (which
+        // Workspace reads on load) hands back the refreshed URL, not the dead one.
+        if(latestRun?.status === 'COMPLETED'){
+            const event = await prisma.runEvent.findFirst({
+                where: { runId: latestRun.id, type: 'run_completed' },
+                orderBy: { createdAt: 'desc' },
+            })
+            if(event?.content){
+                const parsed = JSON.parse(event.content)
+                if(parsed?.result){
+                    parsed.result.previewUrl = previewUrl
+                    await prisma.runEvent.update({where: {id: event.id}, data: {content: JSON.stringify(parsed)}})
+                }
+            }
+        }
+    } catch(e){
+        logger.error(`Failed to open sandbox for project ${projectId}: ${e}`)
+    }
+
+    res.status(200).json({
+        success: true,
+        data: {
+            ...project,
+            latestRunId: latestRun?.id ?? null,
+            sandboxId,
+            previewUrl,
+        },
+    })
 });
 projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
