@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot src/index.ts",
-    "worker": "bun --hot src/modules/worker.ts"
+    "worker": "bun --hot src/modules/worker.ts",
+    "test": "bun test src"
   },
   "devDependencies": {
     "@types/bun": "latest",
