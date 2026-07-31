@@ -49,22 +49,31 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
                 }
             }
             else if(response.action === 'research'){
-                let researchResponse: string = ""
-                if(response.searchType.type === 'webSearch'){
-                    researchResponse = await this.researcher.WebSearch(response.searchType.query, response.searchType.maxResults)
+                try{
+                    let researchResponse: string = ""
+                    if(response.searchType.type === 'webSearch'){
+                        researchResponse = await this.researcher.WebSearch(response.searchType.query, response.searchType.maxResults)
+                    }
+                    else if(response.searchType.type === 'webScrape'){
+                        researchResponse = await this.researcher.WebScrape(response.searchType.urls, response.searchType.maxPages)
+                    }
+                    else if(response.searchType.type === 'docsSearch'){
+                        researchResponse = await fetchDocs(response.searchType.library, response.searchType.query)
+                    }
+                    else{
+                        researchResponse = "Invalid research type"
+                    }
+                    return {
+                        success: true,
+                        response: researchResponse
+                    }
                 }
-                else if(response.searchType.type === 'webScrape'){
-                    researchResponse = await this.researcher.WebScrape(response.searchType.urls, response.searchType.maxPages)
-                }
-                else if(response.searchType.type === 'docsSearch'){
-                    researchResponse = await fetchDocs(response.searchType.library, response.searchType.query)
-                }
-                else{
-                    throw new Error("Invalid research type")
-                }
-                return {
-                    success: true,
-                    response: researchResponse
+                catch(e){
+                    const reason = e instanceof Error ? e.message : String(e)
+                    return {
+                        success: false,
+                        response: `Research (${response.searchType.type}) unavailable: ${reason}. Continue without it, or try a different research type.`
+                    }
                 }
             }
             else if(response.action === 'getSkill'){

@@ -3,13 +3,20 @@ import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type R
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
-import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH } from "../config/systemConfig"
+import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS } from "../config/systemConfig"
+
+function truncate(text: string): string {
+    if (text.length <= TOOL_RESULT_MAX_CHARS) return text
+    const half = Math.floor(TOOL_RESULT_MAX_CHARS / 2)
+    const omitted = text.length - TOOL_RESULT_MAX_CHARS
+    return `${text.slice(0, half)}\n... [${omitted} chars omitted, re-read the file if you need this region] ...\n${text.slice(-half)}`
+}
 
 function extractResultText(toolRes: any): string {
-    if (typeof toolRes?.response === 'string') return toolRes.response
-    if (typeof toolRes?.editedFiles === 'string') return toolRes.editedFiles
-    if (typeof toolRes?.toolResult === 'string') return toolRes.toolResult
-    return JSON.stringify(toolRes)
+    if (typeof toolRes?.response === 'string') return truncate(toolRes.response)
+    if (typeof toolRes?.editedFiles === 'string') return truncate(toolRes.editedFiles)
+    if (typeof toolRes?.toolResult === 'string') return truncate(toolRes.toolResult)
+    return truncate(JSON.stringify(toolRes))
 }
 
 function summarizeTurn(res: any, toolRes: any): Message {

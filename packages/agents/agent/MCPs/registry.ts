@@ -16,13 +16,13 @@ const SERVER_CONFIGS: Record<string, ServerConfig> = {
         env: process.env.TAVILY_API_KEY
     },
     figma: {
-        command: "npmx",
+        command: "npx",
         args: ["-y", "figma-developer-mcp", "--studio"],
         env: process.env.FIGMA_API_KEY
     },
     context7: {
         command: "npx",
-        args: ["-y", "@upstash/context-7-mcp@latest"],
+        args: ["-y", "@upstash/context7-mcp@latest"],
         env: process.env.CONTEXT7_API_KEY
     },
     stitch: {
@@ -63,9 +63,35 @@ async function getClient(serverName: string) : Promise<Client>{
     return client
 }
 
+const toolNames: Map<string, string[]> = new Map()
+
+export async function listServerTools(server: string): Promise<string[]> {
+    const client = await getClient(server)
+
+    if(!toolNames.has(server)){
+        const { tools } = await client.listTools()
+        toolNames.set(server, tools.map(t => t.name))
+    }
+    return toolNames.get(server)!
+}
+
+async function resolveToolName(server: string, requested: string): Promise<string> {
+    const available = await listServerTools(server)
+
+    if(available.includes(requested)) return requested
+
+    const normalize = (name: string) => name.toLowerCase().replace(/[-_\s]/g, '')
+    const match = available.find(name => normalize(name) === normalize(requested))
+    if(match) return match
+
+    throw new Error(
+        `MCP server "${server}" exposes no tool matching "${requested}". Available: ${available.join(', ') || '(none)'}`
+    )
+}
+
 export async function callMCP(server: string, tool: string, args: Record<string, unknown>): Promise<string>{
     const client = await getClient(server)
-    const result = await client.callTool({name: tool, arguments: args})
+    const result = await client.callTool({name: await resolveToolName(server, tool), arguments: args})
 
     const  content = result.content as {type: string, text: string}[]
     return content[0]?.text ?? ""

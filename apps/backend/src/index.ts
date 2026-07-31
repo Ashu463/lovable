@@ -1,3 +1,10 @@
+// Must run before anything pulls in baml_client. At INFO, BAML dumps the full
+// prompt and full reply for every call — that was ~180 log lines per coder
+// turn and the bulk of an 86k-line run log. WARN keeps failures and parse
+// errors, which are the parts worth reading. Override with BAML_LOG=info when
+// you actually need to inspect a prompt.
+process.env.BAML_LOG ??= 'warn'
+
 import express from 'express'
 import cors from 'cors'
 import projectRouter from './modules/project';

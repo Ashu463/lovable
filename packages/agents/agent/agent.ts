@@ -361,7 +361,6 @@ export class OrchestratorAgent{
             let summaries: string[] = []
 
             for(let i = 0 ; i < sequentialTodos.length; i++){
-                console.log("logger instance", logger.level);
                 const todo = sequentialTodos[i];
                 logger.info(`Task ${todo?.id}: ${todo?.task}`)
                 // #TODO: Failure handling of planner

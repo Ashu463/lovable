@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
 import { logger } from './logger';
 
 export interface ExecuteRes{
@@ -14,11 +14,13 @@ export class E2BSandbox{
     private userId: string
     private projectId: string
     private sandbox: Sandbox
+    private lastKeepAlive: number
     r2 = new R2()
     private constructor(sandbox: Sandbox, userId: string, projectId: string){
         this.sandbox = sandbox
         this.userId = userId
         this.projectId = projectId
+        this.lastKeepAlive = Date.now()
     }
     get sandboxId(): string{
         return this.sandbox.sandboxId
@@ -26,7 +28,7 @@ export class E2BSandbox{
 
     async Connect(id: string){
         const sandbox = await Sandbox.connect(id)
-        // await sandbox.setTimeout(60*60*1000)
+        await sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
         return sandbox
     }
     static async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<E2BSandbox> {
@@ -112,14 +114,45 @@ export class E2BSandbox{
         return `${PROJECT_ROOT}/${path.replace(/^\.\//, '')}`
     }
 
+    private async keepAlive(): Promise<void> {
+        if (Date.now() - this.lastKeepAlive < SANDBOX_KEEPALIVE_INTERVAL_MS) return
+        this.lastKeepAlive = Date.now()
+        try {
+            await this.sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
+        } catch (e) {
+            logger.warn(`Failed to refresh sandbox timeout: ${e instanceof Error ? e.message : String(e)}`)
+        }
+    }
+
+    private static isSandboxGone(reason: string): boolean {
+        return /sandbox was not found|sandbox is not running|sandbox timeout/i.test(reason)
+    }
+
+    private toolFailure(action: string, path: string, reason: string): ExecuteRes {
+        logger.error(`Failed to ${action} ${path}: ${reason}`)
+        if (E2BSandbox.isSandboxGone(reason)) throw new Error(`Sandbox unavailable: ${reason}`)
+        return {
+            success: false,
+            content: `Failed to ${action} ${path}: ${reason}`
+        }
+    }
+
     async getRepoTree(): Promise<string>{
+        const prunes = [...REPO_TREE_PRUNE_DIRS.map(d => `-name '${d}'`), `-name '@*'`].join(' -o ')
         try{
             const result = await this.sandbox.commands.run(
-                "find . -type f -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' -not -path '*/build/*' -not -name '.env'",
+                `find . \\( ${prunes} \\) -prune -o -type f -not -name '.env' -print`,
                 { cwd: PROJECT_ROOT }
             )
-            return result.stdout
 
+            const entries = result.stdout.split('\n').map(l => l.trim()).filter(Boolean)
+            if(entries.length <= REPO_TREE_MAX_ENTRIES) return entries.join('\n')
+
+            logger.warn(`repoTree has ${entries.length} entries, truncating to ${REPO_TREE_MAX_ENTRIES} — likely dependency spill in the project root`)
+            return [
+                ...entries.slice(0, REPO_TREE_MAX_ENTRIES),
+                `... [${entries.length - REPO_TREE_MAX_ENTRIES} more files omitted; use RunCommand with find/ls to explore a specific directory]`
+            ].join('\n')
         }
         catch(e){
             logger.error(`Failed to generate repo tree: ${e}`)
@@ -128,7 +161,7 @@ export class E2BSandbox{
     }
     
     async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
-        // const homeDir = 
+        await this.keepAlive()
 
         if(payload.action === 'read'){
             const path = this.resolvePath(payload.path)
@@ -140,9 +173,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                const reason = e instanceof Error ? e.message : String(e)
-                logger.error(`Failed to read ${path}: ${reason}`)
-                throw new Error(`Failed to read ${path}: ${reason}`)
+                return this.toolFailure('read', path, e instanceof Error ? e.message : String(e))
             }
         }
         else if(payload.action === 'writeFile'){
@@ -156,9 +187,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                const reason = e instanceof Error ? e.message : String(e)
-                logger.error(`Failed to write ${path}: ${reason}`)
-                throw new Error(`Failed to write ${path}: ${reason}`)
+                return this.toolFailure('write', path, e instanceof Error ? e.message : String(e))
             }
         }
         else if(payload.action === 'editFile'){
@@ -175,9 +204,7 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                const reason = e instanceof Error ? e.message : String(e)
-                logger.error(`Failed to delete ${path}: ${reason}`)
-                throw new Error(`Failed to delete ${path}: ${reason}`)
+                return this.toolFailure('delete', path, e instanceof Error ? e.message : String(e))
             }
         }
         else if(payload.action === 'runCommand'){
@@ -187,9 +214,6 @@ export class E2BSandbox{
                     cwd,
                     timeoutMs: RUN_COMMAND_TIMEOUT_MS
                 })
-                // e2b resolves here only on exit 0 — a non-zero exit throws
-                // CommandExitError instead, so this branch is actually dead,
-                // but kept in case that ever changes.
                 return {
                     success: true,
                     content: cmdRes.stderr + cmdRes.stdout,
@@ -198,12 +222,6 @@ export class E2BSandbox{
                 }
             }
             catch(e){
-                // CommandExitError carries the actual stdout/stderr/exitCode of
-                // the failed command — that's exactly what the coder/debugger
-                // needs to fix it. Surface it as a normal failed ExecuteRes
-                // instead of swallowing it into a generic thrown Error; only
-                // genuinely unexpected errors (sandbox connection lost, etc.)
-                // should still throw.
                 if(e instanceof CommandExitError){
                     logger.error(`Command "${payload.command}" (cwd: ${cwd}) exited ${e.exitCode}: ${e.stderr || e.stdout}`)
                     return {
@@ -213,8 +231,7 @@ export class E2BSandbox{
                         stderr: e.stderr
                     }
                 }
-                logger.error(`Failed to run command "${payload.command}" (cwd: ${cwd}): ${e}`)
-                throw new Error("Error occurred while executing sandbox cmd")
+                return this.toolFailure('run command', `"${payload.command}" (cwd: ${cwd})`, e instanceof Error ? e.message : String(e))
             }
         }
         return {
@@ -236,16 +253,8 @@ export class E2BSandbox{
         copy whole directory of sandbox /home/usr  to the R2.
         */
         const prefix = this.r2.filesPrefix(this.userId, this.projectId)
-        const findCmd = [
-            `find ${PROJECT_ROOT} -type f`,
-            `-not -path '*/node_modules/*'`,
-            `-not -path '*/dist/*'`,
-            `-not -path '*/build/*'`,
-            `-not -path '*/.git/*'`,
-            `-not -path '*/.npm/*'`,
-            `-not -name '.env'`,
-            `-not -name .gitignore`
-        ].join(' ')
+        const prunes = [...REPO_TREE_PRUNE_DIRS.map(d => `-name '${d}'`), `-name '@*'`, `-name '.npm'`].join(' -o ')
+        const findCmd = `find ${PROJECT_ROOT} \\( ${prunes} \\) -prune -o -type f -not -name '.env' -not -name '.gitignore' -print`
 
         const result = await this.sandbox.commands.run(findCmd)
 

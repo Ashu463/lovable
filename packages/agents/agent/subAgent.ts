@@ -106,7 +106,6 @@ export class SubAgent<T extends keyof ContextMap> {
         let success = true
 
         logger.info(`calling LLM for ${this.agentType}`)
-        console.log("logger instance", logger.level);
         while (true) {
             let res
             try{
@@ -115,14 +114,7 @@ export class SubAgent<T extends keyof ContextMap> {
             catch(e){
                 return await this.haltTask(`LLM call failed after ${SUBAGENT_LLM_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
             }
-            console.log(JSON.stringify(res, null, 2), " is the LLM response of subagent, ", this.agentType)
-            logger.info(
-                {
-                  agent: this.agentType,
-                  response: res,
-                },
-                "LLM asdf response"
-              );
+            logger.info(`${this.agentType} task ${this.taskId} iter ${this.iteration} -> ${this.summarizeToolCall(res)}`)
             if (this.isSingleShotAgent() || res.action === 'done') {
                 logger.info(`${this.agentType} done`)
                 let toolRes
@@ -152,7 +144,10 @@ export class SubAgent<T extends keyof ContextMap> {
             catch(e){
                 return await this.haltTask(`Tool call failed after ${SUBAGENT_TOOL_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
             }
-            logger.info(`${JSON.stringify(toolRes, null, 2)} is the tool response`)
+            // Tool results are frequently whole file bodies — log the outcome
+            // and a short excerpt, not the payload.
+            const toolText = JSON.stringify(toolRes)
+            logger.info(`tool result (${toolRes?.success === false ? 'failed' : 'ok'}): ${toolText.length > 300 ? toolText.slice(0, 300) + `... [${toolText.length - 300} more chars]` : toolText}`)
             this.pushSession('assistant', 'in_progress', res)
             this.pushSession('tool', 'done', toolRes)
 

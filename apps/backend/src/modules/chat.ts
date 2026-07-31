@@ -202,11 +202,6 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
         return res.status(400).json({message: 'runId should be of string type'})
     }
 
-    // Validate + fetch before committing to SSE headers, so a bad/missing
-    // runId (e.g. a stale reconnect after the run was deleted) gets a clean
-    // JSON 404 instead of a half-open SSE response with a JSON body stuffed
-    // into it. findUnique (not OrThrow) so this can't become an unhandled
-    // rejection that takes the whole process down mid-reconnect.
     const run = await prisma.run.findUnique({where: {id: runId}})
     if(!run){
         return res.status(404).json({message: `Run not found`})
@@ -229,8 +224,6 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
         return res.end()
     }
 
-    // The agent runs in a separate worker process, so events arrive over Redis
-    // pub/sub (published by createRedisEmitter), not an in-process EventEmitter.
     const subscriber = redis.duplicate();
     await subscriber.subscribe(`run:${runId}`);
 
