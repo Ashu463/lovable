@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type ResearcherContext, type SubAgentsContext } from "../../baml_client"
+import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type ResearcherContext, type Skill, type SubAgentsContext } from "../../baml_client"
 // import type { ContextStruct } from "../../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
@@ -12,18 +12,31 @@ function truncate(text: string): string {
     return `${text.slice(0, half)}\n... [${omitted} chars omitted, re-read the file if you need this region] ...\n${text.slice(-half)}`
 }
 
+function rawResultText(toolRes: any): string {
+    if (typeof toolRes?.response === 'string') return toolRes.response
+    if (typeof toolRes?.editedFiles === 'string') return toolRes.editedFiles
+    if (typeof toolRes?.toolResult === 'string') return toolRes.toolResult
+    return JSON.stringify(toolRes)
+}
+
 function extractResultText(toolRes: any): string {
-    if (typeof toolRes?.response === 'string') return truncate(toolRes.response)
-    if (typeof toolRes?.editedFiles === 'string') return truncate(toolRes.editedFiles)
-    if (typeof toolRes?.toolResult === 'string') return truncate(toolRes.toolResult)
-    return truncate(JSON.stringify(toolRes))
+    return truncate(rawResultText(toolRes))
+}
+
+function applySkillLoad(skills: Skill[], res: any, toolRes: any): Skill[] {
+    const content = rawResultText(toolRes)
+    return skills.map(s => s.name === res?.skillName ? { ...s, content } : s)
 }
 
 function summarizeTurn(res: any, toolRes: any): Message {
     const label = res?.path ?? res?.command ?? res?.skillName ?? ''
+
+    const result = res?.action === 'getSkill'
+        ? `loaded into skills (${rawResultText(toolRes).length} chars)`
+        : extractResultText(toolRes)
     return {
         role: 'toolCall',
-        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${extractResultText(toolRes)}`,
+        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}`,
         timestamp: new Date().toISOString()
     }
 }
@@ -113,7 +126,7 @@ export class CoderContextManager extends ContextManager<CoderContext>{
             task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
             repoTree: context.repoTree,
-            skills: context.skills,
+            skills: res?.action === 'getSkill' ? applySkillLoad(context.skills, res, toolRes) : context.skills,
             recentTurns
         }
     }
@@ -163,7 +176,7 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
                 ...context.fixHistory,
                 { error: context.originalError, fixSummary: `${label}: ${toolRes.message ?? toolRes.summary ?? JSON.stringify(toolRes).slice(0, 500)}` }
             ],
-            skills: context.skills,
+            skills: res?.action === 'getSkill' ? applySkillLoad(context.skills, res, toolRes) : context.skills,
             recentTurns
         }
     }

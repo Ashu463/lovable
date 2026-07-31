@@ -4,6 +4,10 @@ client OpenAIGeneric {
     base_url env.LLM_BASE_URL
     api_key env.LLM_API_KEY
     model "deepseek-v4-flash"
+    temperature 0.3
+    response_format {
+      type "json_object"
+    }
   }
 }
 client Gemini {

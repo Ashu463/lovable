@@ -178,8 +178,10 @@ export class OrchestratorAgent{
         const pastClarificationStage = answers !== undefined
         if(hasRealAnswers){
             logger.info(`Answer added to user prompt`)
-            userPrompt += `Answers for these ${questions} are: ${answers}`
-            answers!.map((ans) => userPrompt += ans)
+            const qa = answers!
+                .map((ans) => `- ${ans.question}\n  Answer: ${ans.answer}`)
+                .join('\n')
+            userPrompt += `\n\nThe user was asked clarifying questions and answered:\n${qa}`
             complexity = true
         }
         else if(!pastClarificationStage && questions.length > 0){
