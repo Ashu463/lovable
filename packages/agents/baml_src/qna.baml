@@ -1,6 +1,10 @@
 class Question{
     question string
-    option string[]
+    option string[] @description(#"
+      2-4 short, mutually exclusive answer choices for this question, ordered
+      with the most sensible default first. Always populate this — the UI
+      renders these as the only way the user can answer.
+    "#)
 }
 class SimpleComplexity{
     complex false

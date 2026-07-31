@@ -35,10 +35,13 @@ function DebuggerAgent(
 
         {% if toolResult %}ToolResult: {{toolResult}}{%endif%}
 
-        {# {{prior_fix_attempts}} — if this is not your first attempt at this item,
-  what was tried before and what happened as a result. A non-empty list
-  here means your previous approach did not resolve the issue — read what
-  was already tried before proposing another fix. #}
+        {{context}} - the repo tree plus your own history on this item:
+  recentTurns is every tool call you have already made and what it returned,
+  and fixHistory is what was already attempted and the result. If these are
+  non-empty, your previous approach has not resolved the issue yet — read
+  them before acting. Never repeat a tool call that already appears in
+  recentTurns; you already have that result, use it and take the next step.
+
         {{ctx.output_format}}
     "#
 }

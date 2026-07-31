@@ -540,6 +540,13 @@ Batch genuinely necessary questions together rather than trickling them out
 turn by turn. Questions must be specific and answerable in one line each —
 not open-ended.
 
+Every question you ask MUST come with 2-4 concrete answer choices in its
+"option" array, ordered with the most sensible default first. The user answers
+by picking one of them, so a question with an empty "option" array is
+unanswerable and stalls the entire run. If you cannot enumerate plausible
+choices for something, that is a signal to assume a sensible default and not
+ask it at all.
+
 # CONSTRAINTS
 
 - Complexity and clarification are separate judgments — a request can be
