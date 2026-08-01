@@ -1,8 +1,10 @@
 import { CommandExitError, Sandbox } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES, R2_SYNC_INTERVAL_MS } from '../config/systemConfig';
 import { logger } from './logger';
+
+const SANDBOX_GONE = /sandbox was not found|sandbox is not running|sandbox timeout/i
 
 export interface ExecuteRes{
     success: boolean,
@@ -15,12 +17,15 @@ export class E2BSandbox{
     private projectId: string
     private sandbox: Sandbox
     private lastKeepAlive: number
+    private lastR2Sync: number
+    private recovering: Promise<void> | null = null
     r2 = new R2()
     private constructor(sandbox: Sandbox, userId: string, projectId: string){
         this.sandbox = sandbox
         this.userId = userId
         this.projectId = projectId
         this.lastKeepAlive = Date.now()
+        this.lastR2Sync = Date.now()
     }
     get sandboxId(): string{
         return this.sandbox.sandboxId
@@ -57,15 +62,12 @@ export class E2BSandbox{
 
         if (files.length > 0) {
             logger.info(`Restoring ${files.length} files from R2`)
+            this.lastR2Sync = Date.now()
 
             for (const key of files) {
                 const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
                 const content = await this.r2.getFile(key)
-                await this.Execute(this.sandboxId, {
-                    action: 'writeFile',
-                    path: `${SANDBOX_HOME}${relativePath}`,
-                    content
-                })
+                await this.sandbox.files.write(`${SANDBOX_HOME}${relativePath}`, content)
             }
             const hasDeps = await this.sandbox.commands.run(
                 `test -d ${PROJECT_ROOT}/node_modules && echo yes || echo no`
@@ -105,7 +107,7 @@ export class E2BSandbox{
 
             logger.info(`Bootstrap complete, sandboxId: ${this.sandboxId}`)
 
-            await this.SyncR2()
+            await this.SyncR2(true)
         }
 
     }
@@ -114,23 +116,9 @@ export class E2BSandbox{
         return `${PROJECT_ROOT}/${path.replace(/^\.\//, '')}`
     }
 
-    private async keepAlive(): Promise<void> {
-        if (Date.now() - this.lastKeepAlive < SANDBOX_KEEPALIVE_INTERVAL_MS) return
-        this.lastKeepAlive = Date.now()
-        try {
-            await this.sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
-        } catch (e) {
-            logger.warn(`Failed to refresh sandbox timeout: ${e instanceof Error ? e.message : String(e)}`)
-        }
-    }
-
-    private static isSandboxGone(reason: string): boolean {
-        return /sandbox was not found|sandbox is not running|sandbox timeout/i.test(reason)
-    }
-
     private toolFailure(action: string, path: string, reason: string): ExecuteRes {
         logger.error(`Failed to ${action} ${path}: ${reason}`)
-        if (E2BSandbox.isSandboxGone(reason)) throw new Error(`Sandbox unavailable: ${reason}`)
+        if (SANDBOX_GONE.test(reason)) throw new Error(`Sandbox unavailable: ${reason}`)
         return {
             success: false,
             content: `Failed to ${action} ${path}: ${reason}`
@@ -160,83 +148,111 @@ export class E2BSandbox{
         }
     }
     
-    async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand): Promise<ExecuteRes>{
-        await this.keepAlive()
+    async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand, retried = false): Promise<ExecuteRes>{
+        try{
 
-        if(payload.action === 'read'){
-            const path = this.resolvePath(payload.path)
-            try{
-                const result: string = await this.sandbox.files.read(path)
-                return {
-                    success: true,
-                    content: result
-                }
+            // Refresh the sandbox TTL at most once per interval, not on every call.
+            if(Date.now() - this.lastKeepAlive >= SANDBOX_KEEPALIVE_INTERVAL_MS){
+                this.lastKeepAlive = Date.now()
+                await this.sandbox.setTimeout(SANDBOX_TIMEOUT_MS).catch(e => logger.warn(`Failed to refresh sandbox timeout: ${e}`))
             }
-            catch(e){
-                return this.toolFailure('read', path, e instanceof Error ? e.message : String(e))
-            }
-        }
-        else if(payload.action === 'writeFile'){
-            const path = this.resolvePath(payload.path)
-            try{
-                const writeRes = await this.sandbox.files.write(path, payload.content)
 
-                return {
-                    success: true,
-                    content: `Content written at ${writeRes.path}`
-                }
-            }
-            catch(e){
-                return this.toolFailure('write', path, e instanceof Error ? e.message : String(e))
-            }
-        }
-        else if(payload.action === 'editFile'){
-            throw new Error(`To be implemented don't call this please`)
-        }
-        else if(payload.action === 'delete'){
-            const path = this.resolvePath(payload.path)
-            try{
-                const deleteRes = await this.sandbox.files.remove(path)
-
-                return {
-                    success: true,
-                    content: `Deleted file is ${deleteRes}`
-                }
-            }
-            catch(e){
-                return this.toolFailure('delete', path, e instanceof Error ? e.message : String(e))
-            }
-        }
-        else if(payload.action === 'runCommand'){
-            const cwd = payload.cwd ? this.resolvePath(payload.cwd) : PROJECT_ROOT
-            try{
-                const cmdRes = await this.sandbox.commands.run(payload.command, {
-                    cwd,
-                    timeoutMs: RUN_COMMAND_TIMEOUT_MS
-                })
-                return {
-                    success: true,
-                    content: cmdRes.stderr + cmdRes.stdout,
-                    stderr: cmdRes.stderr,
-                    stdout: cmdRes.stdout
-                }
-            }
-            catch(e){
-                if(e instanceof CommandExitError){
-                    logger.error(`Command "${payload.command}" (cwd: ${cwd}) exited ${e.exitCode}: ${e.stderr || e.stdout}`)
+            if(payload.action === 'read'){
+                const path = this.resolvePath(payload.path)
+                try{
+                    const result: string = await this.sandbox.files.read(path)
                     return {
-                        success: false,
-                        content: e.stderr || e.stdout || e.error || `Command exited with code ${e.exitCode}`,
-                        stdout: e.stdout,
-                        stderr: e.stderr
+                        success: true,
+                        content: result
                     }
                 }
-                return this.toolFailure('run command', `"${payload.command}" (cwd: ${cwd})`, e instanceof Error ? e.message : String(e))
+                catch(e){
+                    return this.toolFailure('read', path, e instanceof Error ? e.message : String(e))
+                }
             }
+            else if(payload.action === 'writeFile'){
+                const path = this.resolvePath(payload.path)
+                try{
+                    const writeRes = await this.sandbox.files.write(path, payload.content)
+                    await this.SyncR2()
+
+                    return {
+                        success: true,
+                        content: `Content written at ${writeRes.path}`
+                    }
+                }
+                catch(e){
+                    return this.toolFailure('write', path, e instanceof Error ? e.message : String(e))
+                }
+            }
+            else if(payload.action === 'editFile'){
+                throw new Error(`To be implemented don't call this please`)
+            }
+            else if(payload.action === 'delete'){
+                const path = this.resolvePath(payload.path)
+                try{
+                    const deleteRes = await this.sandbox.files.remove(path)
+                    await this.SyncR2()
+
+                    return {
+                        success: true,
+                        content: `Deleted file is ${deleteRes}`
+                    }
+                }
+                catch(e){
+                    return this.toolFailure('delete', path, e instanceof Error ? e.message : String(e))
+                }
+            }
+            else if(payload.action === 'runCommand'){
+                const cwd = payload.cwd ? this.resolvePath(payload.cwd) : PROJECT_ROOT
+                try{
+                    const cmdRes = await this.sandbox.commands.run(payload.command, {
+                        cwd,
+                        timeoutMs: RUN_COMMAND_TIMEOUT_MS
+                    })
+                    return {
+                        success: true,
+                        content: cmdRes.stderr + cmdRes.stdout,
+                        stderr: cmdRes.stderr,
+                        stdout: cmdRes.stdout
+                    }
+                }
+                catch(e){
+                    if(e instanceof CommandExitError){
+                        logger.error(`Command "${payload.command}" (cwd: ${cwd}) exited ${e.exitCode}: ${e.stderr || e.stdout}`)
+                        return {
+                            success: false,
+                            content: e.stderr || e.stdout || e.error || `Command exited with code ${e.exitCode}`,
+                            stdout: e.stdout,
+                            stderr: e.stderr
+                        }
+                    }
+                    return this.toolFailure('run command', `"${payload.command}" (cwd: ${cwd})`, e instanceof Error ? e.message : String(e))
+                }
+            }
+            return {
+                success: false,
+                content: "Unknown error occurred"
+            }
+
         }
-        return {
-            success: false,
-            content: "Unknown error occurred"
+        catch(e){
+            const reason = e instanceof Error ? e.message : String(e)
+            if(retried || !SANDBOX_GONE.test(reason)) throw e
+
+            // E2B kills a sandbox at the plan's runtime cap (1h Hobby / 24h Pro).
+            const lost = this.sandbox.sandboxId
+            logger.warn(`Sandbox ${lost} is gone, replacing it and restoring from R2`)
+            // Shared promise so concurrent callers wait on one replacement, not several.
+            this.recovering ??= (async () => {
+                this.sandbox = await Sandbox.create('react-sandbox-node22', { timeoutMs: SANDBOX_TIMEOUT_MS })
+                this.lastKeepAlive = Date.now()
+                await this.restoreOrBootstrap()
+                logger.info(`Recovered onto sandbox ${this.sandboxId} (was ${lost})`)
+            })()
+            try { await this.recovering } finally { this.recovering = null }
+
+            return this.Execute(id, payload, true)
         }
     }
 
@@ -246,12 +262,10 @@ export class E2BSandbox{
         - else run npm create-vite@latest and return the current tree of the code. 
         */
     
-    async SyncR2(){
-        /*Steps: sandbox -> r2
-        - create the new path for all such files.
-        - putfile with that key for each of the file.
-        copy whole directory of sandbox /home/usr  to the R2.
-        */
+    async SyncR2(force = false){
+        if(!force && Date.now() - this.lastR2Sync < R2_SYNC_INTERVAL_MS) return
+        this.lastR2Sync = Date.now()
+
         const prefix = this.r2.filesPrefix(this.userId, this.projectId)
         const prunes = [...REPO_TREE_PRUNE_DIRS.map(d => `-name '${d}'`), `-name '@*'`, `-name '.npm'`].join(' -o ')
         const findCmd = `find ${PROJECT_ROOT} \\( ${prunes} \\) -prune -o -type f -not -name '.env' -not -name '.gitignore' -print`
@@ -284,15 +298,11 @@ export class E2BSandbox{
         return probe.stdout.trim()
     }
 
-    private isServing(status: string): boolean {
-        return status !== '' && status !== '000' && status !== '403'
-    }
-
     async GetPreviewUrl(): Promise<string>{
         const url = `https://${this.sandbox.getHost(PREVIEW_PORT)}`
         try{
             const status = await this.probePreviewStatus()
-            if(this.isServing(status)) return url
+            if(status !== '' && status !== '000' && status !== '403') return url
 
             // A 403 means a dev server is up but was started without the
             // allowedHosts env var below (e.g. by the agent itself, or by an
@@ -322,7 +332,8 @@ export class E2BSandbox{
             const deadline = Date.now() + MAX_BOOT_WAIT_MS
             while(Date.now() < deadline){
                 await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-                if(this.isServing(await this.probePreviewStatus())) return url
+                const s = await this.probePreviewStatus()
+                if(s !== '' && s !== '000' && s !== '403') return url
             }
 
             throw new Error(`dev server did not start listening on port ${PREVIEW_PORT} within ${MAX_BOOT_WAIT_MS}ms`)
