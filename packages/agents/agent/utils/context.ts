@@ -3,13 +3,12 @@ import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type R
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/sysPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
-import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS } from "../config/systemConfig"
+import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS, READ_RESULT_MAX_CHARS } from "../config/systemConfig"
 
-function truncate(text: string): string {
-    if (text.length <= TOOL_RESULT_MAX_CHARS) return text
-    const half = Math.floor(TOOL_RESULT_MAX_CHARS / 2)
-    const omitted = text.length - TOOL_RESULT_MAX_CHARS
-    return `${text.slice(0, half)}\n... [${omitted} chars omitted, re-read the file if you need this region] ...\n${text.slice(-half)}`
+function truncate(text: string, limit: number): string {
+    if (text.length <= limit) return text
+    const half = Math.floor(limit / 2)
+    return `${text.slice(0, half)}\n... [${text.length - limit} chars omitted — this excerpt is all you get; use RunCommand with sed/grep to see a specific range] ...\n${text.slice(-half)}`
 }
 
 function rawResultText(toolRes: any): string {
@@ -19,8 +18,13 @@ function rawResultText(toolRes: any): string {
     return JSON.stringify(toolRes)
 }
 
-function extractResultText(toolRes: any): string {
-    return truncate(rawResultText(toolRes))
+function extractResultText(res: any, toolRes: any): string {
+    return truncate(rawResultText(toolRes), res?.action === 'read' ? READ_RESULT_MAX_CHARS : TOOL_RESULT_MAX_CHARS)
+}
+
+function dropStaleReads(turns: Message[], res: any): Message[] {
+    if (res?.action !== 'read' || !res?.path) return turns
+    return turns.filter(t => !t.content.startsWith(`read ${res.path} -> `))
 }
 
 function applySkillLoad(skills: Skill[], res: any, toolRes: any): Skill[] {
@@ -33,7 +37,7 @@ function summarizeTurn(res: any, toolRes: any): Message {
 
     const result = res?.action === 'getSkill'
         ? `loaded into skills (${rawResultText(toolRes).length} chars)`
-        : extractResultText(toolRes)
+        : extractResultText(res, toolRes)
     return {
         role: 'toolCall',
         content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}`,
@@ -121,7 +125,7 @@ export abstract class ContextManager<TContext>{
 
 export class CoderContextManager extends ContextManager<CoderContext>{
     appendTurn(context: CoderContext, res: any, toolRes: any): CoderContext {
-        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
+        const recentTurns = [...dropStaleReads(context.recentTurns, res), summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
@@ -168,7 +172,7 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     appendTurn(context: DebuggerContext, res: any, toolRes: any): DebuggerContext {
         const label = res?.action ?? 'unknown'
-        const recentTurns = [...context.recentTurns, summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
+        const recentTurns = [...dropStaleReads(context.recentTurns, res), summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             repoTree: context.repoTree,
             originalError: context.originalError,

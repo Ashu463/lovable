@@ -21,6 +21,8 @@ export const UI_EXPERT_MAX_ITERATIONS = 10
 export const TESTER_DEBUGGER_LOOP_MAX_ITERATIONS = 5
 export const RECENT_TURNS_LIMIT = 20
 export const TOOL_RESULT_MAX_CHARS = 2000
+// only for READ tool
+export const READ_RESULT_MAX_CHARS = 12000
 export const REPO_TREE_PRUNE_DIRS = [
     'node_modules', '.git', 'dist', 'build', '.next', '.turbo',
     'coverage', '.cache', '.vite', '.output', 'vendor'
@@ -29,7 +31,7 @@ export const REPO_TREE_MAX_ENTRIES = 400
 export const RUN_COMMAND_TIMEOUT_MS = 300_000
 export const SANDBOX_TIMEOUT_MS = 60 * 60 * 1000
 export const SANDBOX_KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000
-export const R2_SYNC_INTERVAL_MS = 2 * 60 * 1000
+export const TASK_SANDBOX_RETRY_LIMIT = 5
 export const SUBAGENT_LLM_RETRY_ATTEMPTS = 3
 export const SUBAGENT_TOOL_RETRY_ATTEMPTS = 2
 export const SUBAGENT_RETRY_BACKOFF_MS = 1000
