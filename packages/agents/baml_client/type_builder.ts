@@ -67,7 +67,7 @@ export default class TypeBuilder {
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
     
-    EditFile: ClassViewer<'EditFile', "action" | "path" | "content">;
+    EditFile: ClassViewer<'EditFile', "action" | "path" | "edits">;
     
     EpisodicMemory: ClassViewer<'EpisodicMemory', "sessionGoal" | "userRequests" | "impFacts" | "decisions" | "toolResults" | "generatedArtifacts" | "openTasks" | "preferences" | "entities" | "summary">;
     
@@ -78,6 +78,8 @@ export default class TypeBuilder {
     FetchDocs: ClassViewer<'FetchDocs', "action" | "query" | "library">;
     
     FileEdit: ClassViewer<'FileEdit', "fileName" | "summary">;
+    
+    FileEditOp: ClassViewer<'FileEditOp', "oldString" | "newString">;
     
     Fixes: ClassViewer<'Fixes', "error" | "fixSummary">;
     
@@ -152,7 +154,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","Fixes","GetSkill","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType","ToolType",
@@ -241,7 +243,7 @@ export default class TypeBuilder {
         ]);
         
         this.EditFile = this.tb.classViewer("EditFile", [
-          "action","path","content",
+          "action","path","edits",
         ]);
         
         this.EpisodicMemory = this.tb.classViewer("EpisodicMemory", [
@@ -262,6 +264,10 @@ export default class TypeBuilder {
         
         this.FileEdit = this.tb.classViewer("FileEdit", [
           "fileName","summary",
+        ]);
+        
+        this.FileEditOp = this.tb.classViewer("FileEditOp", [
+          "oldString","newString",
         ]);
         
         this.Fixes = this.tb.classViewer("Fixes", [

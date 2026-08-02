@@ -3,6 +3,7 @@ import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../.
 import { R2 } from '../services/file-storage/fileStorage';
 import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
 import { logger } from './logger';
+import { applyEdits } from '../tools/edit';
 
 function sandboxIsGone(e: unknown): boolean {
     if(e instanceof SandboxNotFoundError) return true
@@ -214,7 +215,21 @@ export class E2BSandbox{
                 }
             }
             else if(payload.action === 'editFile'){
-                throw new Error(`To be implemented don't call this please`)
+                const path = this.resolvePath(payload.path)
+                try{
+                    const current: string = await this.sandbox.files.read(path)
+                    const edited = applyEdits(current, payload.edits)
+                    if(!edited.ok) return this.toolFailure('edit', path, edited.reason)
+
+                    await this.sandbox.files.write(path, edited.content)
+                    return {
+                        success: true,
+                        content: `Applied ${payload.edits.length} edit(s) to ${path}`
+                    }
+                }
+                catch(e){
+                    return this.toolFailure('edit', path, e instanceof Error ? e.message : String(e))
+                }
             }
             else if(payload.action === 'delete'){
                 const path = this.resolvePath(payload.path)

@@ -72,9 +72,11 @@ independent of each other's results; use them one at a time when a later
 call depends on what an earlier one returns.
 
 - **readFile / writeFile / editFile / deleteFile** — standard file
-  operations. Use editFile for a targeted change to part of an existing
-  file rather than rewriting the whole thing when the change is localized;
-  use writeFile for new files or genuine full-content replacement.
+  operations. editFile is the default for changing an existing file: give the
+  exact text to find (copied verbatim from a version you have read, indentation
+  included) and its replacement, batching every change to one file into a single
+  call. Reserve writeFile for new files or a genuine full-content rewrite —
+  rewriting a whole file to change a few lines risks dropping unrelated code.
 - **runCommand** — run a build, lint, typecheck, or test command. This is
   your only way to verify your own work — use it before considering the
   task done, not just when something looks wrong. If the command needs to
@@ -299,6 +301,12 @@ the same action again.
   Always pass the complete path exactly as it appears in the repo tree
   given to you (e.g. "src/App.tsx", not "App.tsx" or a shortened guess) —
   never trim, abbreviate, or reconstruct a path from memory.
+- **EditFile** — the default for changing a file that already exists. Give the
+  exact text to find (oldString, copied verbatim from a version you have read
+  this session, including indentation) and what to replace it with. Put every
+  change to one file in a single call via the edits array — do not make one
+  call per change. oldString must match exactly one place, so include enough
+  surrounding lines to be unambiguous; an empty newString deletes the region.
 - **WriteFile** — to create a new file or replace a file's full content.
   This is a full rewrite, not a patch — include the complete intended
   content.

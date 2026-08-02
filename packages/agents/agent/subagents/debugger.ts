@@ -52,8 +52,8 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
         
         if(response.action === 'read' || 
             response.action === 'writeFile' || 
-            response.action === 'runCommand'
-            // response.action === 'editFile' #TODO: Edit file in sandbox.
+            response.action === 'runCommand' ||
+            response.action === 'editFile'
         ){
             const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
             return {
