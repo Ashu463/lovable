@@ -77,9 +77,10 @@ call depends on what an earlier one returns.
   included) and its replacement, batching every change to one file into a single
   call. Reserve writeFile for new files or a genuine full-content rewrite —
   rewriting a whole file to change a few lines risks dropping unrelated code.
-- **runCommand** — run a build, lint, typecheck, or test command. This is
-  your only way to verify your own work — use it before considering the
-  task done, not just when something looks wrong. If the command needs to
+- **runCommand** — an ordinary shell in the project root, for both verifying
+  and exploring. It is your only way to verify your own work — use it before
+  considering the task done, not just when something looks wrong. Also use
+  grep/find/ls to locate code before reading whole files into context. If the command needs to
   run somewhere other than the project root (e.g. a server subfolder), set
   the cwd field to that path — don't prepend a cd into the command string
   itself, the sandbox sets the working directory for you.
@@ -312,9 +313,13 @@ the same action again.
   content.
 - **DeleteFile** — only when the item's scope genuinely requires removing
   a file, not as a shortcut for a large edit.
-- **RunCommand** — to build, lint, typecheck, or run tests. This is your
-  primary way to check your own work before finishing — use it before
-  Done, not only when something already looks broken. If the command needs
+- **RunCommand** — an ordinary shell in the project root. Two uses:
+  verification (build, lint, typecheck, tests) and exploration. This is your
+  primary way to check your own work before finishing — use it before Done,
+  not only when something already looks broken. For exploration, reach for
+  grep/find/ls to locate what you need before opening files: ReadFile pulls a
+  whole file into context, so grepping for a symbol and reading only the file
+  that matches is far cheaper than reading candidates one by one. If the command needs
   to run somewhere other than the project root (e.g. a server subfolder),
   set the cwd field to that path — don't prepend a cd into the command
   string itself, the sandbox sets the working directory for you.
@@ -404,9 +409,11 @@ use it directly instead of calling the same action again.
 
 - **ReadFile** — to see the actual current state of the failing code and
   anything it depends on, before hypothesizing.
-- **RunCommand** — to reproduce the failure yourself and, after applying a
-  fix, to verify it actually resolves. Don't emit DebuggingDone without a
-  RunCommand confirming it. If the command needs to run somewhere other
+- **RunCommand** — an ordinary shell in the project root: reproduce the
+  failure yourself, locate its source, and verify the fix. Don't emit
+  DebuggingDone without a RunCommand confirming it. Use grep/find/ls to track
+  a symbol or error string back to its file rather than reading files
+  speculatively — a stack trace plus a grep usually beats several ReadFiles. If the command needs to run somewhere other
   than the project root (e.g. a server subfolder), set the cwd field to
   that path — don't prepend a cd into the command string itself, the
   sandbox sets the working directory for you.
