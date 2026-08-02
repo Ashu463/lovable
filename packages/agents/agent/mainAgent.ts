@@ -153,7 +153,8 @@ export class MainAgent{
                             await this.syncToR2({action: "write", path: response.toolCall.writeFile.path, content: response.toolCall.writeFile.content})
                         }
                         if(response.toolCall.editFile){
-                            await this.syncToR2({action: "write", path: response.toolCall.editFile.path, content: response.toolCall.editFile.content})
+                            // An edit has no final content here, so push the project rather than one file.
+                            await this.sandbox.SyncR2()
                         }
                         if(response.toolCall.deleteFile){
                             await this.syncToR2({action: "delete", path: response.toolCall.deleteFile.path})
@@ -326,7 +327,7 @@ export class MainAgent{
             case ToolType.EditFile:
                 if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
                 logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.editFile.path}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.editFile.path, content: toolCall.editFile.content})).content
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.editFile)).content
 
             case ToolType.DeleteFile:
                 if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")

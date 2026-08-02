@@ -40,7 +40,7 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
                 || response.action === 'writeFile' 
                 || response.action === 'delete' 
                 || response.action === 'runCommand'
-                // || response.action === 'editFile' #TODO: EDIT FILE
+                || response.action === 'editFile'
             ){
                 const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
                 return {

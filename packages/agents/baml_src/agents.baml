@@ -127,10 +127,23 @@ class RunCommand{
     command string
     cwd string? // path relative to the project root, e.g. "server". Omit to run at the project root — don't prepend `cd ... &&` to command instead, the sandbox sets this directly.
 }
+class FileEditOp{
+    oldString string @description(#"
+      Text to find, copied verbatim from a version of this file you have read in
+      this session — including indentation. Must appear exactly once, so include
+      enough surrounding lines to be unambiguous.
+    "#)
+    newString string @description(#"
+      Replacement text. Use an empty string to delete the matched region.
+    "#)
+}
 class EditFile{
     action "editFile"
     path string
-    content string
+    edits FileEditOp[] @description(#"
+      All the changes you want to make to this file, applied in order. Batch
+      every change to one file into a single call rather than one call per edit.
+    "#)
 }
 class ToolResult{
     success bool

@@ -216,7 +216,7 @@ export interface Done {
 export interface EditFile {
   action: "editFile"
   path: string
-  content: string
+  edits: FileEditOp[]
   
 }
 
@@ -258,6 +258,12 @@ export interface FetchDocs {
 export interface FileEdit {
   fileName: string
   summary: string
+  
+}
+
+export interface FileEditOp {
+  oldString: string
+  newString: string
   
 }
 
