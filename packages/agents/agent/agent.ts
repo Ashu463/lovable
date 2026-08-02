@@ -7,7 +7,7 @@ import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import axios from 'axios'
 import { MainAgent } from "./mainAgent"
-import { BACKEND_URL, TESTER_DEBUGGER_LOOP_MAX_ITERATIONS } from "./config/systemConfig"
+import { BACKEND_URL, TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
@@ -337,6 +337,7 @@ export class OrchestratorAgent{
         if(!data.isComplex){
             const mainAgent: MainAgent = new MainAgent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
 
+            await this.sandbox.EnsureAlive()
             const mainResult = await mainAgent.runLoop()
             if(!mainResult.success){
                 return {
@@ -358,24 +359,56 @@ export class OrchestratorAgent{
             }
 
             const dag: DAG = new DAG(tasks)
-            const sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+            let sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
             logger.info(`todos generated and arranged sequentially`)
             let summaries: string[] = []
 
-            for(let i = 0 ; i < sequentialTodos.length; i++){
-                const todo = sequentialTodos[i];
-                logger.info(`Task ${todo?.id}: ${todo?.task}`)
-                // #TODO: Failure handling of planner
-                if (!todo?.agent){
-                    logger.warn(`Task ${todo?.id} has no agent assigned, stopping DAG execution`)
-                    break;
+            sequentialTodos.forEach(t => t.status = 'pending')
+
+            let i = 0
+            let sandboxRetries = 0
+            while(i < sequentialTodos.length){
+                const todo = sequentialTodos[i]!
+
+                if(todo.status !== 'pending'){
+                    i++
+                    continue
                 }
 
-                const agentType = todo?.agent
+                logger.info(`Task ${todo.id}: ${todo.task}`)
+                // #TODO: Failure handling of planner
+                if(!todo.agent){
+                    logger.warn(`Task ${todo.id} has no agent assigned, stopping DAG execution`)
+                    break
+                }
+
+                // The previous task may have run past E2B's runtime cap, so the
+                // sandbox is checked (and rebuilt from R2) before every spawn.
+                await this.sandbox.EnsureAlive()
+
+                const agentType = todo.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
                 logger.info(`Starting runloop for ${agentType} (task ${todo.id})`)
                 const result = await subagent.runLoop()
+
+                // A failed task plus a dead sandbox means the sandbox is why it
+                // failed — its partial work is gone, so leave the todo pending and
+                // redo it whole on the replacement rather than trusting half of it.
+                if(!result.success && await this.sandbox.EnsureAlive()){
+                    if(++sandboxRetries >= TASK_SANDBOX_RETRY_LIMIT){
+                        logger.error(`Task ${todo.id} lost its sandbox ${sandboxRetries} times, giving up`)
+                        break
+                    }
+                    logger.warn(`Sandbox died during task ${todo.id}, retrying it from the start (${sandboxRetries}/${TASK_SANDBOX_RETRY_LIMIT})`)
+                    continue
+                }
+                sandboxRetries = 0
+
+                // R2 is the only thing that outlives the sandbox, so checkpoint the
+                // finished task's work before moving to the next one.
+                await this.sandbox.SyncR2()
+
                 summaries.push(result.summary)
 
                 try{
@@ -406,6 +439,9 @@ export class OrchestratorAgent{
                     summary: result.summary,
                     success: result.success
                 });
+
+                todo.status = 'completed'
+                i++
             }
             // FIX: this.state/context in place of summaries. => done, kept subagents summary short and avoided LLM call.
             orchestratorSummary = JSON.stringify(summaries)
@@ -517,6 +553,7 @@ export class OrchestratorAgent{
                 const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem)
                 const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
                 const debuggerResult = await debuggerAgent.runLoop()
+                await this.sandbox.SyncR2()
                 this.state.lastToolResult = {
                     success: debuggerResult.success,                                
                 }
