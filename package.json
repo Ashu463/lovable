@@ -23,9 +23,12 @@
     "packages/*"
   ],
   "dependencies": {
+    "@apollo/server": "^5.5.1",
+    "@as-integrations/express5": "^1.1.2",
     "@prisma/client": "^7.8.0",
     "@types/express": "^5.0.6",
     "express": "^5.2.1",
+    "graphql": "^17.0.2",
     "ioredis": "^5.11.1"
   }
 }
