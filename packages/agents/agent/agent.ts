@@ -333,7 +333,7 @@ export class OrchestratorAgent{
         this.selectedDesign = data.selectedDesign ?? ""
 
         let orchestratorSummary: string = ""
-        let tasks: PlannerTodo[] = []
+        let todos: PlannerTodo[] = []
         if(!data.isComplex){
             const mainAgent: MainAgent = new MainAgent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
 
@@ -350,16 +350,30 @@ export class OrchestratorAgent{
         }
         else{
             logger.info(`Given task is complex, generating todos`)
-            tasks = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
+            todos = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
 
             try{
-                await axios.post(`${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos`, { todos: tasks }, { headers: internalAuthHeader() })
+                await axios.post(`${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos`, { todos: todos }, { headers: internalAuthHeader() })
             } catch(e){
                 logger.error(`Failed to save todos for run ${this.runId}: ${e}`)
             }
 
-            const dag: DAG = new DAG(tasks)
+            const dag: DAG = new DAG(todos)
             let sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+            let parallelTodos = dag.TopologicalSortParallel()
+            let it = 0;
+            while(it < parallelTodos.length){
+
+                const response = await Promise.allSettled([
+                    // frame the input for the subagent
+                    // copy paste the below logic of spawning subagent here
+                    // and do the run loop call
+                    // I'm still confused how will the run logic works parallely. 
+                    // and I've to do this with git worktrees into the sandbox, IDK how would it done.
+                    // will probably have to resolve the merge conflicts as well. 
+                    // 
+                ])
+            }
             logger.info(`todos generated and arranged sequentially`)
             let summaries: string[] = []
 
@@ -424,6 +438,7 @@ export class OrchestratorAgent{
                 let testsPassing: boolean | null = null;
                 let lastErrors = null
                 let testResults
+                // TODO: Changing the condition to i % no of tasks/2, please bring some good logic for this.
                 if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
                     logger.info(`Starting tester debugger loop`)
                     testsPassing = false;
@@ -455,7 +470,7 @@ export class OrchestratorAgent{
             const result: OrchestratorResponse = {
                 status: "completed",
                 design: this.selectedDesign,
-                todos: data.isComplex ? tasks : [],
+                todos: data.isComplex ? todos : [],
                 previewUrl,
                 summary: orchestratorSummary,
             };
@@ -491,9 +506,7 @@ export class OrchestratorAgent{
         // not after every single coder task. Stubbed for now, always returns true (test every time).
         return true
     }
-    async emitSSEUpdate(event: OrchestratorEvent){
-        await this.emitter.emit(event)
-    }
+    
     async GenerateOrchestratorSummary(summaries: string[]): Promise<string>{
         return await b.OrchestratorSummary(ORCHESTRATOR_SUMMARY_PROMPT, summaries)
     }

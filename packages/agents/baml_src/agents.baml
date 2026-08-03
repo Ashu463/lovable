@@ -16,6 +16,20 @@ client Gemini {
     model "gemini-3.5-flash"
   }
 }
+client<llm> OpenRouter {
+  provider "openai-generic"
+
+  options {
+    base_url "https://openrouter.ai/api/v1"
+    api_key env.OPENROUTER_API_KEY
+    model "google/gemini-2.5-pro"
+
+    // headers {
+    //   "HTTP-Referer" "https://yourapp.com"
+    //   "X-Title" "My BAML App"
+    // }
+  }
+}
 
 class AgentResponse{
     
