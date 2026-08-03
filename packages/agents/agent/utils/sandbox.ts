@@ -219,7 +219,7 @@ export class E2BSandbox{
                 try{
                     const current: string = await this.sandbox.files.read(path)
                     const edited = applyEdits(current, payload.edits)
-                    if(!edited.ok) return this.toolFailure('edit', path, edited.reason)
+                    if(!edited.ok) return this.toolFailure('edit', path, `Edit failed ${edited}`)
 
                     await this.sandbox.files.write(path, edited.content)
                     return {
