@@ -360,6 +360,20 @@ export class OrchestratorAgent{
 
             const dag: DAG = new DAG(todos)
             let sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
+            let parallelTodos = dag.TopologicalSortParallel()
+            let it = 0;
+            while(it < parallelTodos.length){
+
+                const response = await Promise.allSettled([
+                    // frame the input for the subagent
+                    // copy paste the below logic of spawning subagent here
+                    // and do the run loop call
+                    // I'm still confused how will the run logic works parallely. 
+                    // and I've to do this with git worktrees into the sandbox, IDK how would it done.
+                    // will probably have to resolve the merge conflicts as well. 
+                    // 
+                ])
+            }
             logger.info(`todos generated and arranged sequentially`)
             let summaries: string[] = []
 
