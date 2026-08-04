@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { prisma } from "../prisma";
-import { auth, type AuthRequest } from "./middleware";
+import { prisma } from "../../src/lib/prisma";
+import { auth, type AuthRequest } from "../../src/lib/middleware";
 import type { Request, Response } from "express";
 import { randomUUID } from "node:crypto";
 import { R2 } from "../../../../packages/agents/agent/services/file-storage/fileStorage";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
-import { logger } from "./utils";
+import { logger } from "../../src/lib/utils";
 /*Routes:
 GET    /projects                                  → list projects for authed user
 POST   /projects                                  → create project

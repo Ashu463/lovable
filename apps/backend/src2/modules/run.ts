@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { prisma } from "../prisma";
-import { auth, internalAuth } from "./middleware";
+import { prisma } from "../../src/lib/prisma";
+import { auth, internalAuth } from "../../src/lib/middleware";
 import type { Request, Response } from "express";
 import { randomUUIDv7 } from "bun";
-import { logger } from "./utils";
+import { logger } from "../../src/lib/utils";
 import type { AgentType } from "../../generated/prisma/enums";
 
 const runRouter = Router();

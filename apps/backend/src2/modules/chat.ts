@@ -1,11 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { auth } from "./middleware";
+import { auth } from "../../src/lib/middleware";
 import { randomUUIDv7 } from "bun";
-import { prisma } from "../prisma";
-import { redis } from "./redis";
-import { logger } from "./utils";
-import { runQueue } from "./worker";
+import { prisma } from "../../src/lib/prisma";
+import { redis } from "../../src/lib/redis";
+import { logger } from "../../src/lib/utils";
+import { runQueue } from "../../src/lib/queue";
 import type { OrchestratorEvent } from "../../../../packages/agents";
 import type { Answers } from "../../../../packages/agents/types/agentTypes";
 

@@ -1,13 +1,10 @@
-import { Queue, Worker } from "bullmq";
+import { Worker } from "bullmq";
 import { redis } from "./redis";
 import { logger } from "./utils";
-import { prisma } from "../prisma";
+import { prisma } from "./prisma";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
 import { AgentCall } from "../../../../packages/agents";
 
-export const runQueue = new Queue(
-    "run-agent", {connection: redis}
-);
 const worker = new Worker("run-agent", async (job) => {
     const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId } = job.data;
     let sandbox;
