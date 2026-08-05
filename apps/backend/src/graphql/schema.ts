@@ -1,4 +1,6 @@
 import { userTypeDefs } from "./modules/user";
+import { projectTypeDefs } from "./modules/project";
+import { runTypeDefs } from "./modules/run";
 
 // GraphQL requires a root type to exist before `extend type` can add to it, and
 // a type can't be empty — hence the `_empty` placeholders. Each domain module
@@ -6,6 +8,7 @@ import { userTypeDefs } from "./modules/user";
 // resolvers that implement it.
 const baseTypeDefs = `#graphql
   scalar DateTime
+  scalar JSON
 
   type Query {
     _empty: String
@@ -16,4 +19,4 @@ const baseTypeDefs = `#graphql
   }
 `;
 
-export const typeDefs = [baseTypeDefs, userTypeDefs];
+export const typeDefs = [baseTypeDefs, userTypeDefs, projectTypeDefs, runTypeDefs];

@@ -145,6 +145,7 @@ projectRouter.get("/:projectId/session", auth, async (req: AuthRequest, res: Res
         },
     })
 });
+
 projectRouter.patch('/:projectId', auth, async (req: Request, res: Response) =>{
     const projectId = req.params.projectId
     const { name, archived, starred, isComplex } = req.body;
