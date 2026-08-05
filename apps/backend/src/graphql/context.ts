@@ -1,4 +1,3 @@
-import type { Request } from "express";
 import jwt from "jsonwebtoken";
 import { GraphQLError } from "graphql";
 import { prisma } from "../lib/prisma";
@@ -11,8 +10,15 @@ export interface GraphQLContext {
   isInternal: boolean;
 }
 
-export async function createContext({ req }: { req: Request }): Promise<GraphQLContext> {
-  const authHeader = req.headers.authorization;
+// Takes just the headers rather than a full express Request, so the Apollo
+// middleware and the graphql-sse handler can both build a context from it.
+export async function createContext({
+  req,
+}: {
+  req: { headers: Record<string, string | string[] | undefined> };
+}): Promise<GraphQLContext> {
+  const raw = req.headers.authorization;
+  const authHeader = Array.isArray(raw) ? raw[0] : raw;
   const token = authHeader?.startsWith("Bearer ")
     ? authHeader.slice("Bearer ".length)
     : undefined;

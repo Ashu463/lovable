@@ -43,3 +43,17 @@ export async function loadOwnedRun(
 
   return run;
 }
+
+// For the routes keyed on runId alone (a reloaded /w/:runId page has no project
+// id to hand back), so ownership has to be reached through the run's project.
+export async function loadOwnedRunById(ctx: GraphQLContext, runId: string) {
+  const run = await ctx.prisma.run.findUnique({ where: { id: runId } });
+  if (!run) {
+    throw new GraphQLError("Run not found", {
+      extensions: { code: "NOT_FOUND", http: { status: 404 } },
+    });
+  }
+
+  await loadOwnedProject(ctx, run.projectId);
+  return run;
+}
