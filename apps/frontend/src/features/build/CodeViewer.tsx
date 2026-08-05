@@ -1,12 +1,18 @@
 import { useEffect, useState } from "react";
 import { FileCode } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
 
 interface ProjectFile {
   path: string;
   content: string;
 }
+
+const PROJECT_FILES = `
+  query ProjectFiles($id: ID!) {
+    projectFiles(id: $id) { path content }
+  }
+`;
 
 export function CodeViewer({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[] | null>(null);
@@ -18,16 +24,15 @@ export function CodeViewer({ projectId }: { projectId: string }) {
     setFiles(null);
     setError(null);
 
-    api
-      .get<{ success: boolean; data: ProjectFile[] }>(`/api/project/${projectId}/files`)
+    gql<{ projectFiles: ProjectFile[] }>(PROJECT_FILES, { id: projectId })
       .then((res) => {
         if (cancelled) return;
-        setFiles(res.data);
-        setSelected(res.data[0]?.path ?? null);
+        setFiles(res.projectFiles);
+        setSelected(res.projectFiles[0]?.path ?? null);
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : "Failed to load files.");
+        setError(err instanceof GqlError ? err.message : "Failed to load files.");
       });
 
     return () => {

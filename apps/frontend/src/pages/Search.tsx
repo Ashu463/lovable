@@ -3,7 +3,7 @@ import { SearchIcon } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { api, ApiError } from "@/lib/api";
+import { gql, GqlError } from "@/lib/graphql";
 
 interface ProjectRow {
   id: string;
@@ -11,16 +11,21 @@ interface ProjectRow {
   createdAt: string;
 }
 
+const PROJECTS = `
+  query Projects {
+    projects { id name createdAt }
+  }
+`;
+
 export function Search() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   useEffect(() => {
-    api
-      .get<{ success: boolean; data: ProjectRow[] }>("/api/project")
-      .then((res) => setProjects(res.data))
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load projects."));
+    gql<{ projects: ProjectRow[] }>(PROJECTS)
+      .then((res) => setProjects(res.projects))
+      .catch((err) => setError(err instanceof GqlError ? err.message : "Failed to load projects."));
   }, []);
 
   const results = (projects ?? []).filter((p) =>
