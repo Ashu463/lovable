@@ -1,8 +1,8 @@
 import type { DesignOption, OrchestratorResponse } from '../types/agentTypes';
 import type { Question } from '../baml_client/types';
-import axios from 'axios';
-import { BACKEND_URL, REDIS_HOST, REDIS_PORT } from './config/systemConfig';
+import { REDIS_HOST, REDIS_PORT } from './config/systemConfig';
 import IORedis from "ioredis";
+import { backendGql } from './utils/backendClient';
 export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
     | { type: "clarification_needed"; questions: Question[] }
@@ -32,10 +32,11 @@ export function createBackendEmitter(runId: string): EventEmitter{
     return {
         async emit(event: OrchestratorEvent){
             try{
-                await axios.post(`${BACKEND_URL}/internal/session/${runId}/events`, event, {
-                    headers: internalAuthHeader(),
-                    timeout: 5000,
-                })
+                await backendGql(
+                    `mutation RecordRunEvent($runId: ID!, $event: JSON!) { recordRunEvent(runId: $runId, event: $event) }`,
+                    { runId, event },
+                    5000,
+                )
             } catch(err){
                 console.error(`Failed to emit event for run ${runId}:`, err)
 

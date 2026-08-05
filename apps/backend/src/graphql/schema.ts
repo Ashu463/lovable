@@ -5,6 +5,7 @@ import { chatTypeDefs } from "./modules/chat";
 import { designTypeDefs } from "./modules/design";
 import { questionTypeDefs } from "./modules/question";
 import { streamTypeDefs } from "./modules/stream";
+import { internalTypeDefs } from "./modules/internal";
 
 // GraphQL requires a root type to exist before `extend type` can add to it, and
 // a type can't be empty — hence the `_empty` placeholders. Each domain module
@@ -32,4 +33,5 @@ export const typeDefs = [
   designTypeDefs,
   questionTypeDefs,
   streamTypeDefs,
+  internalTypeDefs,
 ];

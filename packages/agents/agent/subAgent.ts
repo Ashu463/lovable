@@ -5,15 +5,15 @@ import { Researcher } from "./subagents/researcher";
 import { TesterAgent, type TesterResponse } from "./subagents/tester";
 
 import type { BaseAgent } from "./subagents/baseAgent";
-import { BACKEND_URL, CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS, SUBAGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_TOOL_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig";
+import { CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS, SUBAGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_TOOL_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
-import axios from "axios";
 import type { BaseTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
-import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events";
+import { createRunEmitter, type EventEmitter } from "./events";
+import { backendGql, SAVE_RUN_STATE } from "./utils/backendClient";
 import { logger } from "./utils/logger";
 import { SkillStore } from "./skills";
 
@@ -198,11 +198,13 @@ export class SubAgent<T extends keyof ContextMap> {
         if(this.repoTree === ""){
             this.repoTree = await this.sandbox.getRepoTree()
         }
-        const res = await axios.get<{success: boolean, data: {summary: string, todo: {taskId: number}}[]}>(
-            `${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/summaries`,
-            { headers: internalAuthHeader() }
+        const res = await backendGql<{summaries: {summary: string, todo: {taskId: number}}[]}>(
+            `query Summaries($projectId: ID!, $runId: ID!) {
+                summaries(projectId: $projectId, runId: $runId) { summary todo { taskId } }
+            }`,
+            { projectId: this.projectId, runId: this.runId }
         )
-        const summaries: TaskSummary[] = res.data.data
+        const summaries: TaskSummary[] = res.summaries
             .filter(s => dependentTaskIds.includes(s.todo.taskId))
             .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
 
@@ -247,9 +249,12 @@ export class SubAgent<T extends keyof ContextMap> {
         return { query: (this.input as BaseTaskInput).task.task, skills }
     }
     async BuildUIExpertContext(): Promise<UIExpertContext>{
-        const priorDesigns = await axios.get(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, {
-            headers: internalAuthHeader()
-        })
+        const priorDesigns = await backendGql<{designs: {id: string, htmlContent: string, isSelected: boolean}[]}>(
+            `query Designs($projectId: ID!) {
+                designs(projectId: $projectId) { id htmlContent isSelected }
+            }`,
+            { projectId: this.projectId }
+        )
         const skills = [
             ...(await this.skillStore.globalSkills('uiExpert')),
             ...(await this.skillStore.getRoleSkills('uiExpert')),
@@ -261,7 +266,9 @@ export class SubAgent<T extends keyof ContextMap> {
         // should mean here before mapping it properly.
         return {
             userPrompt: (this.input as BaseTaskInput).task.task,
-            priorDesigns: priorDesigns.data.data,
+            // Passed through as-is, exactly as before. The cast makes the shape gap
+            // described above explicit — it used to be hidden by an untyped axios call.
+            priorDesigns: priorDesigns.designs as unknown as UIExpertContext["priorDesigns"],
             skills
         }
     }
@@ -329,14 +336,12 @@ export class SubAgent<T extends keyof ContextMap> {
 
     async SaveSessionState() {
         try{
-            await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
+            await backendGql(SAVE_RUN_STATE, {
+                runId: this.runId,
                 iteration: this.iteration,
-                context_snapshot: JSON.stringify(this.context),
-                session_snapshot: JSON.stringify(this.session)
-            }, {
-                headers: internalAuthHeader(),
-                timeout: 5000,
-            })
+                contextSnapshot: JSON.stringify(this.context),
+                sessionSnapshot: JSON.stringify(this.session)
+            }, 5000)
         } catch(e){
             logger.error(`Failed to save session state for task ${this.taskId}: ${e}`)
         }

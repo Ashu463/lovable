@@ -44,6 +44,16 @@ export async function loadOwnedRun(
   return run;
 }
 
+// Guards the mutations only the agent worker may call. These carry no end user,
+// so they authenticate with the shared INTERNAL_SERVICE_TOKEN instead of a JWT.
+export function requireInternal(ctx: GraphQLContext) {
+  if (!ctx.isInternal) {
+    throw new GraphQLError("Internal service token required", {
+      extensions: { code: "FORBIDDEN", http: { status: 403 } },
+    });
+  }
+}
+
 // For the routes keyed on runId alone (a reloaded /w/:runId page has no project
 // id to hand back), so ownership has to be reached through the run's project.
 export async function loadOwnedRunById(ctx: GraphQLContext, runId: string) {
