@@ -6,8 +6,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api } from "@/lib/api";
+import { gql } from "@/lib/graphql";
 import { getStoredSession, setStoredSession, type Session } from "@/lib/session";
+import GOOGLE_SIGN_IN from "@/graphql/googleSignIn.graphql?raw";
 
 interface AuthContextValue {
   session: Session | null;
@@ -21,13 +22,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(() => getStoredSession());
 
   const signInWithGoogle = useCallback(async (idToken: string) => {
-    const res = await api.post<{ success: boolean; data: Session }>(
-      "/api/user/google",
+    const res = await gql<{ googleSignIn: Session }>(
+      GOOGLE_SIGN_IN,
       { idToken },
       { auth: false },
     );
-    setStoredSession(res.data);
-    setSession(res.data);
+    setStoredSession(res.googleSignIn);
+    setSession(res.googleSignIn);
   }, []);
 
   const signOut = useCallback(() => {

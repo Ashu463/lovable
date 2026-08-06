@@ -1,0 +1,16 @@
+# Root types and custom scalars every other schema file builds on.
+#
+# GraphQL requires a root type to exist before `extend type` can add to it, and a
+# type can't be empty — hence the `_empty` placeholders. Each domain file then
+# extends Query/Mutation with its own fields.
+
+scalar DateTime
+scalar JSON
+
+type Query {
+  _empty: String
+}
+
+type Mutation {
+  _empty: String
+}

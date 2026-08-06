@@ -1,0 +1,7 @@
+# Starts a build. Omitting projectId makes the backend create the project too.
+mutation CreateRun($projectId: ID, $userPrompt: String!) {
+  createRun(projectId: $projectId, userPrompt: $userPrompt) {
+    id
+    projectId
+  }
+}

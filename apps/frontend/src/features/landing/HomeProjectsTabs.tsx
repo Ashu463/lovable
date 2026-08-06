@@ -4,7 +4,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { TemplateGrid } from "@/features/templates/TemplateGrid";
 import { useAuth } from "@/lib/auth";
-import { api, ApiError } from "@/lib/api";
+import { gql, GqlError } from "@/lib/graphql";
+import PROJECTS from "@/graphql/projectsSummary.graphql?raw";
 
 interface ProjectRow {
   id: string;
@@ -19,10 +20,9 @@ function MyProjects() {
 
   useEffect(() => {
     if (!session) return;
-    api
-      .get<{ success: boolean; data: ProjectRow[] }>("/api/project")
-      .then((res) => setProjects(res.data.slice(0, 6)))
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load projects."));
+    gql<{ projects: ProjectRow[] }>(PROJECTS)
+      .then((res) => setProjects(res.projects.slice(0, 6)))
+      .catch((err) => setError(err instanceof GqlError ? err.message : "Failed to load projects."));
   }, [session]);
 
   if (!session) {

@@ -1,0 +1,28 @@
+# Generated design variants and which one is selected. Resolvers: ../modules/design.ts
+
+type Design {
+  id: ID!
+  projectId: ID!
+  screenId: String!
+  htmlContent: String!
+  isSelected: Boolean!
+  createdAt: DateTime!
+}
+
+extend type Project {
+  designs: [Design!]!
+  "The currently selected design, or null if the user hasn't picked one yet."
+  selectedDesign: Design
+}
+
+extend type Query {
+  designs(projectId: ID!): [Design!]!
+  selectedDesign(projectId: ID!): Design
+}
+
+extend type Mutation {
+  "Selects a design, clearing the previous selection in the same transaction."
+  selectDesign(projectId: ID!, designId: ID!): Design!
+  "Legacy path for callers holding htmlContent instead of an id — prefer selectDesign."
+  selectDesignByContent(projectId: ID!, htmlContent: String!): Design!
+}

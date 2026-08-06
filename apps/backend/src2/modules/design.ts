@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { prisma } from "../prisma";
-import { auth, internalAuth } from "./middleware";
+import { prisma } from "../../src/lib/prisma";
+import { auth, internalAuth } from "../../src/lib/middleware";
 import type { Request, Response } from "express";
 import { randomUUID } from "bullmq";
 import { randomUUIDv5, randomUUIDv7 } from "bun";
-import { logger } from "./utils";
+import { logger } from "../../src/lib/utils";
 
 const designRouter = Router();
 

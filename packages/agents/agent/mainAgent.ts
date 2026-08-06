@@ -2,17 +2,17 @@ import type { Screen } from "@google/stitch-sdk"
 import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
 import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
-import { BACKEND_URL, COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
+import { COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
 import { webSearch } from "./MCPs/tavily"
 import { makeOneScreen } from "./tools/stitch"
 import { encoding_for_model } from "tiktoken"
 import { R2 } from "./services/file-storage/fileStorage"
-import axios from "axios"
 
 import { E2BSandbox } from "./utils/sandbox"
-import { createRunEmitter, internalAuthHeader, type EventEmitter } from "./events"
+import { createRunEmitter, type EventEmitter } from "./events"
+import { backendGql, SAVE_RUN_STATE } from "./utils/backendClient"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
@@ -278,14 +278,12 @@ export class MainAgent{
 
     async saveSessionState(){
         try{
-            await axios.post(`${BACKEND_URL}/internal/session/${this.runId}/state`, {
-                context_snapshot: JSON.stringify(this.context),
-                session_snapshot: JSON.stringify(this.session),
+            await backendGql(SAVE_RUN_STATE, {
+                runId: this.runId,
+                contextSnapshot: JSON.stringify(this.context),
+                sessionSnapshot: JSON.stringify(this.session),
                 iteration: this.iterations,
-            }, {
-                headers: internalAuthHeader(),
-                timeout: 5000,
-            })
+            }, 5000)
             logger.info(`[MainAgent:${this.runId}] Session state saved at iteration ${this.iterations}`)
         } catch(e){
             logger.error(`[MainAgent:${this.runId}] Failed to save session state: ${e instanceof Error ? e.message : String(e)}`)

@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Star } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
-import { api, ApiError } from "@/lib/api";
+import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
+import PROJECTS from "@/graphql/projects.graphql?raw";
+import SET_STARRED from "@/graphql/setStarred.graphql?raw";
+import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
 
 interface ProjectRow {
   id: string;
@@ -11,13 +14,6 @@ interface ProjectRow {
   isStarred: boolean;
   isArchived: boolean;
   createdAt: string;
-}
-
-interface OpenedProject {
-  id: string;
-  latestRunId: string | null;
-  sandboxId: string | null;
-  previewUrl: string | null;
 }
 
 export function Projects() {
@@ -31,10 +27,9 @@ export function Projects() {
   const [openError, setOpenError] = useState<string | null>(null);
 
   useEffect(() => {
-    api
-      .get<{ success: boolean; data: ProjectRow[] }>("/api/project")
-      .then((res) => setProjects(res.data))
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load projects."));
+    gql<{ projects: ProjectRow[] }>(PROJECTS)
+      .then((res) => setProjects(res.projects))
+      .catch((err) => setError(err instanceof GqlError ? err.message : "Failed to load projects."));
   }, []);
 
   const toggleStar = async (project: ProjectRow) => {
@@ -42,7 +37,7 @@ export function Projects() {
       prev?.map((p) => (p.id === project.id ? { ...p, isStarred: !p.isStarred } : p)) ?? null,
     );
     try {
-      await api.patch(`/api/project/${project.id}`, { starred: !project.isStarred });
+      await gql(SET_STARRED, { id: project.id, starred: !project.isStarred });
     } catch {
       // revert on failure
       setProjects((prev) =>
@@ -58,14 +53,17 @@ export function Projects() {
       // Boots the project's sandbox back up (restoring files from R2 if it died)
       // and refreshes its preview URL before we land on the workspace, which is
       // keyed by runId rather than projectId.
-      const res = await api.get<{ success: boolean; data: OpenedProject }>(`/api/project/${project.id}/session`);
-      if (!res.data.latestRunId) {
+      const res = await gql<{ projectSession: { latestRunId: string | null } }>(
+        PROJECT_SESSION,
+        { id: project.id },
+      );
+      if (!res.projectSession.latestRunId) {
         setOpenError("This project doesn't have a build yet.");
         return;
       }
-      navigate(`/w/${res.data.latestRunId}`);
+      navigate(`/w/${res.projectSession.latestRunId}`);
     } catch (err) {
-      setOpenError(err instanceof ApiError ? err.message : "Couldn't open this project.");
+      setOpenError(err instanceof GqlError ? err.message : "Couldn't open this project.");
     } finally {
       setOpeningId(null);
     }

@@ -1,0 +1,9 @@
+# Trimmed project list for Search and the landing page tabs — neither renders
+# the star or archive state, so those fields aren't fetched.
+query ProjectsSummary {
+  projects {
+    id
+    name
+    createdAt
+  }
+}

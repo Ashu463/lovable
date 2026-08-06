@@ -5,15 +5,15 @@ import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type 
 import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/sysPrompts"
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
-import axios from 'axios'
 import { MainAgent } from "./mainAgent"
-import { BACKEND_URL, TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT } from "./config/systemConfig"
+import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import { TesterAgent, type TesterResponse } from "./subagents/tester"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
-import { createRunEmitter, internalAuthHeader, type EventEmitter, type OrchestratorEvent } from "./events"
+import { createRunEmitter, type EventEmitter, type OrchestratorEvent } from "./events"
+import { backendGql } from "./utils/backendClient"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
 import type { TesterContext } from "../baml_client"
@@ -164,15 +164,22 @@ export class OrchestratorAgent{
         let isComplex
         let complexity: boolean = false
         logger.info(`Starting to fetch qeustions and designs`)
-        let [questionRes, designRes, projectRes] = await Promise.all([
-            axios.get<{success: boolean, data: {question: string, options: string[]}[]}>(`${BACKEND_URL}/api/question/${this.projectId}/getQuestions`, { headers: internalAuthHeader() }),
-            axios.get<{success: boolean, data: {id: string, htmlContent: string, isSelected: boolean}[]}>(`${BACKEND_URL}/api/design/${this.projectId}/getDesigns`, { headers: internalAuthHeader() }),
-            axios.get<{success: boolean, data: {isComplex: boolean | null}}>(`${BACKEND_URL}/api/project/${this.projectId}`, { headers: internalAuthHeader() })
-        ])
-        const savedQuestions = questionRes.data.data
-        const questions: Question[] = savedQuestions.map((q) => ({question: q.question, option: q.options}))
-        const designs = designRes.data.data
-        const cachedIsComplex = projectRes.data.data.isComplex
+        // graphql power. 3 in 1
+        const bootstrap = await backendGql<{
+            questions: {question: string, options: string[]}[],
+            designs: {id: string, htmlContent: string, isSelected: boolean}[],
+            project: {isComplex: boolean | null},
+        }>(
+            `query Bootstrap($projectId: ID!) {
+                questions(projectId: $projectId) { question options }
+                designs(projectId: $projectId) { id htmlContent isSelected }
+                project(id: $projectId) { isComplex }
+            }`,
+            { projectId: this.projectId }
+        )
+        const questions: Question[] = bootstrap.questions.map((q) => ({question: q.question, option: q.options}))
+        const designs = bootstrap.designs
+        const cachedIsComplex = bootstrap.project.isComplex
         logger.info(`Fetched ${questions.length} saved question(s) and ${designs.length} saved design(s)`)
         const hasRealAnswers = !!answers && answers.length > 0
         const pastClarificationStage = answers !== undefined
@@ -217,7 +224,12 @@ export class OrchestratorAgent{
             logger.info(`Complexity checker result: complex=${isComplex.complex}, questions=${JSON.stringify(isComplex.complex ? isComplex.questions : [])}`)
             complexity = isComplex.complex
             try{
-                await axios.patch(`${BACKEND_URL}/api/project/${this.projectId}`, { isComplex: complexity }, { headers: internalAuthHeader() })
+                await backendGql(
+                    `mutation CacheComplexity($id: ID!, $isComplex: Boolean!) {
+                        updateProject(id: $id, isComplex: $isComplex) { id }
+                    }`,
+                    { id: this.projectId, isComplex: complexity }
+                )
             } catch(e){
                 logger.error(`Failed to cache complexity verdict for project ${this.projectId}: ${e}`)
             }
@@ -256,14 +268,15 @@ export class OrchestratorAgent{
             // Save right away so the response can hand back real ids — the
             // frontend/caller only ever needs to pass an id around after this,
             // never the full htmlContent again.
-            const { data: saved } = await axios.post<{success: boolean, data: {id: string, htmlContent: string}[]}>(
-                `${BACKEND_URL}/api/design/${this.projectId}`,
-                { designs: designsHtml },
-                { headers: internalAuthHeader() }
+            const saved = await backendGql<{saveDesigns: {id: string, htmlContent: string}[]}>(
+                `mutation SaveDesigns($projectId: ID!, $designs: [String!]!) {
+                    saveDesigns(projectId: $projectId, designs: $designs) { id htmlContent }
+                }`,
+                { projectId: this.projectId, designs: designsHtml }
             )
             return {
                 status: 'select_design',
-                designs: saved.data.map((d): DesignOption => ({id: d.id, htmlContent: d.htmlContent})),
+                designs: saved.saveDesigns.map((d): DesignOption => ({id: d.id, htmlContent: d.htmlContent})),
                 alreadySaved: true
             }
         }
@@ -289,7 +302,12 @@ export class OrchestratorAgent{
     async Orchestrate(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<OrchestratorResponse>{
         logger.info(`Running orchestrator`)
         if(selectedDesignId){
-            await axios.patch(`${BACKEND_URL}/api/design/${this.projectId}/designs/${selectedDesignId}`, {}, { headers: internalAuthHeader() })
+            await backendGql(
+                `mutation SelectDesign($projectId: ID!, $designId: ID!) {
+                    selectDesign(projectId: $projectId, designId: $designId) { id }
+                }`,
+                { projectId: this.projectId, designId: selectedDesignId }
+            )
         }
         var data;
         try{
@@ -307,7 +325,12 @@ export class OrchestratorAgent{
         if(data.status === 'clarification_needed'){
             if(!data.alreadySaved){
                 logger.info(`LLM generated questions, saving them`)
-                await axios.post(`${BACKEND_URL}/api/question/${this.projectId}/${this.runId}`, { questionsObj: data.questions }, { headers: internalAuthHeader() })
+                await backendGql(
+                    `mutation SaveQuestions($projectId: ID!, $runId: ID!, $questions: [PlannedQuestionInput!]!) {
+                        saveQuestions(projectId: $projectId, runId: $runId, questions: $questions) { id }
+                    }`,
+                    { projectId: this.projectId, runId: this.runId, questions: data.questions }
+                )
             }
             await this.emitter.emit({ type: 'clarification_needed', questions: data.questions })
             return {
@@ -353,7 +376,12 @@ export class OrchestratorAgent{
             todos = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
 
             try{
-                await axios.post(`${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos`, { todos: todos }, { headers: internalAuthHeader() })
+                await backendGql(
+                    `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
+                        saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
+                    }`,
+                    { projectId: this.projectId, runId: this.runId, todos }
+                )
             } catch(e){
                 logger.error(`Failed to save todos for run ${this.runId}: ${e}`)
             }
@@ -362,18 +390,18 @@ export class OrchestratorAgent{
             let sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
             let parallelTodos = dag.TopologicalSortParallel()
             let it = 0;
-            while(it < parallelTodos.length){
+            // while(it < parallelTodos.length){
 
-                const response = await Promise.allSettled([
-                    // frame the input for the subagent
-                    // copy paste the below logic of spawning subagent here
-                    // and do the run loop call
-                    // I'm still confused how will the run logic works parallely. 
-                    // and I've to do this with git worktrees into the sandbox, IDK how would it done.
-                    // will probably have to resolve the merge conflicts as well. 
-                    // 
-                ])
-            }
+            //     const response = await Promise.allSettled([
+            //         // frame the input for the subagent
+            //         // copy paste the below logic of spawning subagent here
+            //         // and do the run loop call
+            //         // I'm still confused how will the run logic works parallely. 
+            //         // and I've to do this with git worktrees into the sandbox, IDK how would it done.
+            //         // will probably have to resolve the merge conflicts as well. 
+            //         // 
+            //     ])
+            // }
             logger.info(`todos generated and arranged sequentially`)
             let summaries: string[] = []
 
@@ -426,10 +454,11 @@ export class OrchestratorAgent{
                 summaries.push(result.summary)
 
                 try{
-                    await axios.post(
-                        `${BACKEND_URL}/api/run/${this.projectId}/${this.runId}/todos/${todo.id}/summary`,
-                        { summary: result.summary },
-                        { headers: internalAuthHeader() }
+                    await backendGql(
+                        `mutation SaveTaskSummary($projectId: ID!, $runId: ID!, $taskId: Int!, $summary: String!) {
+                            saveTaskSummary(projectId: $projectId, runId: $runId, taskId: $taskId, summary: $summary) { id }
+                        }`,
+                        { projectId: this.projectId, runId: this.runId, taskId: todo.id, summary: result.summary }
                     )
                 } catch(e){
                     logger.error(`Failed to save summary for task ${todo.id} on run ${this.runId}: ${e}`)

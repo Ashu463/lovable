@@ -8,9 +8,13 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { api, ApiError } from "@/lib/api";
-import { openEventStream } from "@/lib/sse";
+import { gql, GqlError } from "@/lib/graphql";
+import { subscribe } from "@/lib/gqlStream";
 import { describeEvent } from "@/features/build/describeEvent";
+import CREATE_RUN from "@/graphql/createRun.graphql?raw";
+import CONTINUE_RUN from "@/graphql/continueRun.graphql?raw";
+import RUN_STATE from "@/graphql/runState.graphql?raw";
+import RUN_EVENTS from "@/graphql/runEvents.graphql?raw";
 import type { OrchestratorEvent } from "../../../../packages/agents/agent/events";
 import type { Answers, DesignOption, OrchestratorResponse } from "../../../../packages/agents/types/agentTypes";
 import type { Question } from "../../../../packages/agents/baml_client/types";
@@ -32,9 +36,8 @@ export interface ChatMessage {
   content: string;
 }
 
-interface CreateRunResponse {
-  success: boolean;
-  runId: string;
+interface RunRef {
+  id: string;
   projectId: string;
 }
 
@@ -49,8 +52,7 @@ interface RunContextValue {
 }
 
 interface RunStateResponse {
-  success: boolean;
-  data: {
+  runState: {
     runId: string;
     projectId: string;
     userPrompt: string;
@@ -64,7 +66,7 @@ interface RunStateResponse {
 const RunContext = createContext<RunContextValue | null>(null);
 
 function messageFor(err: unknown, fallback: string): string {
-  return err instanceof ApiError ? err.message : fallback;
+  return err instanceof GqlError ? err.message : fallback;
 }
 
 let messageSeq = 0;
@@ -89,49 +91,46 @@ export function RunProvider({ children }: { children: ReactNode }) {
       closeStreamRef.current?.();
       setState({ status: "running", runId, projectId, userPrompt, feed: [] });
 
-      closeStreamRef.current = openEventStream(`/api/chat/${runId}/stream`, {
-        onMessage: (raw) => {
-          let event: OrchestratorEvent;
-          try {
-            event = JSON.parse(raw);
-          } catch {
-            return;
-          }
-
-          switch (event.type) {
-            case "clarification_needed":
-              pushMessage("system", "I need a couple of things clarified before continuing.");
-              setState({ status: "clarification_needed", runId, projectId, userPrompt, questions: event.questions });
-              return;
-            case "select_design":
-              // The orchestrator has already returned for this run — nothing
-              // more will arrive on this connection until a new run picks up.
-              closeStreamRef.current?.();
-              pushMessage("system", "Here are a few design directions to start from.");
-              setState({ status: "select_design", runId, projectId, userPrompt, designs: event.designs });
-              return;
-            case "run_completed": {
-              const result = event.result as CompletedResult;
-              pushMessage("system", result.summary);
-              setState({ status: "completed", runId, projectId, result });
-              return;
+      closeStreamRef.current = subscribe<{ runEvents: OrchestratorEvent }>(
+        RUN_EVENTS,
+        { runId },
+        {
+          onEvent: ({ runEvents: event }) => {
+            switch (event.type) {
+              case "clarification_needed":
+                pushMessage("system", "I need a couple of things clarified before continuing.");
+                setState({ status: "clarification_needed", runId, projectId, userPrompt, questions: event.questions });
+                return;
+              case "select_design":
+                // The orchestrator has already returned for this run — nothing
+                // more will arrive on this connection until a new run picks up.
+                closeStreamRef.current?.();
+                pushMessage("system", "Here are a few design directions to start from.");
+                setState({ status: "select_design", runId, projectId, userPrompt, designs: event.designs });
+                return;
+              case "run_completed": {
+                const result = event.result as CompletedResult;
+                pushMessage("system", result.summary);
+                setState({ status: "completed", runId, projectId, result });
+                return;
+              }
+              case "run_failed":
+                pushMessage("system", `Failed: ${event.error}`);
+                setState({ status: "failed", runId, projectId, error: event.error });
+                return;
+              default:
+                pushMessage("system", describeEvent(event));
+                setState((prev) =>
+                  prev.status === "running" ? { ...prev, feed: [...prev.feed, event] } : prev,
+                );
             }
-            case "run_failed":
-              pushMessage("system", `Failed: ${event.error}`);
-              setState({ status: "failed", runId, projectId, error: event.error });
-              return;
-            default:
-              pushMessage("system", describeEvent(event));
-              setState((prev) =>
-                prev.status === "running" ? { ...prev, feed: [...prev.feed, event] } : prev,
-              );
-          }
+          },
+          onError: () => {
+            pushMessage("system", "Lost connection to the build stream.");
+            setState({ status: "failed", runId, projectId, error: "Lost connection to the build stream." });
+          },
         },
-        onError: () => {
-          pushMessage("system", "Lost connection to the build stream.");
-          setState({ status: "failed", runId, projectId, error: "Lost connection to the build stream." });
-        },
-      });
+      );
     },
     [pushMessage],
   );
@@ -141,12 +140,12 @@ export function RunProvider({ children }: { children: ReactNode }) {
       pushMessage("user", userPrompt);
       setState({ status: "submitting" });
       try {
-        const res = await api.post<CreateRunResponse>(
-          projectId ? `/api/chat/${projectId}` : "/api/chat",
-          { userPrompt },
-        );
-        attachStream(res.runId, res.projectId, userPrompt);
-        return res.runId;
+        const res = await gql<{ createRun: RunRef }>(CREATE_RUN, {
+          projectId: projectId ?? null,
+          userPrompt,
+        });
+        attachStream(res.createRun.id, res.createRun.projectId, userPrompt);
+        return res.createRun.id;
       } catch (err) {
         const error = messageFor(err, "Failed to start the build.");
         pushMessage("system", `Failed: ${error}`);
@@ -165,11 +164,14 @@ export function RunProvider({ children }: { children: ReactNode }) {
       setState({ status: "submitting" });
       try {
         // Continues the same pending runId — no new run is created here.
-        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}/${runId}/continue`, {
+        const res = await gql<{ continueRun: RunRef }>(CONTINUE_RUN, {
+          projectId,
+          runId,
           answers,
+          selectedDesignId: null,
         });
-        attachStream(res.runId, res.projectId, userPrompt);
-        return res.runId;
+        attachStream(res.continueRun.id, res.continueRun.projectId, userPrompt);
+        return res.continueRun.id;
       } catch (err) {
         const error = messageFor(err, "Failed to resume the build.");
         pushMessage("system", `Failed: ${error}`);
@@ -187,12 +189,14 @@ export function RunProvider({ children }: { children: ReactNode }) {
       pushMessage("user", "Picked a design direction.");
       setState({ status: "submitting" });
       try {
-        const res = await api.post<CreateRunResponse>(`/api/chat/${projectId}/${runId}/continue`, {
+        const res = await gql<{ continueRun: RunRef }>(CONTINUE_RUN, {
+          projectId,
+          runId,
           answers: [],
           selectedDesignId: designId,
         });
-        attachStream(res.runId, res.projectId, userPrompt);
-        return res.runId;
+        attachStream(res.continueRun.id, res.continueRun.projectId, userPrompt);
+        return res.continueRun.id;
       } catch (err) {
         const error = messageFor(err, "Failed to continue the build.");
         pushMessage("system", `Failed: ${error}`);
@@ -208,8 +212,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
   const resume = useCallback(
     async (runId: string) => {
       try {
-        const res = await api.get<RunStateResponse>(`/api/chat/${runId}/state`);
-        const { projectId, userPrompt, status, pauseEvent, completedEvent, failedEvent } = res.data;
+        const res = await gql<RunStateResponse>(RUN_STATE, { runId });
+        const { projectId, userPrompt, status, pauseEvent, completedEvent, failedEvent } = res.runState;
 
         if (status === "IN_PROGRESS") {
           attachStream(runId, projectId, userPrompt);

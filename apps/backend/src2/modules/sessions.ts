@@ -1,9 +1,9 @@
 import { Router, type Request, type Response } from "express";
-import { internalAuth } from "./middleware";
-import { prisma } from "../prisma";
+import { internalAuth } from "../../src/lib/middleware";
+import { prisma } from "../../src/lib/prisma";
 import { randomUUIDv7 } from "bun";
 import type { OrchestratorEvent } from "../../../../packages/agents";
-import { logger } from "./utils";
+import { logger } from "../../src/lib/utils";
 
 /*
 POST   /internal/sessions/:runId/events

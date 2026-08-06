@@ -1,0 +1,13 @@
+
+
+query{
+  user(id: 1){
+    name
+    posts{
+      title
+      description
+    }
+    contact
+    
+  }
+}

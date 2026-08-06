@@ -1,0 +1,12 @@
+# Exchanges a Google ID token for our own session token. Used by lib/auth.tsx
+mutation GoogleSignIn($idToken: String!) {
+  googleSignIn(idToken: $idToken) {
+    token
+    user {
+      id
+      email
+      name
+      createdAt
+    }
+  }
+}

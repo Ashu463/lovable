@@ -1,0 +1,10 @@
+# Full project list for the Projects page, which needs the star/archive flags.
+query Projects {
+  projects {
+    id
+    name
+    isStarred
+    isArchived
+    createdAt
+  }
+}

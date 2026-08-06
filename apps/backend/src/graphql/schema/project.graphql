@@ -1,0 +1,47 @@
+# Projects, their sandbox session and synced files. Resolvers: ../modules/project.ts
+
+type Project {
+  id: ID!
+  name: String
+  repoTree: String
+  "Cached complexity verdict, so Bootstrap can skip re-running that LLM call."
+  isComplex: Boolean
+  isArchived: Boolean!
+  isStarred: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+"A project plus its live sandbox, resolved by booting E2B. Slow — don't use it where 'project' would do."
+type ProjectSession {
+  project: Project!
+  latestRunId: ID
+  sandboxId: String
+  previewUrl: String
+}
+
+type ProjectFile {
+  path: String!
+  content: String!
+}
+
+extend type Query {
+  "Projects belonging to the authenticated user."
+  projects: [Project!]!
+  project(id: ID!): Project!
+  projectSession(id: ID!): ProjectSession!
+  "Files synced sandbox -> R2 during the run, read from the durable copy."
+  projectFiles(id: ID!): [ProjectFile!]!
+}
+
+extend type Mutation {
+  createProject(name: String): Project!
+  updateProject(
+    id: ID!
+    name: String
+    archived: Boolean
+    starred: Boolean
+    isComplex: Boolean
+  ): Project!
+  deleteProject(id: ID!): Boolean!
+}

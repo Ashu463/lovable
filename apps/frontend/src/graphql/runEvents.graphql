@@ -1,0 +1,5 @@
+# Live build feed over SSE: replays past events, then streams new ones until the
+# run reaches a terminal event.
+subscription RunEvents($runId: ID!) {
+  runEvents(runId: $runId)
+}

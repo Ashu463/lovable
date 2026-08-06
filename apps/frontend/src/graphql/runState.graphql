@@ -1,0 +1,12 @@
+# Rebuilds the workspace UI after a refresh, when only the runId is in the URL.
+query RunState($runId: ID!) {
+  runState(runId: $runId) {
+    runId
+    projectId
+    userPrompt
+    status
+    pauseEvent
+    completedEvent
+    failedEvent
+  }
+}

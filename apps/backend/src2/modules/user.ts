@@ -1,10 +1,10 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { prisma } from "../prisma";
-import { auth, type AuthRequest } from "./middleware";
-import {isValidEmail, isValidPassword, signUserToken,toPublicUser} from "./user.helpers";
-import { verifyGoogleIdToken } from "./google";
-import { logger } from "./utils";
+import { prisma } from "../../src/lib/prisma";
+import { auth, type AuthRequest } from "../../src/lib/middleware";
+import {isValidEmail, isValidPassword, signUserToken,toPublicUser} from "../../src/lib/user.helpers";
+import { verifyGoogleIdToken } from "../../src/lib/google";
+import { logger } from "../../src/lib/utils";
 /*Routes:
 POST /users/signup                                → email/password signup
 POST /users/login                                 → email/password login
