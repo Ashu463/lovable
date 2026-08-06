@@ -37,7 +37,17 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
         )
     }
     async fetchDesignHtml(screen: Screen): Promise<string> {
-        const htmlUrl = await screen.getHtml();
+        let htmlUrl = await screen.getHtml();
+        for (let attempt = 1; attempt <= 5 && !htmlUrl; attempt++) {
+            logger.warn(`Screen ${screen.screenId} HTML not ready, retrying (${attempt}/5)`);
+            await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+            htmlUrl = await screen.getHtml();
+        }
+
+        if (!htmlUrl) {
+            throw new Error(`Stitch never returned an HTML URL for screen ${screen.screenId}`);
+        }
+
         const res = await fetch(htmlUrl);
 
         if (!res.ok) {
