@@ -11,6 +11,10 @@ import {
 import { gql, GqlError } from "@/lib/graphql";
 import { subscribe } from "@/lib/gqlStream";
 import { describeEvent } from "@/features/build/describeEvent";
+import CREATE_RUN from "@/graphql/createRun.graphql?raw";
+import CONTINUE_RUN from "@/graphql/continueRun.graphql?raw";
+import RUN_STATE from "@/graphql/runState.graphql?raw";
+import RUN_EVENTS from "@/graphql/runEvents.graphql?raw";
 import type { OrchestratorEvent } from "../../../../packages/agents/agent/events";
 import type { Answers, DesignOption, OrchestratorResponse } from "../../../../packages/agents/types/agentTypes";
 import type { Question } from "../../../../packages/agents/baml_client/types";
@@ -31,41 +35,6 @@ export interface ChatMessage {
   role: "user" | "system";
   content: string;
 }
-
-const CREATE_RUN = `
-  mutation CreateRun($projectId: ID, $userPrompt: String!) {
-    createRun(projectId: $projectId, userPrompt: $userPrompt) { id projectId }
-  }
-`;
-
-const CONTINUE_RUN = `
-  mutation ContinueRun($projectId: ID!, $runId: ID!, $answers: [AgentAnswerInput!]!, $selectedDesignId: ID) {
-    continueRun(projectId: $projectId, runId: $runId, answers: $answers, selectedDesignId: $selectedDesignId) {
-      id
-      projectId
-    }
-  }
-`;
-
-const RUN_STATE = `
-  query RunState($runId: ID!) {
-    runState(runId: $runId) {
-      runId
-      projectId
-      userPrompt
-      status
-      pauseEvent
-      completedEvent
-      failedEvent
-    }
-  }
-`;
-
-const RUN_EVENTS = `
-  subscription RunEvents($runId: ID!) {
-    runEvents(runId: $runId)
-  }
-`;
 
 interface RunRef {
   id: string;

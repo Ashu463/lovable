@@ -5,18 +5,13 @@ import { Card } from "@/components/ui/card";
 import { TemplateGrid } from "@/features/templates/TemplateGrid";
 import { useAuth } from "@/lib/auth";
 import { gql, GqlError } from "@/lib/graphql";
+import PROJECTS from "@/graphql/projectsSummary.graphql?raw";
 
 interface ProjectRow {
   id: string;
   name: string | null;
   createdAt: string;
 }
-
-const PROJECTS = `
-  query Projects {
-    projects { id name createdAt }
-  }
-`;
 
 function MyProjects() {
   const { session } = useAuth();

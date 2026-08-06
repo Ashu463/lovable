@@ -1,0 +1,9 @@
+# Boots the project's sandbox back up and returns a fresh preview URL. Slow —
+# only used when opening a project, not for listing.
+query ProjectSession($id: ID!) {
+  projectSession(id: $id) {
+    latestRunId
+    sandboxId
+    previewUrl
+  }
+}

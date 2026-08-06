@@ -2,34 +2,6 @@ import { GraphQLError } from "graphql";
 import type { GraphQLContext } from "../context";
 import { loadOwnedProject } from "../authz";
 
-export const designTypeDefs = `#graphql
-  type Design {
-    id: ID!
-    projectId: ID!
-    screenId: String!
-    htmlContent: String!
-    isSelected: Boolean!
-    createdAt: DateTime!
-  }
-
-  extend type Project {
-    designs: [Design!]!
-    "The currently selected design, or null if the user hasn't picked one yet."
-    selectedDesign: Design
-  }
-
-  extend type Query {
-    designs(projectId: ID!): [Design!]!
-    selectedDesign(projectId: ID!): Design
-  }
-
-  extend type Mutation {
-    "Selects a design, clearing the previous selection in the same transaction."
-    selectDesign(projectId: ID!, designId: ID!): Design!
-    "Legacy path for callers holding htmlContent instead of an id — prefer selectDesign."
-    selectDesignByContent(projectId: ID!, htmlContent: String!): Design!
-  }
-`;
 
 // updateMany + update must land together, or a failure between them leaves the
 // project with no selected design at all.

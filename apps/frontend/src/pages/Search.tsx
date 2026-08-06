@@ -4,18 +4,13 @@ import { PageShell } from "@/features/shell/PageShell";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { gql, GqlError } from "@/lib/graphql";
+import PROJECTS from "@/graphql/projectsSummary.graphql?raw";
 
 interface ProjectRow {
   id: string;
   name: string | null;
   createdAt: string;
 }
-
-const PROJECTS = `
-  query Projects {
-    projects { id name createdAt }
-  }
-`;
 
 export function Search() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);

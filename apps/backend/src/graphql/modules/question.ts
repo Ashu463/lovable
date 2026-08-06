@@ -3,50 +3,6 @@ import { randomUUIDv7 } from "bun";
 import type { GraphQLContext } from "../context";
 import { loadOwnedProject, loadOwnedRun } from "../authz";
 
-export const questionTypeDefs = `#graphql
-  "An answer as it is stored — keyed by question id. See AgentAnswerInput for the shape the agent consumes."
-  input AnswerQuestionInput {
-    questionId: ID!
-    answer: String!
-  }
-
-  type Question {
-    id: ID!
-    projectId: ID!
-    runId: ID!
-    question: String!
-    options: [String!]!
-    createdAt: DateTime!
-    clarification: Answer
-  }
-
-  type Answer {
-    id: ID!
-    runId: ID!
-    questionId: ID!
-    questionText: String!
-    answer: String
-    createdAt: DateTime!
-    answeredAt: DateTime
-  }
-
-  extend type Project {
-    questions: [Question!]!
-  }
-
-  extend type Query {
-    "Unanswered clarification questions for a project."
-    questions(projectId: ID!): [Question!]!
-  }
-
-  extend type Mutation {
-    answerQuestions(
-      projectId: ID!
-      runId: ID!
-      answers: [AnswerQuestionInput!]!
-    ): [Answer!]!
-  }
-`;
 
 export const questionResolvers = {
   Query: {

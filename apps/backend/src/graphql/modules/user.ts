@@ -10,33 +10,6 @@ import {
 import { verifyGoogleIdToken } from "../../lib/google";
 import { logger } from "../../lib/utils";
 
-export const userTypeDefs = `#graphql
-  type User {
-    id: ID!
-    email: String!
-    name: String
-    createdAt: DateTime!
-  }
-
-  type AuthPayload {
-    token: String!
-    user: User!
-  }
-
-  extend type Query {
-    "The currently authenticated user, resolved from the bearer token."
-    me: User!
-  }
-
-  extend type Mutation {
-    signup(email: String!, password: String!, name: String): AuthPayload!
-    login(email: String!, password: String!): AuthPayload!
-    "Exchanges a Google ID token (obtained client-side) for a session token."
-    googleSignIn(idToken: String!): AuthPayload!
-    "Tokens are stateless, so this is an acknowledgement the client acts on."
-    logout: Boolean!
-  }
-`;
 
 export const userResolvers = {
   Query: {

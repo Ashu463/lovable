@@ -1,0 +1,73 @@
+# Runs and the planner's todo/summary ledger. Resolvers: ../modules/run.ts
+
+enum RunStatus {
+  IN_PROGRESS
+  CLARIFICATION_NEEDED
+  AWAITING_DESIGN_SELECTION
+  COMPLETED
+  FAILED
+  STOPPED
+}
+
+enum AgentType {
+  coder
+  debuggerr
+  tester
+  researcher
+  uiExpert
+}
+
+enum TodoStatus {
+  PENDING
+  COMPLETED
+}
+
+type Run {
+  id: ID!
+  projectId: ID!
+  sandboxId: String
+  status: RunStatus!
+  userPrompt: String!
+  currentStep: String
+  contextSnapshot: String
+  sessionSnapshot: String
+  parentRunId: ID
+  startedAt: DateTime!
+  endedAt: DateTime
+  project: Project!
+  todos: [Todo!]!
+}
+
+type Todo {
+  id: ID!
+  runId: ID!
+  taskId: Int!
+  task: String!
+  agent: AgentType!
+  status: TodoStatus!
+  "Task ids this one waits on, used by the DAG planner."
+  dependency: [Int!]!
+  agentSpecificData: JSON
+  summary: TaskSummary
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type TaskSummary {
+  id: ID!
+  summary: String!
+  createdAt: DateTime!
+  todo: Todo!
+}
+
+extend type Project {
+  runs: [Run!]!
+}
+
+extend type Query {
+  runs(projectId: ID!): [Run!]!
+  run(projectId: ID!, runId: ID!): Run!
+  todos(projectId: ID!, runId: ID!): [Todo!]!
+  "The TaskSummary ledger for a run, in the order the agents produced it."
+  summaries(projectId: ID!, runId: ID!): [TaskSummary!]!
+}

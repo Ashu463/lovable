@@ -1,0 +1,7 @@
+# Files synced sandbox -> R2 during the run. Used by the CodeViewer.
+query ProjectFiles($id: ID!) {
+  projectFiles(id: $id) {
+    path
+    content
+  }
+}

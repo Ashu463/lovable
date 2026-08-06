@@ -4,6 +4,9 @@ import { Star } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
 import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
+import PROJECTS from "@/graphql/projects.graphql?raw";
+import SET_STARRED from "@/graphql/setStarred.graphql?raw";
+import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
 
 interface ProjectRow {
   id: string;
@@ -12,28 +15,6 @@ interface ProjectRow {
   isArchived: boolean;
   createdAt: string;
 }
-
-const PROJECTS = `
-  query Projects {
-    projects { id name isStarred isArchived createdAt }
-  }
-`;
-
-const SET_STARRED = `
-  mutation SetStarred($id: ID!, $starred: Boolean!) {
-    updateProject(id: $id, starred: $starred) { id isStarred }
-  }
-`;
-
-const PROJECT_SESSION = `
-  query ProjectSession($id: ID!) {
-    projectSession(id: $id) {
-      latestRunId
-      sandboxId
-      previewUrl
-    }
-  }
-`;
 
 export function Projects() {
   const navigate = useNavigate();

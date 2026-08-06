@@ -1,0 +1,18 @@
+# Resumes the SAME paused run after clarification answers or a design pick —
+# this does not create a new run.
+mutation ContinueRun(
+  $projectId: ID!
+  $runId: ID!
+  $answers: [AgentAnswerInput!]!
+  $selectedDesignId: ID
+) {
+  continueRun(
+    projectId: $projectId
+    runId: $runId
+    answers: $answers
+    selectedDesignId: $selectedDesignId
+  ) {
+    id
+    projectId
+  }
+}

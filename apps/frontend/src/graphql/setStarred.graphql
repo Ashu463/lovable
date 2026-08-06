@@ -1,0 +1,7 @@
+# Toggles the star on a project. Used by the Projects page.
+mutation SetStarred($id: ID!, $starred: Boolean!) {
+  updateProject(id: $id, starred: $starred) {
+    id
+    isStarred
+  }
+}

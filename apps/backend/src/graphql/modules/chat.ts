@@ -6,41 +6,6 @@ import { loadOwnedProject, loadOwnedRun, loadOwnedRunById } from "../authz";
 import { runQueue } from "../../lib/queue";
 import { logger } from "../../lib/utils";
 
-export const chatTypeDefs = `#graphql
-  "An answer as the agent consumes it — question text, not id. See AnswerQuestionInput for the persisted shape."
-  input AgentAnswerInput {
-    question: String!
-    answer: String!
-  }
-
-  "A run's reconstructable UI state, for reopening /w/:runId after a refresh."
-  type RunState {
-    runId: ID!
-    projectId: ID!
-    userPrompt: String!
-    status: RunStatus!
-    "Populated only while CLARIFICATION_NEEDED or AWAITING_DESIGN_SELECTION."
-    pauseEvent: JSON
-    completedEvent: JSON
-    failedEvent: JSON
-  }
-
-  extend type Query {
-    runState(runId: ID!): RunState!
-  }
-
-  extend type Mutation {
-    "Starts a run, creating the project too when projectId is omitted."
-    createRun(projectId: ID, userPrompt: String!, sandboxId: String): Run!
-    "Resumes a run paused for clarification or design selection. Does not create a new run."
-    continueRun(
-      projectId: ID!
-      runId: ID!
-      answers: [AgentAnswerInput!]! = []
-      selectedDesignId: ID
-    ): Run!
-  }
-`;
 
 export const chatResolvers = {
   Query: {

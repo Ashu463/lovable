@@ -13,36 +13,6 @@ const STATUS_FOR_EVENT: Record<string, "CLARIFICATION_NEEDED" | "AWAITING_DESIGN
   run_failed: "FAILED",
 };
 
-export const internalTypeDefs = `#graphql
-  "A question as the planner produces it — note 'option', not 'options'."
-  input PlannedQuestionInput {
-    question: String!
-    option: [String!]!
-  }
-
-  input PlannedTodoInput {
-    "The planner's numeric task id, stored as Todo.taskId."
-    id: Int!
-    task: String!
-    agent: AgentType!
-    "Planner casing ('pending' / 'completed'), normalised server-side."
-    status: String!
-    dependency: [Int!]!
-    designNeeded: Boolean
-  }
-
-  extend type Mutation {
-    "Bulk-saves generated designs and echoes back the rows with ids."
-    saveDesigns(projectId: ID!, designs: [String!]!): [Design!]!
-    saveQuestions(projectId: ID!, runId: ID!, questions: [PlannedQuestionInput!]!): [Question!]!
-    saveTodos(projectId: ID!, runId: ID!, todos: [PlannedTodoInput!]!): [Todo!]!
-    "Marks the todo completed and upserts its summary."
-    saveTaskSummary(projectId: ID!, runId: ID!, taskId: Int!, summary: String!): TaskSummary!
-    "Durably records an orchestrator event and applies any run status transition."
-    recordRunEvent(runId: ID!, event: JSON!): Boolean!
-    saveRunState(runId: ID!, contextSnapshot: String, sessionSnapshot: String, iteration: Int): Boolean!
-  }
-`;
 
 export const internalResolvers = {
   Mutation: {

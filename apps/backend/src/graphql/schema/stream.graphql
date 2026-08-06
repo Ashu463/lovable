@@ -1,0 +1,6 @@
+# Live run feed, served over SSE at /graphql/stream. Resolvers: ../modules/stream.ts
+
+type Subscription {
+  "Past events for the run, then live ones. Completes when the run reaches a terminal event."
+  runEvents(runId: ID!): JSON!
+}

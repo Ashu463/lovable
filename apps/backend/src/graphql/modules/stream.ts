@@ -16,12 +16,6 @@ const TERMINAL = new Set([
 // client doesn't re-trigger a modal it has already answered.
 const NOT_REPLAYED = ["clarification_needed", "select_design"];
 
-export const streamTypeDefs = `#graphql
-  type Subscription {
-    "Past events for the run, then live ones. Completes when the run reaches a terminal event."
-    runEvents(runId: ID!): JSON!
-  }
-`;
 
 async function* streamRunEvents(run: { id: string; status: string }, ctx: GraphQLContext) {
   // Replay history first so a client joining mid-run (or after a refresh) sees

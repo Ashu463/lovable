@@ -8,15 +8,7 @@ import {
 } from "react";
 import { gql } from "@/lib/graphql";
 import { getStoredSession, setStoredSession, type Session } from "@/lib/session";
-
-const GOOGLE_SIGN_IN = `
-  mutation GoogleSignIn($idToken: String!) {
-    googleSignIn(idToken: $idToken) {
-      token
-      user { id email name createdAt }
-    }
-  }
-`;
+import GOOGLE_SIGN_IN from "@/graphql/googleSignIn.graphql?raw";
 
 interface AuthContextValue {
   session: Session | null;

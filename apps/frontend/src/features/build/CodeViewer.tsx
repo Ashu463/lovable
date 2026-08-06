@@ -2,17 +2,12 @@ import { useEffect, useState } from "react";
 import { FileCode } from "lucide-react";
 import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
+import PROJECT_FILES from "@/graphql/projectFiles.graphql?raw";
 
 interface ProjectFile {
   path: string;
   content: string;
 }
-
-const PROJECT_FILES = `
-  query ProjectFiles($id: ID!) {
-    projectFiles(id: $id) { path content }
-  }
-`;
 
 export function CodeViewer({ projectId }: { projectId: string }) {
   const [files, setFiles] = useState<ProjectFile[] | null>(null);
