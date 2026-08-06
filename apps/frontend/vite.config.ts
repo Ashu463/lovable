@@ -14,6 +14,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": "http://localhost:3000",
+      // Covers /graphql and, by prefix, /graphql/stream for subscriptions.
+      "/graphql": "http://localhost:3000",
     },
   },
 });
