@@ -1,4 +1,4 @@
-import { Screen, stitch } from "@google/stitch-sdk";
+import { Screen, StitchError, stitch } from "@google/stitch-sdk";
 import { logger } from "../utils/logger";
 
 type CreateProjectResult = {
@@ -10,9 +10,19 @@ type CreateProjectResult = {
 };
 
 export async function makeOneScreen(prompt: string, userId: string): Promise<Screen> {
-    const projectResult: CreateProjectResult = await stitch.callTool("create_project", {
-      title: userId,
-    });
+
+    let projectResult: CreateProjectResult | undefined;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+            projectResult = await stitch.callTool("create_project", { title: userId });
+            break;
+        } catch (e) {
+            if (attempt === 3) throw e;
+            const code = e instanceof StitchError ? e.code : "unknown";
+            logger.warn(`create_project failed (${code}), retry ${attempt}/2: ${e}`);
+            await new Promise((resolve) => setTimeout(resolve, 500 * attempt));
+        }
+    }
 
     if (!projectResult?.name) {
         throw new Error(`create_project returned unexpected shape: ${JSON.stringify(projectResult)}`);

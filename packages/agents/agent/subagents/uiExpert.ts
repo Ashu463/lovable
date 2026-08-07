@@ -26,15 +26,35 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
     }
     async generateDesigns(userPrompt: string, semanticMem: string, skills: Skill[]): Promise<Screen[]> {
         const variantPrompts: string[] = await this.craftDesignVariants({userPrompt, semanticMem}, skills)
-        const designs = await Promise.all(
+        const settled = await Promise.allSettled(
             variantPrompts.map((p) => makeOneScreen(p, this.userId))
         )
+
+        const designs = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
+        for (const r of settled) {
+            if (r.status === "rejected") logger.warn(`Design variant failed, continuing with the rest: ${r.reason}`)
+        }
+        if (designs.length === 0) {
+            throw new Error(`All ${variantPrompts.length} design variants failed: ${settled.map((r) => r.status === "rejected" ? r.reason : "").join(" | ")}`)
+        }
+        logger.info(`Generated ${designs.length}/${variantPrompts.length} design variant(s)`)
+
         return designs
     }
     async fetchDesigns(screens: Screen[]): Promise<string[]>{
-        return Promise.all(
+        const settled = await Promise.allSettled(
             screens.map(screen => this.fetchDesignHtml(screen))
         )
+
+        const html = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
+        for (const r of settled) {
+            if (r.status === "rejected") logger.warn(`Design HTML fetch failed, continuing with the rest: ${r.reason}`)
+        }
+        if (html.length === 0) {
+            throw new Error(`Could not fetch HTML for any of the ${screens.length} generated design(s)`)
+        }
+
+        return html
     }
     async fetchDesignHtml(screen: Screen): Promise<string> {
         let htmlUrl = await screen.getHtml();
