@@ -30,7 +30,12 @@ client<llm> OpenRouter {
     // }
   }
 }
-
+client OpenAI {
+    provider "openai"
+    options {
+        model "gpt-4o-mini"
+    }
+}
 class AgentResponse{
     
 }
@@ -66,7 +71,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -198,7 +203,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the

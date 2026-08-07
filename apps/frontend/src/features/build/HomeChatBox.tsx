@@ -16,7 +16,7 @@ import { GoogleLoginButton } from "@/features/auth/GoogleLoginButton";
 const MODES = ["Build", "Plan"];
 
 export function HomeChatBox() {
-  const { session } = useAuth();
+  const { session, sessionExpired } = useAuth();
   const { submit } = useRun();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -103,7 +103,10 @@ export function HomeChatBox() {
 
       {!session && (
         <p className="mt-3 text-center font-mono text-xs text-muted-foreground">
-          {authError ?? "Sign in with Google to start building."}
+          {authError ??
+            (sessionExpired
+              ? "Your session is no longer valid. Please sign in again."
+              : "Sign in with Google to start building.")}
         </p>
       )}
     </div>

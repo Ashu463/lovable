@@ -1,0 +1,10 @@
+# Validates the stored token against the server on boot — a deleted or revoked
+# account is only detectable here, not from localStorage.
+query Me {
+  me {
+    id
+    email
+    name
+    createdAt
+  }
+}

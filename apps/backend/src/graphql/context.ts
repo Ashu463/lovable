@@ -38,7 +38,16 @@ export async function createContext({
       id: string;
       email: string;
     };
-    return { prisma, user: { id: payload.id, email: payload.email }, isInternal: false };
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.id },
+      select: { id: true, email: true },
+    });
+    if (!user) {
+      return { prisma, user: null, isInternal: false };
+    }
+
+    return { prisma, user, isInternal: false };
   } catch {
     // An invalid token is left to `requireUser` to reject, so that public
     // operations still resolve when a stale token happens to be attached.

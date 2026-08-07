@@ -17,6 +17,20 @@ interface GqlOptions {
   auth?: boolean;
 }
 
+// Only the server knows whether the stored token still names a real account, so
+// every UNAUTHENTICATED reply funnels through here and AuthProvider registers
+// the handler that drops the session. Lives outside React because `gql` and the
+// SSE client are plain modules, not hooks.
+let unauthenticatedHandler: (() => void) | null = null;
+
+export function setUnauthenticatedHandler(handler: (() => void) | null) {
+  unauthenticatedHandler = handler;
+}
+
+export function reportUnauthenticated() {
+  unauthenticatedHandler?.();
+}
+
 export async function gql<T>(
   query: string,
   variables?: Record<string, unknown>,
@@ -42,7 +56,9 @@ export async function gql<T>(
   // isn't enough to tell whether the operation succeeded.
   const first = payload?.errors?.[0];
   if (first) {
-    throw new GqlError(first.message ?? "Request failed", first.extensions?.code);
+    const code = first.extensions?.code;
+    if (code === "UNAUTHENTICATED") reportUnauthenticated();
+    throw new GqlError(first.message ?? "Request failed", code);
   }
   if (!res.ok || !payload?.data) {
     throw new GqlError(`Request failed (${res.status})`);

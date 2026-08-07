@@ -1,6 +1,6 @@
 import { createClient } from "graphql-sse";
 import { getStoredSession } from "@/lib/session";
-import { GRAPHQL_URL } from "@/lib/graphql";
+import { GRAPHQL_URL, reportUnauthenticated } from "@/lib/graphql";
 
 interface StreamHandlers<T> {
   onEvent: (data: T) => void;
@@ -30,12 +30,19 @@ export function subscribe<T>(
     {
       next: (result) => {
         if (result.errors?.length) {
+          if (result.errors[0]!.extensions?.code === "UNAUTHENTICATED") reportUnauthenticated();
           handlers.onError?.(new Error(result.errors[0]!.message));
           return;
         }
         if (result.data) handlers.onEvent(result.data);
       },
-      error: (err) => handlers.onError?.(err),
+      // A subscription rejected before it streams surfaces here as the raw
+      // GraphQL error array rather than through `next`.
+      error: (err) => {
+        const errors = (Array.isArray(err) ? err : []) as { extensions?: { code?: string } }[];
+        if (errors.some((e) => e?.extensions?.code === "UNAUTHENTICATED")) reportUnauthenticated();
+        handlers.onError?.(err);
+      },
       complete: () => handlers.onComplete?.(),
     },
   );

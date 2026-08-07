@@ -16,7 +16,7 @@ class ComplexComplexity{
 type ComplexityLevel = SimpleComplexity | ComplexComplexity
 function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: string) -> SimpleComplexity | ComplexComplexity {
 
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -35,7 +35,7 @@ function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: s
 // }
 // function CheckComplexity(userPrompt: string, systemPrompt: string) -> ComplexityLevel{
 
-//     client OpenAIGeneric
+//     client OpenAI
 //     prompt #"
 //         {{systemPrompt}}
 //         {{userPrompt}}
@@ -46,7 +46,7 @@ function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: s
 
 // function GenerateQuestion(userPrompt: string, systemPrompt: string) -> Question[]{
 
-//     client OpenAIGeneric
+//     client OpenAI
 //     prompt #"
 //         {{systemPrompt}}
 //         {{userPrompt}}
