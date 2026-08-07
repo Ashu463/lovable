@@ -38,6 +38,7 @@ export const resolvers = {
   },
 
   Project: {
+    ...projectResolvers.Project,
     ...runResolvers.Project,
     ...designResolvers.Project,
     ...questionResolvers.Project,

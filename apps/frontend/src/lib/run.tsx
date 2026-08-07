@@ -14,6 +14,7 @@ import { describeEvent } from "@/features/build/describeEvent";
 import CREATE_RUN from "@/graphql/createRun.graphql?raw";
 import CONTINUE_RUN from "@/graphql/continueRun.graphql?raw";
 import RUN_STATE from "@/graphql/runState.graphql?raw";
+import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
 import RUN_EVENTS from "@/graphql/runEvents.graphql?raw";
 import type { OrchestratorEvent } from "../../../../packages/agents/agent/events";
 import type { Answers, DesignOption, OrchestratorResponse } from "../../../../packages/agents/types/agentTypes";
@@ -27,8 +28,8 @@ export type RunState =
   | { status: "running"; runId: string; projectId: string; userPrompt: string; feed: OrchestratorEvent[] }
   | { status: "clarification_needed"; runId: string; projectId: string; userPrompt: string; questions: Question[] }
   | { status: "select_design"; runId: string; projectId: string; userPrompt: string; designs: DesignOption[] }
-  | { status: "completed"; runId: string; projectId: string; result: CompletedResult }
-  | { status: "failed"; runId: string; projectId: string; error: string };
+  | { status: "completed"; runId: string; projectId: string; userPrompt: string; result: CompletedResult }
+  | { status: "failed"; runId: string; projectId: string; userPrompt: string; error: string };
 
 export interface ChatMessage {
   id: string;
@@ -57,6 +58,7 @@ interface RunStateResponse {
     projectId: string;
     userPrompt: string;
     status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED" | "STOPPED";
+    stalled: boolean;
     pauseEvent: { type: "clarification_needed"; questions: Question[] } | { type: "select_design"; designs: DesignOption[] } | null;
     completedEvent: { type: "run_completed"; result: CompletedResult } | null;
     failedEvent: { type: "run_failed"; error: string } | null;
@@ -111,12 +113,12 @@ export function RunProvider({ children }: { children: ReactNode }) {
               case "run_completed": {
                 const result = event.result as CompletedResult;
                 pushMessage("system", result.summary);
-                setState({ status: "completed", runId, projectId, result });
+                setState({ status: "completed", runId, projectId, userPrompt, result });
                 return;
               }
               case "run_failed":
                 pushMessage("system", `Failed: ${event.error}`);
-                setState({ status: "failed", runId, projectId, error: event.error });
+                setState({ status: "failed", runId, projectId, userPrompt, error: event.error });
                 return;
               default:
                 pushMessage("system", describeEvent(event));
@@ -127,7 +129,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
           },
           onError: () => {
             pushMessage("system", "Lost connection to the build stream.");
-            setState({ status: "failed", runId, projectId, error: "Lost connection to the build stream." });
+            setState({ status: "failed", runId, projectId, userPrompt, error: "Lost connection to the build stream." });
           },
         },
       );
@@ -149,7 +151,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         const error = messageFor(err, "Failed to start the build.");
         pushMessage("system", `Failed: ${error}`);
-        setState({ status: "failed", runId: "", projectId: projectId ?? "", error });
+        setState({ status: "failed", runId: "", projectId: projectId ?? "", userPrompt, error });
         return null;
       }
     },
@@ -175,7 +177,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         const error = messageFor(err, "Failed to resume the build.");
         pushMessage("system", `Failed: ${error}`);
-        setState({ status: "failed", runId, projectId, error });
+        setState({ status: "failed", runId, projectId, userPrompt, error });
         return null;
       }
     },
@@ -200,7 +202,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         const error = messageFor(err, "Failed to continue the build.");
         pushMessage("system", `Failed: ${error}`);
-        setState({ status: "failed", runId, projectId, error });
+        setState({ status: "failed", runId, projectId, userPrompt, error });
         return null;
       }
     },
@@ -213,8 +215,20 @@ export function RunProvider({ children }: { children: ReactNode }) {
     async (runId: string) => {
       try {
         const res = await gql<RunStateResponse>(RUN_STATE, { runId });
-        const { projectId, userPrompt, status, pauseEvent, completedEvent, failedEvent } = res.runState;
+        const { projectId, userPrompt, status, stalled, pauseEvent, completedEvent, failedEvent } = res.runState;
 
+        // The row still says IN_PROGRESS but nothing is queued to advance it —
+        // attaching a stream would just hang on "Building…" forever.
+        if (status === "IN_PROGRESS" && stalled) {
+          setState({
+            status: "failed",
+            runId,
+            projectId,
+            userPrompt,
+            error: "This build stopped unexpectedly and is no longer running. Send the prompt again to retry.",
+          });
+          return true;
+        }
         if (status === "IN_PROGRESS") {
           attachStream(runId, projectId, userPrompt);
           return true;
@@ -228,11 +242,33 @@ export function RunProvider({ children }: { children: ReactNode }) {
           return true;
         }
         if (status === "COMPLETED" && completedEvent?.type === "run_completed") {
-          setState({ status: "completed", runId, projectId, result: completedEvent.result });
+          // Render straight away, but blank the stored preview URL first: it
+          // points at a sandbox that has almost certainly expired, and showing a
+          // dead iframe is worse than showing "starting sandbox". projectSession
+          // boots a fresh one and we swap the URL in when it answers.
+          setState({
+            status: "completed",
+            runId,
+            projectId,
+            userPrompt,
+            result: { ...completedEvent.result, previewUrl: "" },
+          });
+
+          void gql<{ projectSession: { previewUrl: string | null } }>(PROJECT_SESSION, { id: projectId })
+            .then((session) =>
+              setState((prev) =>
+                prev.status === "completed" && prev.runId === runId
+                  ? { ...prev, result: { ...prev.result, previewUrl: session.projectSession.previewUrl ?? "" } }
+                  : prev,
+              ),
+            )
+            .catch(() => {
+              /* preview stays blank; the chat and code panes still work */
+            });
           return true;
         }
         if (status === "FAILED") {
-          setState({ status: "failed", runId, projectId, error: failedEvent?.error ?? "This run failed." });
+          setState({ status: "failed", runId, projectId, userPrompt, error: failedEvent?.error ?? "This run failed." });
           return true;
         }
         return false;

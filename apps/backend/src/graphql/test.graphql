@@ -8,6 +8,14 @@ query{
       description
     }
     contact
-    
+
   }
+}
+query { 
+  project(id: "p1") {
+   name
+   designs {
+      id 
+    } 
+  } 
 }

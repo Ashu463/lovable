@@ -153,7 +153,14 @@ function PreviewPane() {
         <span className="font-mono text-[11px] text-muted-foreground">reads from R2</span>
       </div>
       <TabsContent value="preview" className="flex-1">
-        <iframe title="Live preview" src={state.result.previewUrl} className="h-full w-full bg-white" />
+        {state.result.previewUrl ? (
+          <iframe title="Live preview" src={state.result.previewUrl} className="h-full w-full bg-white" />
+        ) : (
+          <div className="flex h-full items-center justify-center gap-2.5 font-mono text-sm text-muted">
+            <BrandMark className="h-5 w-5" />
+            Starting sandbox…
+          </div>
+        )}
       </TabsContent>
       <TabsContent value="code" className="flex-1 overflow-hidden">
         <CodeViewer projectId={state.projectId} />
@@ -164,25 +171,26 @@ function PreviewPane() {
 
 type ResumeStatus = "checking" | "not_found";
 
-// Placeholder title until projects get real LLM-generated names — first 10
-// characters of the prompt that started this run. Read from the message log
-// rather than RunState directly — the completed/failed variants don't carry
-// userPrompt, but the first user message is always there regardless of status.
+// Placeholder title until projects get real LLM-generated names — the prompt
+// that started this run, taken from run state so it survives a page reload
+// (the in-memory message log is empty when a past session is reopened).
 function projectTitle(userPrompt: string | undefined): string {
   const trimmed = userPrompt?.trim();
   if (!trimmed) return "Untitled project";
-  return trimmed.length > 10 ? `${trimmed.slice(0, 10)}…` : trimmed;
+  return trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
 }
 
 export function Workspace() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
-  const { state, messages, resume, reset } = useRun();
+  const { state, resume, reset } = useRun();
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
   const { stages, agents } = useWorkspacePipeline(state);
 
   const isLive = "runId" in state && state.runId === runId;
-  const showSplit = state.status === "completed";
+  // Guarded on isLive so a previous run's completed state can't flash its
+  // preview while a different runId is still resuming.
+  const showSplit = isLive && state.status === "completed";
 
   useEffect(() => {
     if (isLive || !runId) return;
@@ -198,39 +206,25 @@ export function Workspace() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId]);
 
-  if (!isLive) {
-    if (resumeStatus === "checking" || resumeStatus === null) {
-      return (
-        <div className="flex h-full items-center justify-center gap-2.5 font-mono text-sm text-muted">
-          <BrandMark className="h-6 w-6" />
-          Reconnecting to this build…
-        </div>
-      );
-    }
-
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
-        <p className="text-muted">This build session couldn&rsquo;t be found.</p>
-        <Link to="/" className="text-accent hover:underline">
-          Start a new build
-        </Link>
-      </div>
-    );
-  }
+  // The chrome renders immediately from the URL alone; only the panes that need
+  // server data wait. Blocking the whole page on resume made every reload look
+  // like a cold start.
+  const resuming = !isLive && resumeStatus !== "not_found";
+  const notFound = !isLive && resumeStatus === "not_found";
 
   const isFailed = state.status === "failed";
 
   return (
     <div className="flex h-full flex-col">
       <StatusLine>
-        <StatusItem label="run" value={state.runId.slice(0, 8)} />
+        <StatusItem label="run" value={(isLive ? state.runId : (runId ?? "")).slice(0, 8)} />
         <StatusSep />
         <StatusItem
           label="status"
-          live={!isFailed && state.status !== "completed"}
+          live={resuming || (!isFailed && state.status !== "completed")}
           value={
             <span className={cn(isFailed && "text-danger", state.status === "completed" && "text-ok")}>
-              {state.status.replace(/_/g, " ")}
+              {resuming ? "loading" : notFound ? "not found" : state.status.replace(/_/g, " ")}
             </span>
           }
         />
@@ -238,8 +232,14 @@ export function Workspace() {
 
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <span className={cn("h-2 w-2 rounded-sm", isFailed ? "bg-danger" : state.status === "completed" ? "bg-ok" : "bg-accent")} />
-          {projectTitle(messages.find((m) => m.role === "user")?.content)}
+          <span className={cn("h-2 w-2 rounded-sm", resuming ? "bg-muted" : isFailed ? "bg-danger" : state.status === "completed" ? "bg-ok" : "bg-accent")} />
+          {resuming ? (
+            <span className="h-4 w-48 animate-pulse rounded bg-surface-hover" />
+          ) : (
+            <span className="truncate" title={isLive && "userPrompt" in state ? state.userPrompt : undefined}>
+              {notFound ? "Session not found" : projectTitle(isLive && "userPrompt" in state ? state.userPrompt : undefined)}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -264,18 +264,37 @@ export function Workspace() {
 
       <PipelineStrip stages={stages} agents={agents} />
 
-      <div className={cn("flex flex-1 overflow-hidden", showSplit && "divide-x divide-border")}>
-        <div className={cn("flex flex-col", showSplit ? "w-[400px] shrink-0" : "flex-1")}>
-          <ChatLog wide={!showSplit} />
-          <WorkspaceInput />
-        </div>
-
-        {showSplit && (
-          <div className="flex-1">
-            <PreviewPane />
+      {resuming ? (
+        <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3.5 px-6 py-6">
+          <div className="h-10 w-2/3 animate-pulse self-end rounded-2xl bg-surface" />
+          <div className="h-4 w-1/2 animate-pulse rounded bg-surface" />
+          <div className="h-4 w-2/3 animate-pulse rounded bg-surface" />
+          <div className="flex items-center gap-2 pt-1 font-mono text-xs text-muted">
+            <BrandMark className="h-4 w-4" />
+            Loading this build…
           </div>
-        )}
-      </div>
+        </div>
+      ) : notFound ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
+          <p className="text-muted">This build session couldn&rsquo;t be found.</p>
+          <Link to="/" className="text-accent hover:underline">
+            Start a new build
+          </Link>
+        </div>
+      ) : (
+        <div className={cn("flex flex-1 overflow-hidden", showSplit && "divide-x divide-border")}>
+          <div className={cn("flex flex-col", showSplit ? "w-[400px] shrink-0" : "flex-1")}>
+            <ChatLog wide={!showSplit} />
+            <WorkspaceInput />
+          </div>
+
+          {showSplit && (
+            <div className="flex-1">
+              <PreviewPane />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

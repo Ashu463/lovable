@@ -39,11 +39,23 @@ export const chatResolvers = {
         run.status === "CLARIFICATION_NEEDED" ||
         run.status === "AWAITING_DESIGN_SELECTION";
 
+      // A run only leaves IN_PROGRESS when the agent emits a terminal event, so
+      // a worker restart or a job that died mid-flight leaves the row building
+      // forever. The queue is the source of truth for whether work is pending:
+      // waiting/active/delayed covers every state a job can be in before it
+      // reaches the worker, so finding none means nothing will advance this run.
+      let stalled = false;
+      if (run.status === "IN_PROGRESS") {
+        const pending = await runQueue.getJobs(["waiting", "active", "delayed"]);
+        stalled = !pending.some((job) => job.data?.runId === run.id);
+      }
+
       return {
         runId: run.id,
         projectId: run.projectId,
         userPrompt: run.userPrompt,
         status: run.status,
+        stalled,
         pauseEvent: paused ? payload : null,
         completedEvent: run.status === "COMPLETED" ? payload : null,
         failedEvent: run.status === "FAILED" ? payload : null,

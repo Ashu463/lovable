@@ -4,11 +4,14 @@ import { PageShell } from "@/features/shell/PageShell";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { gql, GqlError } from "@/lib/graphql";
+import { useOpenProject } from "@/lib/useOpenProject";
+import { cn } from "@/lib/utils";
 import PROJECTS from "@/graphql/projectsSummary.graphql?raw";
 
 interface ProjectRow {
   id: string;
-  name: string | null;
+  title: string;
+  latestRunId: string | null;
   createdAt: string;
 }
 
@@ -16,6 +19,7 @@ export function Search() {
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const { openProject, openingId, openError } = useOpenProject();
 
   useEffect(() => {
     gql<{ projects: ProjectRow[] }>(PROJECTS)
@@ -24,7 +28,7 @@ export function Search() {
   }, []);
 
   const results = (projects ?? []).filter((p) =>
-    (p.name ?? "Untitled project").toLowerCase().includes(query.toLowerCase()),
+    p.title.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
@@ -46,12 +50,29 @@ export function Search() {
         <p className="text-sm text-muted-foreground">No matching projects.</p>
       )}
 
+      {openError && <p className="mb-4 text-sm text-red-400">{openError}</p>}
+
       <div className="space-y-2">
         {results.map((p) => (
-          <Card key={p.id} className="flex items-center justify-between px-4 py-3">
-            <p className="font-medium">{p.name ?? "Untitled project"}</p>
-            <p className="font-mono text-[11px] text-muted-foreground">
-              {new Date(p.createdAt).toLocaleDateString()}
+          <Card
+            key={p.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => void openProject(p)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                void openProject(p);
+              }
+            }}
+            className={cn(
+              "flex cursor-pointer items-center justify-between px-4 py-3 transition-colors hover:bg-surface-hover",
+              openingId === p.id && "pointer-events-none opacity-60",
+            )}
+          >
+            <p className="truncate font-medium">{p.title}</p>
+            <p className="shrink-0 pl-4 font-mono text-[11px] text-muted-foreground">
+              {openingId === p.id ? "Starting sandbox…" : new Date(p.createdAt).toLocaleDateString()}
             </p>
           </Card>
         ))}

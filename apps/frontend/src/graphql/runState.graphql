@@ -5,6 +5,7 @@ query RunState($runId: ID!) {
     projectId
     userPrompt
     status
+    stalled
     pauseEvent
     completedEvent
     failedEvent

@@ -12,6 +12,13 @@ type RunState {
   projectId: ID!
   userPrompt: String!
   status: RunStatus!
+  """
+  True when the run still says IN_PROGRESS but no queued or active job backs it,
+  so nothing will ever advance it. Distinguishes a genuinely building run from
+  one orphaned by a worker restart or a job that died without emitting a
+  terminal event.
+  """
+  stalled: Boolean!
   "Populated only while CLARIFICATION_NEEDED or AWAITING_DESIGN_SELECTION."
   pauseEvent: JSON
   completedEvent: JSON

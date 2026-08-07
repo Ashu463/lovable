@@ -1,30 +1,29 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Star } from "lucide-react";
 import { PageShell } from "@/features/shell/PageShell";
 import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
 import PROJECTS from "@/graphql/projects.graphql?raw";
 import SET_STARRED from "@/graphql/setStarred.graphql?raw";
-import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
+import { useOpenProject } from "@/lib/useOpenProject";
 
 interface ProjectRow {
   id: string;
-  name: string | null;
+  title: string;
+  latestRunId: string | null;
   isStarred: boolean;
   isArchived: boolean;
   createdAt: string;
 }
 
 export function Projects() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = searchParams.get("filter") === "starred" ? "starred" : "all";
 
   const [projects, setProjects] = useState<ProjectRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [openingId, setOpeningId] = useState<string | null>(null);
-  const [openError, setOpenError] = useState<string | null>(null);
+  const { openProject, openingId, openError } = useOpenProject();
 
   useEffect(() => {
     gql<{ projects: ProjectRow[] }>(PROJECTS)
@@ -43,29 +42,6 @@ export function Projects() {
       setProjects((prev) =>
         prev?.map((p) => (p.id === project.id ? { ...p, isStarred: project.isStarred } : p)) ?? null,
       );
-    }
-  };
-
-  const openProject = async (project: ProjectRow) => {
-    setOpenError(null);
-    setOpeningId(project.id);
-    try {
-      // Boots the project's sandbox back up (restoring files from R2 if it died)
-      // and refreshes its preview URL before we land on the workspace, which is
-      // keyed by runId rather than projectId.
-      const res = await gql<{ projectSession: { latestRunId: string | null } }>(
-        PROJECT_SESSION,
-        { id: project.id },
-      );
-      if (!res.projectSession.latestRunId) {
-        setOpenError("This project doesn't have a build yet.");
-        return;
-      }
-      navigate(`/w/${res.projectSession.latestRunId}`);
-    } catch (err) {
-      setOpenError(err instanceof GqlError ? err.message : "Couldn't open this project.");
-    } finally {
-      setOpeningId(null);
     }
   };
 
@@ -111,12 +87,12 @@ export function Projects() {
           {visible.map((project) => (
             <button
               key={project.id}
-              onClick={() => openProject(project)}
+              onClick={() => void openProject(project)}
               disabled={openingId === project.id}
               className="grid w-full grid-cols-[1fr_auto_auto] items-center gap-4 border-b border-border px-5 py-3.5 text-left text-sm transition-colors last:border-b-0 hover:bg-surface disabled:opacity-60"
             >
               <span className="truncate font-medium">
-                {openingId === project.id ? "Opening…" : (project.name ?? "Untitled project")}
+                {openingId === project.id ? "Starting sandbox…" : project.title}
               </span>
               <span className="font-mono text-xs text-muted-foreground">
                 {new Date(project.createdAt).toLocaleDateString()}

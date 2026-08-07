@@ -3,6 +3,10 @@
 type Project {
   id: ID!
   name: String
+  "Display name for a session: the project's name if set, otherwise the prompt that started it."
+  title: String!
+  "Most recent run, so a list can link straight to the workspace without booting a sandbox."
+  latestRunId: ID
   repoTree: String
   "Cached complexity verdict, so Bootstrap can skip re-running that LLM call."
   isComplex: Boolean

@@ -3,7 +3,8 @@
 query ProjectsSummary {
   projects {
     id
-    name
+    title
+    latestRunId
     createdAt
   }
 }

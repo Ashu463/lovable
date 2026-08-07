@@ -11,6 +11,32 @@ const r2 = new R2();
 
 
 export const projectResolvers = {
+  // Both fields hit the runs table per project, so a long list costs one query
+  // each — worth a DataLoader if these lists ever grow past a page.
+  Project: {
+    title: async (parent: { id: string; name: string | null }, _args: unknown, ctx: GraphQLContext) => {
+      if (parent.name?.trim()) return parent.name;
+
+      // Projects created by createRun have no name, so fall back to the prompt
+      // that started the session.
+      const first = await ctx.prisma.run.findFirst({
+        where: { projectId: parent.id },
+        orderBy: { startedAt: "asc" },
+        select: { userPrompt: true },
+      });
+      return first?.userPrompt?.trim() || "Untitled project";
+    },
+
+    latestRunId: async (parent: { id: string }, _args: unknown, ctx: GraphQLContext) => {
+      const latest = await ctx.prisma.run.findFirst({
+        where: { projectId: parent.id },
+        orderBy: { startedAt: "desc" },
+        select: { id: true },
+      });
+      return latest?.id ?? null;
+    },
+  },
+
   Query: {
     projects: async (_parent: unknown, _args: unknown, ctx: GraphQLContext) => {
       const user = requireUser(ctx);

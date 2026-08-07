@@ -256,7 +256,11 @@ export class MainAgent{
         if(data.action === 'write'){
             try{
                 logger.info(`[MainAgent:${this.runId}] Syncing write to R2: ${data.path}`)
-                await this.r2.putFile(key + data.path, data.content)
+                // r2Key() already returns the complete key — appending data.path
+                // again produced keys like ".../src/App.tsxsrc/App.tsx", so every
+                // edit landed on a bogus object and the real one kept the
+                // bootstrap template that restore later pulled back down.
+                await this.r2.putFile(key, data.content)
             }
             catch(e){
                 logger.error(`[MainAgent:${this.runId}] R2 write failed for ${data.path}: ${e instanceof Error ? e.message : String(e)}`)
@@ -267,7 +271,7 @@ export class MainAgent{
         else{
             try{
                 logger.info(`[MainAgent:${this.runId}] Syncing delete to R2: ${data.path}`)
-                await this.r2.deleteFile(key + data.path)
+                await this.r2.deleteFile(key)
             }
             catch(e){
                 logger.error(`[MainAgent:${this.runId}] R2 delete failed for ${data.path}: ${e instanceof Error ? e.message : String(e)}`)
