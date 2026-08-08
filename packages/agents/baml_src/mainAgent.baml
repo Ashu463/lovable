@@ -1,60 +1,37 @@
-enum ToolType {
-  Apify
-  Context7
-  Tavily
-  Stitch
-  ReadFile
-  WriteFile
-  EditFile
-  RunCommand
-  DeleteFile
-  QnA
-  GetSkill
-}
-class ToolCall {
-  // MUST stay optional, and `bun run baml-generate` MUST be run after editing
-  // this. `type` is redundant — the populated field below already identifies the
-  // tool. Models routinely omit it, and while it was required a missing `type`
-  // made the whole ToolCall unparseable; because the field is declared
-  // `ToolCall?`, that failure silently became null instead of an error, and
-  // surfaced as the misleading "Tool call not sended by LLM".
-  type ToolType?
-
-  apify Apify?
-  context7 Context7?
-  tavily Tavily?
-  stitch StitchTool?
-  readFile ReadFile?
-  writeFile WriteFile?
-  editFile EditFile?
-  runCommand RunCommand?
-  deleteFile DeleteFile?
-  getSkill GetSkill?
-}
+// Main-agent-only tools. The file/command/skill tools it shares with the
+// subagents live in agents.baml, so this file only declares what's unique here.
+//
+// Each carries a literal `action` discriminator, matching CoderAgent's union —
+// this is what MainLLMCall returns directly. The previous shape wrapped every
+// tool in a `ToolCall` class of ten mutually-exclusive optional fields, which
+// models kept getting wrong in three separate ways: omitting the redundant
+// `type` discriminator (which nulled the whole ToolCall), carrying over the
+// previous turn's `type`, and flattening args to the top level (where BAML
+// silently dropped them as unknown keys). A flat discriminated union removes
+// all three failure modes, because there's no redundant field left to disagree
+// with the payload.
 class StitchTool {
+  action "stitch"
   prompt string
   userId string
 }
 
 class Apify {
+  action "apify"
   urls string[]
   maxPages int
 }
 
 class Context7 {
+  action "context7"
   library string
   query string
 }
 
 class Tavily {
+  action "tavily"
   query string
   maxResults int
-}
-class LLMResponse{
-    stopReason "completed" | "aborted" | "toolCall"
-    content string? // narration — leave unset on a pure tool call, no need to force empty string
-    toolCall ToolCall?
-    questions Question[]?
 }
 
 function MainLLMCall(
@@ -64,7 +41,7 @@ function MainLLMCall(
   semanticMem: string, 
   design: string?,
   orchestratorContext: string
-  ) -> LLMResponse{
+  ) -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort{
 
     client OpenAI
     prompt #"

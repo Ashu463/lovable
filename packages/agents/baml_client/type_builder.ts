@@ -33,7 +33,7 @@ export default class TypeBuilder {
     
     AgentResponse: ClassViewer<'AgentResponse'>;
     
-    Apify: ClassViewer<'Apify', "urls" | "maxPages">;
+    Apify: ClassViewer<'Apify', "action" | "urls" | "maxPages">;
     
     ApifyRes: ClassViewer<'ApifyRes', "status" | "itemcount" | "scrapeRes">;
     
@@ -47,7 +47,7 @@ export default class TypeBuilder {
     
     ComplexComplexity: ClassViewer<'ComplexComplexity', "complex" | "questions">;
     
-    Context7: ClassViewer<'Context7', "library" | "query">;
+    Context7: ClassViewer<'Context7', "action" | "library" | "query">;
     
     DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory" | "skills" | "recentTurns">;
     
@@ -87,8 +87,6 @@ export default class TypeBuilder {
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
     
-    LLMResponse: ClassViewer<'LLMResponse', "stopReason" | "content" | "toolCall" | "questions">;
-    
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
     PlannerTodo: ClassViewer<'PlannerTodo', "id" | "task" | "agent" | "status" | "dependency" | "designNeeded">;
@@ -113,7 +111,7 @@ export default class TypeBuilder {
     
     Skill: ClassViewer<'Skill', "name" | "description" | "content">;
     
-    StitchTool: ClassViewer<'StitchTool', "prompt" | "userId">;
+    StitchTool: ClassViewer<'StitchTool', "action" | "prompt" | "userId">;
     
     SubAgentsContexts: ClassViewer<'SubAgentsContexts', "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert">;
     
@@ -121,15 +119,13 @@ export default class TypeBuilder {
     
     TaskSummary: ClassViewer<'TaskSummary', "taskId" | "summary">;
     
-    Tavily: ClassViewer<'Tavily', "query" | "maxResults">;
+    Tavily: ClassViewer<'Tavily', "action" | "query" | "maxResults">;
     
     TesterContext: ClassViewer<'TesterContext', "skills">;
     
     TesterResponse: ClassViewer<'TesterResponse'>;
     
     TesterSession: ClassViewer<'TesterSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
-    
-    ToolCall: ClassViewer<'ToolCall', "type" | "apify" | "context7" | "tavily" | "stitch" | "readFile" | "writeFile" | "editFile" | "runCommand" | "deleteFile" | "getSkill">;
     
     ToolResult: ClassViewer<'ToolResult', "success" | "content">;
     
@@ -148,16 +144,14 @@ export default class TypeBuilder {
     
     ContextType: EnumViewer<'ContextType', "CoderContext" | "DebuggerContext" | "TesterContext" | "UIExpertContext" | "ResearcherContext">;
     
-    ToolType: EnumViewer<'ToolType', "Apify" | "Context7" | "Tavily" | "Stitch" | "ReadFile" | "WriteFile" | "EditFile" | "RunCommand" | "DeleteFile" | "QnA" | "GetSkill">;
-    
 
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","LLMResponse","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolCall","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
-            "Agent","ContextType","ToolType",
+            "Agent","ContextType",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
@@ -175,7 +169,7 @@ export default class TypeBuilder {
         ]);
         
         this.Apify = this.tb.classViewer("Apify", [
-          "urls","maxPages",
+          "action","urls","maxPages",
         ]);
         
         this.ApifyRes = this.tb.classViewer("ApifyRes", [
@@ -203,7 +197,7 @@ export default class TypeBuilder {
         ]);
         
         this.Context7 = this.tb.classViewer("Context7", [
-          "library","query",
+          "action","library","query",
         ]);
         
         this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
@@ -282,10 +276,6 @@ export default class TypeBuilder {
           "title","description","url",
         ]);
         
-        this.LLMResponse = this.tb.classViewer("LLMResponse", [
-          "stopReason","content","toolCall","questions",
-        ]);
-        
         this.Message = this.tb.classViewer("Message", [
           "role","content","timestamp",
         ]);
@@ -335,7 +325,7 @@ export default class TypeBuilder {
         ]);
         
         this.StitchTool = this.tb.classViewer("StitchTool", [
-          "prompt","userId",
+          "action","prompt","userId",
         ]);
         
         this.SubAgentsContexts = this.tb.classViewer("SubAgentsContexts", [
@@ -351,7 +341,7 @@ export default class TypeBuilder {
         ]);
         
         this.Tavily = this.tb.classViewer("Tavily", [
-          "query","maxResults",
+          "action","query","maxResults",
         ]);
         
         this.TesterContext = this.tb.classViewer("TesterContext", [
@@ -364,10 +354,6 @@ export default class TypeBuilder {
         
         this.TesterSession = this.tb.classViewer("TesterSession", [
           "taskId","role","status","iterationCount","timestamp","content",
-        ]);
-        
-        this.ToolCall = this.tb.classViewer("ToolCall", [
-          "type","apify","context7","tavily","stitch","readFile","writeFile","editFile","runCommand","deleteFile","getSkill",
         ]);
         
         this.ToolResult = this.tb.classViewer("ToolResult", [
@@ -401,10 +387,6 @@ export default class TypeBuilder {
         
         this.ContextType = this.tb.enumViewer("ContextType", [
           "CoderContext","DebuggerContext","TesterContext","UIExpertContext","ResearcherContext",
-        ]);
-        
-        this.ToolType = this.tb.enumViewer("ToolType", [
-          "Apify","Context7","Tavily","Stitch","ReadFile","WriteFile","EditFile","RunCommand","DeleteFile","QnA","GetSkill",
         ]);
         
     }

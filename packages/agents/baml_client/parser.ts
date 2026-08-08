@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, LLMResponse, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolCall, ToolResult, ToolType, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -263,7 +263,7 @@ export class LlmResponseParser {
   MainLLMCall(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.LLMResponse {
+  ): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -277,7 +277,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.LLMResponse
+      ) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
     } catch (error) {
       throw toBamlError(error);
     }
@@ -729,7 +729,7 @@ export class LlmStreamParser {
   MainLLMCall(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.LLMResponse {
+  ): partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -743,7 +743,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.LLMResponse
+      ) as partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort
     } catch (error) {
       throw toBamlError(error);
     }

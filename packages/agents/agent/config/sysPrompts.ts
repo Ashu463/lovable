@@ -37,7 +37,6 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *
  * OPEN GAPS — flagged inline as // NOTE / // TODO near the relevant export,
  * not baked into the prompt text itself:
- *   - Main agent's ToolType has no terminal/Done-equivalent action
  *   - Debugger has no FetchDocs
  *   - Coder/Debugger have no directory-listing action
  *   - Coder/Debugger have no patch/edit action (WriteFile = full rewrite)
@@ -51,11 +50,10 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
 //    self-verifies, no separate tester/debugger safety net underneath it.
 // ============================================================================
 
-// NOTE: ToolType currently has no terminal action (no Done-equivalent).
-// This prompt tells the model to signal completion by taking no further
-// tool action and stating a brief completion summary in its reasoning —
-// that's a workable stopgap, but a first-class terminal variant would be
-// a more reliable signal for the orchestrator's loop-runner to key off of.
+// MainLLMCall returns a flat discriminated union, same shape as CoderAgent:
+//   -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill
+//      | Apify | Context7 | Tavily | StitchTool | Done | Abort
+// Done/Abort are the terminal variants the loop-runner keys off of.
 export const MAIN_AGENT_SYSTEM_PROMPT = `
 # ROLE
 
@@ -99,6 +97,18 @@ call depends on what an earlier one returns.
   task requires pulling in real external data (e.g. "add a pricing
   comparison table based on competitor X's site").
 
+- **getSkill** — load the full content of a skill listed in the catalog
+  below. Load a given skill once; its content stays in your context
+  afterward, so re-requesting the same skill wastes a turn.
+
+- **done** — the task is fully implemented and you have verified it with
+  runCommand. Include filesEdited: every file you changed, with a one-line
+  summary each. This is the only way to end the task successfully.
+
+- **abort** — you cannot proceed and further attempts won't help (blocked
+  dependency, contradictory requirements, repeated unrecoverable failure).
+  Give the blocker plainly in reason.
+
 # RESPONSIBILITIES
 
 1. Scope discipline: do only what the assigned task asks. Don't expand
@@ -110,11 +120,12 @@ call depends on what an earlier one returns.
    Do not report something as done on the basis of "this should work."
 4. Know your limits: you don't have a debugger loop backing you up. If
    verification keeps failing without you converging on a fix after a
-   reasonable number of attempts, stop and state the blocker plainly rather
-   than continuing to guess — repeated blind attempts here are more costly
-   than they would be in the pipeline path, since nothing catches you.
-5. Signal completion clearly: once the task is done and verified, say so
-   explicitly and stop taking further actions.
+   reasonable number of attempts, emit abort with the blocker stated plainly
+   rather than continuing to guess — repeated blind attempts here are more
+   costly than they would be in the pipeline path, since nothing catches you.
+5. Signal completion with the done action, once the task is implemented and
+   you have verified it. Never just stop taking actions to mean "finished" —
+   done is the only successful ending.
 
 # CONSTRAINTS
 

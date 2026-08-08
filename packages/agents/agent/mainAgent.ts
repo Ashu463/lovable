@@ -1,5 +1,5 @@
 import type { Screen } from "@google/stitch-sdk"
-import { b, ToolType, type LLMResponse, type Message, type Question, type ToolCall } from "../baml_client"
+import { b, type Abort, type Apify, type Context7, type DeleteFile, type Done, type EditFile, type GetSkill, type Message, type ReadFile, type RunCommand, type StitchTool, type Tavily, type WriteFile } from "../baml_client"
 import type { MainAgentResponse, SSEBody } from "../types/mainAgentTypes"
 import { COMPACT_CONTEXT_PROMPT, MAIN_AGENT_SUMMARY_PROMPT, MAIN_AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/sysPrompts"
 import { COMPACT_THRESHOLD, COMPACTION_PARAMETER, MAIN_AGENT_MAX_ITERATIONS, MAIN_AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
@@ -16,6 +16,11 @@ import { backendGql, SAVE_RUN_STATE } from "./utils/backendClient"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
+
+// Mirrors MainLLMCall's return union in mainAgent.baml — keep the two in sync.
+// `Done`/`Abort` are the terminal variants, everything else is a tool call.
+type MainLLMResponse = ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort
+type MainToolCall = Exclude<MainLLMResponse, Done | Abort>
 export class MainAgent{
     private iterations: number
     private K: number
@@ -76,89 +81,40 @@ export class MainAgent{
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
                 let shouldBreak = false
 
-                const response: LLMResponse = await this.withRetry(
+                const response: MainLLMResponse = await this.withRetry(
                     'MainLLMCall',
                     MAIN_AGENT_LLM_RETRY_ATTEMPTS,
                     (priorError) => this.callLLM(updatedSystemPrompt, this.userPrompt, priorError),
                 );
-                logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM stopReason=${response.stopReason}`)
+                logger.info(`[MainAgent:${this.runId}] Iteration ${this.iterations} LLM action=${response.action}`)
 
-                iterationLog.push({
-                    role: "assistant",
-                    content: response.content ?? "",
-                    timestamp: new Date().toISOString()
-                })
-
-                if(response.stopReason === 'completed') {
+                if(response.action === 'done') {
                     logger.info(`[MainAgent:${this.runId}] LLM signaled completion at iteration ${this.iterations}`)
                     iterationLog.push({
                         role: 'assistant',
-                        content: `LLM Response completed`,
+                        content: `Task complete. Files edited: ${response.filesEdited.map(f => `${f.fileName} (${f.summary})`).join('; ') || 'none'}`,
                         timestamp: new Date().toISOString()
                     })
                     shouldBreak = true
                 }
-                if(response.stopReason === 'aborted'){
-                    logger.warn(`[MainAgent:${this.runId}] LLM call aborted at iteration ${this.iterations}`)
+                else if(response.action === 'abort'){
+                    logger.warn(`[MainAgent:${this.runId}] LLM aborted at iteration ${this.iterations}: ${response.reason}`)
                     iterationLog.push({
                         role: 'assistant',
-                        content: `LLM call aborted`,
+                        content: `Aborted: ${response.reason}`,
                         timestamp: new Date().toISOString()
                     })
                     shouldBreak = true
                 }
-    
-                // if(response.stopReason === 'QnA'){
-                //     if(!response.questions) throw new Error("LLM failed to generate question")
-                //     const questions: Question[] = response.questions
-                //     await this.emitSSEUpdate({
-                //         type: 'clarification_needed',
-                //         content: JSON.stringify(questions),
-                //         iteration: this.iterations
-                //     })
-                //     await createBackendEmitter(this.runId).emit({
-                //         type:'clarification_needed',
-                //         questions: questions.map((m) => m.question)
-                //     })
-                //     // render these questions to frontend
-                // }
-    
-                if(response.stopReason === 'toolCall'){
-                    if(!response.toolCall){
-                        throw new Error("Tool call not sended by LLM")
-                    }
-                    // `type` is a redundant label the model gets wrong in two ways:
-                    // it omits it entirely, or it carries over the previous turn's
-                    // value (it has sent runCommand args tagged GetSkill, which
-                    // then died as "missing params" with the real command sitting
-                    // right there). Whichever field actually carries args is the
-                    // ground truth; `type` only breaks ties when several are set.
-                    const carried = ([
-                        ["apify", ToolType.Apify],
-                        ["context7", ToolType.Context7],
-                        ["tavily", ToolType.Tavily],
-                        ["stitch", ToolType.Stitch],
-                        ["readFile", ToolType.ReadFile],
-                        ["writeFile", ToolType.WriteFile],
-                        ["editFile", ToolType.EditFile],
-                        ["runCommand", ToolType.RunCommand],
-                        ["deleteFile", ToolType.DeleteFile],
-                        ["getSkill", ToolType.GetSkill],
-                    ] as const).filter(([field]) => response.toolCall![field] != null)
-
-                    if(carried.length === 1 && carried[0]![1] !== response.toolCall.type){
-                        logger.warn(`[MainAgent:${this.runId}] Tool call labelled ${response.toolCall.type ?? "(none)"} but carries ${carried[0]![1]} args — trusting the args`)
-                        response.toolCall.type = carried[0]![1]
-                    }
-                    if(!response.toolCall.type){
-                        throw new Error(`Tool call carried no recognisable tool: ${JSON.stringify(response.toolCall)}`)
-                    }
-
-                    const toolType = response.toolCall.type
+                else {
+                    // Everything else in the union is a tool call, and `action` is
+                    // the payload's own discriminator, so there is no separate
+                    // label left that can disagree with the args.
+                    const toolType = response.action
                     logger.info(`[MainAgent:${this.runId}] Tool call requested: ${toolType}`)
                     const toolRequestLog: Message = {
                         role: 'assistant',
-                        content: `Requested tool call ${toolType} with args ${JSON.stringify(response.toolCall)}`,
+                        content: `Requested tool call ${toolType} with args ${JSON.stringify(response)}`,
                         timestamp: new Date().toISOString()
                     }
                     this.session.push(toolRequestLog)
@@ -169,22 +125,24 @@ export class MainAgent{
                         toolName: toolType
                     })
                     try{
-                        const toolResult: string | Screen = await this.executeTool(response.toolCall)
+                        const toolResult: string | Screen = await this.executeTool(response)
                         logger.info(`[MainAgent:${this.runId}] Tool call ${toolType} succeeded`)
                         iterationLog.push({
                             role: 'toolCall',
                             content: `Result of ${toolType}: ${JSON.stringify(toolResult)}`,
                             timestamp: new Date().toISOString()
                         })
-                        if(response.toolCall.writeFile){
-                            await this.syncToR2({action: "write", path: response.toolCall.writeFile.path, content: response.toolCall.writeFile.content})
+                        // Only reached when executeTool didn't throw, so these run
+                        // for writes that actually landed in the sandbox.
+                        if(response.action === 'writeFile'){
+                            await this.syncToR2({action: "write", path: response.path, content: response.content})
                         }
-                        if(response.toolCall.editFile){
+                        if(response.action === 'editFile'){
                             // An edit has no final content here, so push the project rather than one file.
                             await this.sandbox.SyncR2()
                         }
-                        if(response.toolCall.deleteFile){
-                            await this.syncToR2({action: "delete", path: response.toolCall.deleteFile.path})
+                        if(response.action === 'delete'){
+                            await this.syncToR2({action: "delete", path: response.path})
                         }
                     }catch(e){
                         logger.error(`[MainAgent:${this.runId}] Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`)
@@ -227,7 +185,7 @@ export class MainAgent{
         }
     }
 
-    async callLLM(systemPrompt: string, userPrompt: string, priorError?: string): Promise<LLMResponse>{
+    async callLLM(systemPrompt: string, userPrompt: string, priorError?: string): Promise<MainLLMResponse>{
         try{
             // Feed the previous attempt's validation failure back in as a one-off
             // correction — appended here, not to this.context, so a successful
@@ -235,12 +193,12 @@ export class MainAgent{
             const context = priorError
                 ? [...this.context, {
                     role: 'system' as const,
-                    content: `Your previous response failed schema validation: ${priorError}. Correct this in your next response — e.g. if you are making a tool call, "content" can be left unset, it does not need to be a non-empty string.`,
+                    content: `Your previous response failed schema validation: ${priorError}. Correct this in your next response — emit exactly one action object with its own fields at the top level, e.g. {"action":"writeFile","path":"...","content":"..."}.`,
                     timestamp: new Date().toISOString(),
                 }]
                 : this.context
 
-            const response: LLMResponse = await b.MainLLMCall(systemPrompt, userPrompt, context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
+            const response: MainLLMResponse = await b.MainLLMCall(systemPrompt, userPrompt, context, this.semanticMem, this.selectedDesign, this.orchestratorContext)
             return response
         }
         catch(e){
@@ -317,68 +275,67 @@ export class MainAgent{
         }
     }
 
-    async executeTool(toolCall: ToolCall): Promise<string | Screen> {
-        switch (toolCall.type) {
-            case ToolType.Apify:
-                if (!toolCall.apify) throw new Error("Apify tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] Apify: scraping ${toolCall.apify.urls.length} url(s), maxPages=${toolCall.apify.maxPages}`)
-                return await webScrape(toolCall.apify.urls, toolCall.apify.maxPages)
+    // Dispatches on the payload's own `action` literal, so there is no separate
+    // discriminator to fall out of sync with the args and no per-case null check
+    // — if it parsed as this variant, its fields are present by construction.
+    async executeTool(toolCall: MainToolCall): Promise<string | Screen> {
+        switch (toolCall.action) {
+            case 'apify':
+                logger.info(`[MainAgent:${this.runId}] Apify: scraping ${toolCall.urls.length} url(s), maxPages=${toolCall.maxPages}`)
+                return await webScrape(toolCall.urls, toolCall.maxPages)
 
-            case ToolType.Context7:
-                if (!toolCall.context7) throw new Error("Context7 tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] Context7: fetching docs for ${toolCall.context7.library}, query="${toolCall.context7.query}"`)
-                return await fetchDocs(toolCall.context7.library, toolCall.context7.query)
+            case 'context7':
+                logger.info(`[MainAgent:${this.runId}] Context7: fetching docs for ${toolCall.library}, query="${toolCall.query}"`)
+                return await fetchDocs(toolCall.library, toolCall.query)
 
-            case ToolType.Tavily:
-                if (!toolCall.tavily) throw new Error("Tavily tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] Tavily: searching "${toolCall.tavily.query}", maxResults=${toolCall.tavily.maxResults}`)
-                return await webSearch(toolCall.tavily.query, toolCall.tavily.maxResults)
+            case 'tavily':
+                logger.info(`[MainAgent:${this.runId}] Tavily: searching "${toolCall.query}", maxResults=${toolCall.maxResults}`)
+                return await webSearch(toolCall.query, toolCall.maxResults)
 
-            case ToolType.Stitch:
-                if (!toolCall.stitch) throw new Error("Stitch tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] Stitch: generating screen for prompt="${toolCall.stitch.prompt}"`)
-                return await makeOneScreen(toolCall.stitch.prompt, toolCall.stitch.userId)
+            case 'stitch':
+                logger.info(`[MainAgent:${this.runId}] Stitch: generating screen for prompt="${toolCall.prompt}"`)
+                return await makeOneScreen(toolCall.prompt, toolCall.userId)
 
-            case ToolType.ReadFile:
-                if (!toolCall.readFile) throw new Error("ReadFile tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] ReadFile: ${toolCall.readFile.path}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "read", path: toolCall.readFile.path})).content
+            case 'read':
+                logger.info(`[MainAgent:${this.runId}] ReadFile: ${toolCall.path}`)
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)).content
 
-            case ToolType.WriteFile: {
-                if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] WriteFile: ${toolCall.writeFile.path}`)
-                const res = await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})
+            // Execute() reports in-sandbox failures via `success`, not by throwing,
+            // so these three surface it — otherwise runLoop treats a failed write
+            // as a success and syncs stale state to R2.
+            case 'writeFile': {
+                logger.info(`[MainAgent:${this.runId}] WriteFile: ${toolCall.path}`)
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
                 if (!res.success) throw new Error(res.content)
                 return res.content
             }
 
-            case ToolType.EditFile: {
-                if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.editFile.path}`)
-                const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.editFile)
+            case 'editFile': {
+                logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.path}`)
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
                 if (!res.success) throw new Error(res.content)
                 return res.content
             }
 
-            case ToolType.DeleteFile: {
-                if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] DeleteFile: ${toolCall.deleteFile.path}`)
-                const res = await this.sandbox.Execute(this.sandbox.sandboxId, {action: "delete", path: toolCall.deleteFile.path})
+            case 'delete': {
+                logger.info(`[MainAgent:${this.runId}] DeleteFile: ${toolCall.path}`)
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
                 if (!res.success) throw new Error(res.content)
                 return res.content
             }
 
-            case ToolType.RunCommand:
-                if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.runCommand.command} (cwd: ${toolCall.runCommand.cwd ?? "project root"})`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.runCommand)).content
+            case 'runCommand':
+                logger.info(`[MainAgent:${this.runId}] RunCommand: ${toolCall.command} (cwd: ${toolCall.cwd ?? "project root"})`)
+                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)).content
 
-            case ToolType.GetSkill:
-                if (!toolCall.getSkill) throw new Error("GetSkill tool call missing params")
-                logger.info(`[MainAgent:${this.runId}] GetSkill: ${toolCall.getSkill.skillName}`)
-                return await this.skillStore.fetchSkillContent(toolCall.getSkill.skillName, 'main')
+            case 'getSkill':
+                logger.info(`[MainAgent:${this.runId}] GetSkill: ${toolCall.skillName}`)
+                return await this.skillStore.fetchSkillContent(toolCall.skillName, 'main')
 
-            default: throw new Error(`Unhandled tool type: ${toolCall.type}`)
+            default: {
+                const unhandled: never = toolCall
+                throw new Error(`Unhandled tool action: ${JSON.stringify(unhandled)}`)
+            }
         }
     }
 

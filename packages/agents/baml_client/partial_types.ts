@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  LLMResponse,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolCall,  ToolResult,  ToolType,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -45,6 +45,7 @@ export namespace partial_types {
     export interface AgentResponse {
     }
     export interface Apify {
+      action?: "apify" | null
       urls: string[]
       maxPages?: number | null
     }
@@ -83,6 +84,7 @@ export namespace partial_types {
       questions: Question[]
     }
     export interface Context7 {
+      action?: "context7" | null
       library?: string | null
       query?: string | null
     }
@@ -185,12 +187,6 @@ export namespace partial_types {
       description?: string | null
       url?: string | null
     }
-    export interface LLMResponse {
-      stopReason?: "completed" | "aborted" | "toolCall" | null
-      content?: string | null
-      toolCall?: ToolCall | null
-      questions?: Question[] | null
-    }
     export interface Message {
       role?: "user" | "assistant" | "toolCall" | "system" | null
       content?: string | null
@@ -253,6 +249,7 @@ export namespace partial_types {
       content?: string | null
     }
     export interface StitchTool {
+      action?: "stitch" | null
       prompt?: string | null
       userId?: string | null
     }
@@ -272,6 +269,7 @@ export namespace partial_types {
       summary?: string | null
     }
     export interface Tavily {
+      action?: "tavily" | null
       query?: string | null
       maxResults?: number | null
     }
@@ -287,19 +285,6 @@ export namespace partial_types {
       iterationCount?: number | null
       timestamp?: string | null
       content?: string | null
-    }
-    export interface ToolCall {
-      type?: types.ToolType | null
-      apify?: Apify | null
-      context7?: Context7 | null
-      tavily?: Tavily | null
-      stitch?: StitchTool | null
-      readFile?: ReadFile | null
-      writeFile?: WriteFile | null
-      editFile?: EditFile | null
-      runCommand?: RunCommand | null
-      deleteFile?: DeleteFile | null
-      getSkill?: GetSkill | null
     }
     export interface ToolResult {
       success?: boolean | null

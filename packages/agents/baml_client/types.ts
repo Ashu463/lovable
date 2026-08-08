@@ -63,20 +63,6 @@ export enum ContextType {
   ResearcherContext = "ResearcherContext",
 }
 
-export enum ToolType {
-  Apify = "Apify",
-  Context7 = "Context7",
-  Tavily = "Tavily",
-  Stitch = "Stitch",
-  ReadFile = "ReadFile",
-  WriteFile = "WriteFile",
-  EditFile = "EditFile",
-  RunCommand = "RunCommand",
-  DeleteFile = "DeleteFile",
-  QnA = "QnA",
-  GetSkill = "GetSkill",
-}
-
 export interface Abort {
   action: "abort"
   reason: string
@@ -92,6 +78,7 @@ export interface AgentResponse {
 }
 
 export interface Apify {
+  action: "apify"
   urls: string[]
   maxPages: number
   
@@ -144,6 +131,7 @@ export interface ComplexComplexity {
 }
 
 export interface Context7 {
+  action: "context7"
   library: string
   query: string
   
@@ -286,14 +274,6 @@ export interface ItemRes {
   
 }
 
-export interface LLMResponse {
-  stopReason: "completed" | "aborted" | "toolCall"
-  content?: string | null
-  toolCall?: ToolCall | null
-  questions?: Question[] | null
-  
-}
-
 export interface Message {
   role: "user" | "assistant" | "toolCall" | "system"
   content: string
@@ -380,6 +360,7 @@ export interface Skill {
 }
 
 export interface StitchTool {
+  action: "stitch"
   prompt: string
   userId: string
   
@@ -407,6 +388,7 @@ export interface TaskSummary {
 }
 
 export interface Tavily {
+  action: "tavily"
   query: string
   maxResults: number
   
@@ -428,21 +410,6 @@ export interface TesterSession {
   iterationCount: number
   timestamp: string
   content?: string | null
-  
-}
-
-export interface ToolCall {
-  type?: ToolType | null
-  apify?: Apify | null
-  context7?: Context7 | null
-  tavily?: Tavily | null
-  stitch?: StitchTool | null
-  readFile?: ReadFile | null
-  writeFile?: WriteFile | null
-  editFile?: EditFile | null
-  runCommand?: RunCommand | null
-  deleteFile?: DeleteFile | null
-  getSkill?: GetSkill | null
   
 }
 
