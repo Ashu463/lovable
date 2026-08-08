@@ -8,7 +8,7 @@ import type { BaseAgent } from "./subagents/baseAgent";
 import { CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESEARCHER_MAX_ITERATIONS, TESTER_MAX_ITERATIONS, UI_EXPERT_MAX_ITERATIONS, SUBAGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_TOOL_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig";
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
-import { SUBAGENT_SUMMARY_PROMPT } from "./config/sysPrompts";
+import { SUBAGENT_SUMMARY_PROMPT } from "./config/systemPrompts";
 import type { BaseTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";

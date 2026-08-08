@@ -81,7 +81,7 @@ const skillFileOverrides: Partial<Record<AgentKey, Partial<Record<SkillId, strin
 const GLOBAL_SKILLS: SkillId[] = [skillsMapper.PROJECT_CONVENTION];
 
 const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
-    coder: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+    coder: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY, skillsMapper.ADD_A_ROUTE],
     debuggerr: [skillsMapper.TRIAGE_PROTOCOL],
     tester: [skillsMapper.DERIVE_ACCEPTANCE_CRITERIA, skillsMapper.SMOKE_CHECKLIST],
     researcher: [skillsMapper.REPORT_FORMAT, skillsMapper.SOURCE_QUALITY_RUBRIC],
@@ -93,7 +93,6 @@ const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
 const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
     coder: [
         skillsMapper.SCAFFOLD_NEW_PROJECT,
-        skillsMapper.ADD_A_ROUTE,
         skillsMapper.DATABASE_INTEGRATION,
         skillsMapper.API_ROUTE_CONVENTIONS,
         skillsMapper.STATE_MANAGEMENT_RULES,

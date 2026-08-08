@@ -2,7 +2,7 @@ import type { OrchestratorResponse, OrchestratorSSE, Project, User, Answers, Boo
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/sysPrompts"
+import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, ORCHESTRATOR_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/systemPrompts"
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import { MainAgent } from "./mainAgent"

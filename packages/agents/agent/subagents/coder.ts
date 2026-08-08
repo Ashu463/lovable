@@ -1,4 +1,4 @@
-import { CODER_PROMPT } from "../config/sysPrompts";
+import { CODER_PROMPT } from "../config/systemPrompts";
 import {b, type Abort, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { E2BSandbox } from "../utils/sandbox";

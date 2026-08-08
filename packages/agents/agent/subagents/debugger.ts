@@ -1,7 +1,7 @@
 import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch, GetSkill, Abort } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
-import { DEBUGGER_PROMPT } from "../config/sysPrompts";
+import { DEBUGGER_PROMPT } from "../config/systemPrompts";
 import { Researcher } from "./researcher";
 import { fetchDocs } from "../MCPs/context7";
 import { webScrape } from "../MCPs/apify";

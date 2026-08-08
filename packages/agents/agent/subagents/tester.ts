@@ -1,7 +1,7 @@
 import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
-import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/sysPrompts"
+import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/systemPrompts"
 import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"

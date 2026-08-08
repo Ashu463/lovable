@@ -2,7 +2,7 @@ import type { Screen } from "@google/stitch-sdk"
 import { makeOneScreen } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
 import { b, type UIExpertContext, type DesignVariants, type Skill } from "../../baml_client"
-import { UI_VARIANTS_PROMPT } from "../config/sysPrompts"
+import { UI_VARIANTS_PROMPT } from "../config/systemPrompts"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
 
