@@ -12,7 +12,13 @@ enum ToolType {
   GetSkill
 }
 class ToolCall {
-  type ToolType
+  // MUST stay optional, and `bun run baml-generate` MUST be run after editing
+  // this. `type` is redundant — the populated field below already identifies the
+  // tool. Models routinely omit it, and while it was required a missing `type`
+  // made the whole ToolCall unparseable; because the field is declared
+  // `ToolCall?`, that failure silently became null instead of an error, and
+  // surfaced as the misleading "Tool call not sended by LLM".
+  type ToolType?
 
   apify Apify?
   context7 Context7?
@@ -69,9 +75,8 @@ function MainLLMCall(
   this Run (layout, visual language, conventions). Never regenerate or
   second-guess this; treat it as settled. {% endif %}
         {{context}} - is the context of main agent
-        {{semanticMem}} - Relevant user context for this build, Use this to calibrate scope, defaults, and how much you ask vs decide.
-        {{orchestratorContext}} - relevant current state of the app: files, prior
-  decisions, whatever the orchestrator has determined is relevant to this
+        {{semanticMem}} 
+        {{orchestratorContext}}
   task.
   
         {{ctx.output_format}}

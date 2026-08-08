@@ -432,7 +432,7 @@ export interface TesterSession {
 }
 
 export interface ToolCall {
-  type: ToolType
+  type?: ToolType | null
   apify?: Apify | null
   context7?: Context7 | null
   tavily?: Tavily | null

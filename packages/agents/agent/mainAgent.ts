@@ -127,6 +127,33 @@ export class MainAgent{
                     if(!response.toolCall){
                         throw new Error("Tool call not sended by LLM")
                     }
+                    // `type` is a redundant label the model gets wrong in two ways:
+                    // it omits it entirely, or it carries over the previous turn's
+                    // value (it has sent runCommand args tagged GetSkill, which
+                    // then died as "missing params" with the real command sitting
+                    // right there). Whichever field actually carries args is the
+                    // ground truth; `type` only breaks ties when several are set.
+                    const carried = ([
+                        ["apify", ToolType.Apify],
+                        ["context7", ToolType.Context7],
+                        ["tavily", ToolType.Tavily],
+                        ["stitch", ToolType.Stitch],
+                        ["readFile", ToolType.ReadFile],
+                        ["writeFile", ToolType.WriteFile],
+                        ["editFile", ToolType.EditFile],
+                        ["runCommand", ToolType.RunCommand],
+                        ["deleteFile", ToolType.DeleteFile],
+                        ["getSkill", ToolType.GetSkill],
+                    ] as const).filter(([field]) => response.toolCall![field] != null)
+
+                    if(carried.length === 1 && carried[0]![1] !== response.toolCall.type){
+                        logger.warn(`[MainAgent:${this.runId}] Tool call labelled ${response.toolCall.type ?? "(none)"} but carries ${carried[0]![1]} args — trusting the args`)
+                        response.toolCall.type = carried[0]![1]
+                    }
+                    if(!response.toolCall.type){
+                        throw new Error(`Tool call carried no recognisable tool: ${JSON.stringify(response.toolCall)}`)
+                    }
+
                     const toolType = response.toolCall.type
                     logger.info(`[MainAgent:${this.runId}] Tool call requested: ${toolType}`)
                     const toolRequestLog: Message = {
@@ -256,10 +283,6 @@ export class MainAgent{
         if(data.action === 'write'){
             try{
                 logger.info(`[MainAgent:${this.runId}] Syncing write to R2: ${data.path}`)
-                // r2Key() already returns the complete key — appending data.path
-                // again produced keys like ".../src/App.tsxsrc/App.tsx", so every
-                // edit landed on a bogus object and the real one kept the
-                // bootstrap template that restore later pulled back down.
                 await this.r2.putFile(key, data.content)
             }
             catch(e){
@@ -321,20 +344,29 @@ export class MainAgent{
                 logger.info(`[MainAgent:${this.runId}] ReadFile: ${toolCall.readFile.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "read", path: toolCall.readFile.path})).content
 
-            case ToolType.WriteFile:
+            case ToolType.WriteFile: {
                 if (!toolCall.writeFile) throw new Error("WriteFile tool call missing params")
                 logger.info(`[MainAgent:${this.runId}] WriteFile: ${toolCall.writeFile.path}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})).content
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, {action: "writeFile", path: toolCall.writeFile.path, content: toolCall.writeFile.content})
+                if (!res.success) throw new Error(res.content)
+                return res.content
+            }
 
-            case ToolType.EditFile:
+            case ToolType.EditFile: {
                 if (!toolCall.editFile) throw new Error("EditFile tool call missing params")
                 logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.editFile.path}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.editFile)).content
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall.editFile)
+                if (!res.success) throw new Error(res.content)
+                return res.content
+            }
 
-            case ToolType.DeleteFile:
+            case ToolType.DeleteFile: {
                 if (!toolCall.deleteFile) throw new Error("DeleteFile tool call missing params")
                 logger.info(`[MainAgent:${this.runId}] DeleteFile: ${toolCall.deleteFile.path}`)
-                return (await this.sandbox.Execute(this.sandbox.sandboxId, {action: "delete", path: toolCall.deleteFile.path})).content
+                const res = await this.sandbox.Execute(this.sandbox.sandboxId, {action: "delete", path: toolCall.deleteFile.path})
+                if (!res.success) throw new Error(res.content)
+                return res.content
+            }
 
             case ToolType.RunCommand:
                 if (!toolCall.runCommand) throw new Error("RunCommand tool call missing params")

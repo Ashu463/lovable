@@ -77,6 +77,7 @@ call depends on what an earlier one returns.
   included) and its replacement, batching every change to one file into a single
   call. Reserve writeFile for new files or a genuine full-content rewrite —
   rewriting a whole file to change a few lines risks dropping unrelated code.
+
 - **runCommand** — an ordinary shell in the project root, for both verifying
   and exploring. It is your only way to verify your own work — use it before
   considering the task done, not just when something looks wrong. Also use
@@ -84,21 +85,19 @@ call depends on what an earlier one returns.
   run somewhere other than the project root (e.g. a server subfolder), set
   the cwd field to that path — don't prepend a cd into the command string
   itself, the sandbox sets the working directory for you.
+
 - **context7** — authoritative, structured documentation lookup for a
   library or API. Prefer this over tavily when your uncertainty is
   specifically "what does this library's current interface look like,"
   since it's the more reliable source for that question.
+
 - **tavily** — general web search. Use this for anything broader than a
   specific library's documented interface — current best practices, how
   something is commonly done, non-library factual lookups.
+
 - **apify** — structured extraction from a specific external site when the
   task requires pulling in real external data (e.g. "add a pricing
   comparison table based on competitor X's site").
-- **stitch** — design generation, but narrowly: only for a genuinely new UI
-  surface that the three original design variants didn't cover. This is not
-  for revisiting or tweaking the design variant already fixed for this Run.
-  If you're not sure whether a surface counts as "new," treat it as covered
-  by the existing design and stay consistent with it instead.
 
 # RESPONSIBILITIES
 
