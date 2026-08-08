@@ -30,11 +30,27 @@ client<llm> OpenRouter {
     // }
   }
 }
+// retry_policy is what handles 429s: without it a single rate-limit
+// response kills the whole run, since every agent call routes through here.
 client OpenAI {
     provider "openai"
+    retry_policy RateLimitBackoff
     options {
         model "gpt-4o-mini"
     }
+}
+
+// Tuned for rate limits rather than transient errors: OpenAI's per-minute
+// windows need seconds of backoff, not the sub-second delays that suit a
+// flaky-connection retry.
+retry_policy RateLimitBackoff {
+  max_retries 5
+  strategy {
+    type exponential_backoff
+    delay_ms 1000
+    multiplier 2
+    max_delay_ms 30000
+  }
 }
 class AgentResponse{
     
@@ -148,12 +164,24 @@ class RunCommand{
 }
 class FileEditOp{
     oldString string @description(#"
-      Text to find, copied verbatim from a version of this file you have read in
-      this session — including indentation. Must appear exactly once, so include
-      enough surrounding lines to be unambiguous.
+      Text to find, copied from a version of this file you have read this session.
+
+      How it is matched, so you can aim precisely:
+      - Matching is literal on the file's raw text. Write the characters as they
+        exist on disk: className="x", NOT className=\"x\". Backslash-escaping the
+        quotes is the most common reason an edit finds nothing.
+      - It must match exactly one place. A single short line like </div> or <div>
+        will match many times and be rejected — include the surrounding lines that
+        make it unique.
+      - Leading indentation and trailing whitespace are forgiven, so you do not
+        need to reproduce them exactly. What must match is the text itself.
+      - If the file's overall shape is wrong (leftover HTML, duplicated blocks,
+        content after the final export), do not try to patch it here — use
+        writeFile to replace the whole file.
     "#)
     newString string @description(#"
-      Replacement text. Use an empty string to delete the matched region.
+      Replacement text, re-indented for you to match the depth of what it replaces.
+      Use an empty string to delete the matched region.
     "#)
 }
 class EditFile{

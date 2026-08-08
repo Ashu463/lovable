@@ -27,7 +27,8 @@ export function applyEdits(content: string, edits: FileEditOp[]): EditOutcome {
         const { oldString, newString } = edits[i]!
         const label = `edit ${i + 1} of ${edits.length}`
         const tooMany = (n: number) =>
-            `${label}: oldString matched ${n} times. Include more surrounding lines so it identifies exactly one location.`
+            `${label}: oldString matched ${n} times. Include more surrounding lines so it identifies exactly one location` +
+            (n > 5 ? ", or use writeFile to replace the whole file if this many duplicates means the file itself is malformed." : ".")
 
         if (!oldString) return { ok: false, reason: `${label}: oldString is empty, which would match everywhere` }
 
@@ -63,7 +64,20 @@ export function applyEdits(content: string, edits: FileEditOp[]): EditOutcome {
         }
 
         if (starts.length === 0) {
-            return { ok: false, reason: `${label}: oldString not found. Re-read the file and copy the text exactly, including indentation.` }
+            // Quote the closest line back, so the model can see how what it sent
+            // differs from the file (usually escaping or class/className) rather
+            // than re-guessing the same string.
+            // Strip backslashes and quotes first: the usual cause of a miss is the
+            // model sending class=\"x\" for a file containing class="x", so probing
+            // with the raw text would find nothing and explain nothing.
+            const probe = (oldLines.find(l => l.trim()) ?? "").replace(/[\\"']/g, " ")
+            const token = probe.split(/[\s<>=]+/).filter(t => t.length > 3).sort((a, b) => b.length - a.length)[0] ?? ""
+            const near = token ? lines.filter(l => l.replace(/[\\"']/g, " ").includes(token)).slice(0, 3) : []
+            const hint = near.length
+                ? ` Closest line(s) actually in the file:\n${near.join("\n")}`
+                : " No line in the file contains that text — check whether you are editing the right file."
+
+            return { ok: false, reason: `${label}: oldString not found. Copy it verbatim from the file, unescaped.${hint}` }
         }
         if (starts.length > 1) return { ok: false, reason: tooMany(starts.length) }
 
