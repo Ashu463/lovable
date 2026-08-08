@@ -44,18 +44,25 @@ function MainLLMCall(
   ) -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort{
 
     client OpenAI
+    // Ordering is deliberate: everything above {{context}} is fixed for the whole
+    // run, so it forms a stable prefix the provider's prompt cache can reuse on
+    // every iteration. {{context}} is the only part that grows per turn, so it
+    // sits last — putting it earlier (as it was) pushed ~600 tokens of otherwise
+    // static text behind the changing part, where it got re-charged in full each
+    // turn. {{ctx.output_format}} stays after it so the schema is the last thing
+    // the model reads before answering.
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the specific, already-clarified request you're
   completing.
-        {% if design %} - the design system chosen once at the start of
+        {% if design %}{{design}} - the design system chosen once at the start of
   this Run (layout, visual language, conventions). Never regenerate or
   second-guess this; treat it as settled. {% endif %}
-        {{context}} - is the context of main agent
-        {{semanticMem}} 
+        {{semanticMem}}
         {{orchestratorContext}}
-  task.
-  
+
+        {{context}} - is the context of main agent
+
         {{ctx.output_format}}
     "#
 }

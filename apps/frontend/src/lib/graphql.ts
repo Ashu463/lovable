@@ -1,6 +1,6 @@
 import { getStoredSession } from "@/lib/session";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000";
 export const GRAPHQL_URL = `${API_BASE}/graphql`;
 
 export class GqlError extends Error {
