@@ -56,7 +56,8 @@ export class OrchestratorAgent{
         public projectId: string,
         public sandbox: E2BSandbox, // initially pass this as empty string, here after connecting it would have some value
         public runId: string,
-        public semanticMem: string
+        public semanticMem: string,
+        public priorRunSummary: string | null = null,
     ){
         this.uiExpert = new UIExpert(userId, projectId, sandbox)
         this.emitter = createRunEmitter(runId)
@@ -358,7 +359,11 @@ export class OrchestratorAgent{
         let orchestratorSummary: string = ""
         let todos: PlannerTodo[] = []
         if(!data.isComplex){
-            const mainAgent: MainAgent = new MainAgent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, JSON.stringify(this.context))
+            // this.context is always empty at this point (it only ever accumulates
+            // on the complex/DAG path below), so the prior run's summary is the
+            // only real orchestrator-level context a fresh simple-path run has.
+            const priorContext = this.priorRunSummary ?? JSON.stringify(this.context)
+            const mainAgent: MainAgent = new MainAgent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, priorContext)
 
             await this.sandbox.EnsureAlive()
             const mainResult = await mainAgent.runLoop()
@@ -373,7 +378,10 @@ export class OrchestratorAgent{
         }
         else{
             logger.info(`Given task is complex, generating todos`)
-            todos = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, JSON.stringify(this.context))
+            // this.context is always empty here (only the DAG loop below fills it),
+            // so a follow-up's prior run summary is the real signal to plan against.
+            const priorContext = this.priorRunSummary ?? JSON.stringify(this.context)
+            todos = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, priorContext)
 
             try{
                 await backendGql(
@@ -487,9 +495,8 @@ export class OrchestratorAgent{
                 todo.status = 'completed'
                 i++
             }
-            // FIX: this.state/context in place of summaries. => done, kept subagents summary short and avoided LLM call.
-            orchestratorSummary = JSON.stringify(summaries)
-                
+            orchestratorSummary = await this.GenerateOrchestratorSummary(summaries)
+
         }
         // Start your dev server first (e.g. npm run dev)
         try{
@@ -503,6 +510,18 @@ export class OrchestratorAgent{
                 previewUrl,
                 summary: orchestratorSummary,
             };
+
+            try{
+                await backendGql(
+                    `mutation SaveRunSummary($runId: ID!, $summary: String!) {
+                        saveRunSummary(runId: $runId, summary: $summary)
+                    }`,
+                    { runId: this.runId, summary: orchestratorSummary }
+                )
+            } catch(e){
+                logger.error(`Failed to save run summary for run ${this.runId}: ${e}`)
+            }
+
             await this.emitter.emit({ type: 'run_completed', result })
             return result;
         }

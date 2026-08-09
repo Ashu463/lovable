@@ -19,10 +19,11 @@ export async function AgentCall(
   sandbox: E2BSandbox,
   semanticMem: string,
   answers?: Answers[],
-  selectedDesignId?: string
+  selectedDesignId?: string,
+  priorRunSummary?: string | null,
 ): Promise<any> {
 
-  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem)
+  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem, priorRunSummary ?? null)
 
   try {
     const result = await orchestrator.Orchestrate(userPrompt, answers, selectedDesignId)

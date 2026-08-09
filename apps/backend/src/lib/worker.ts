@@ -6,7 +6,7 @@ import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
 import { AgentCall } from "../../../../packages/agents";
 
 const worker = new Worker("run-agent", async (job) => {
-    const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId } = job.data;
+    const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId, priorRunSummary } = job.data;
     let sandbox;
     if(sandboxId){
         sandbox = await E2BSandbox.StartSandbox(userId, projectId, sandboxId);
@@ -22,7 +22,7 @@ const worker = new Worker("run-agent", async (job) => {
 
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
-      await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
+      await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId, priorRunSummary);
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;

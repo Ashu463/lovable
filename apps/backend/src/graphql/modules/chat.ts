@@ -87,11 +87,23 @@ export const chatResolvers = {
             })
           ).id;
 
+      let sandboxId = args.sandboxId ?? null;
+      let priorRunSummary: string | null = null;
+      if (args.projectId) {
+        const lastRun = await ctx.prisma.run.findFirst({
+          where: { projectId, status: "COMPLETED" },
+          orderBy: { startedAt: "desc" },
+          select: { sandboxId: true, summary: true },
+        });
+        if (!sandboxId) sandboxId = lastRun?.sandboxId ?? null;
+        priorRunSummary = lastRun?.summary ?? null;
+      }
+
       const run = await ctx.prisma.run.create({
         data: {
           id: randomUUIDv7(),
           projectId,
-          sandboxId: args.sandboxId ?? null,
+          sandboxId,
           userPrompt: args.userPrompt,
         },
       });
@@ -110,7 +122,8 @@ export const chatResolvers = {
           prompt: args.userPrompt,
           runId: run.id,
           semanticMem: owner.semanticMem,
-          sandboxId: args.sandboxId ?? null,
+          sandboxId,
+          priorRunSummary,
         });
         logger.info(`Enqueued run ${run.id}`);
       } catch (e) {

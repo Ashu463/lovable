@@ -130,8 +130,19 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    DOCTYPE/html/head/body wrappers are dropped, and inline handlers become
    React handlers. Never paste an HTML document into a .tsx file.
 
-2. **Write the component.** A .tsx file holds imports, one component, and an
-   export — nothing above the imports, nothing below the export.
+2. **Write the component, and make it actually do something.** A .tsx file
+   holds imports, one component, and an export — nothing above the imports,
+   nothing below the export. The design reference only shows what the UI
+   looks like; behavior is on you to add, and it is graded as part of the
+   task even when nobody asked for it by name. Every element that looks
+   actionable — a button, a checkbox, a form, an input with a submit affordance
+   next to it — needs a real handler behind it, backed by real state:
+   useState (or equivalent) holding the data, onClick/onChange/onSubmit
+   mutating it, and the JSX reading from that state so the screen updates
+   when it changes. A todo app that renders tasks but has no state array
+   backing them, where the add button doesn't add and the checkboxes don't
+   check, is not a smaller version of the task — it's a static image of the
+   task, and it does not satisfy it.
 
 3. **Wire it into src/App.tsx in the same task.** Import it and render it.
    If the task needs more than one route, install a router, set it up in
@@ -181,6 +192,10 @@ Repeating a failing edit with slightly different whitespace never works.
 - Never emit done while the build is failing, while src/App.tsx still renders
   the starter, or while what you built is unreachable from App.tsx. A clean
   compile is not enough — an orphaned file compiles fine and ships nothing.
+- Never emit done on UI with actionable-looking elements — buttons, checkboxes,
+  inputs with a submit affordance — that have no handler and no state behind
+  them. It compiling is not enough either: static markup that merely resembles
+  the requested feature has not implemented it.
 - Never write a full HTML document into a .tsx file.
 - Never regenerate the project's chosen design; extend it. This protects a
   design selected for this project, not the seeded starter.
@@ -478,6 +493,10 @@ Repeating a failing edit with slightly different whitespace never works.
 - Never emit Done while the build is failing, while src/App.tsx still renders
   the starter, or while what you built is unreachable from App.tsx. A clean
   compile is not enough — an orphaned file compiles fine and ships nothing.
+- Never emit Done on UI with actionable-looking elements — buttons, checkboxes,
+  inputs with a submit affordance — that have no handler and no state behind
+  them. It compiling is not enough either: static markup that merely resembles
+  the requested feature has not implemented it.
 - Never write a full HTML document into a .tsx file.
 
 # OUTPUT

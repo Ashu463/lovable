@@ -189,5 +189,24 @@ export const internalResolvers = {
         return false;
       }
     },
+
+    saveRunSummary: async (
+      _parent: unknown,
+      args: { runId: string; summary: string },
+      ctx: GraphQLContext,
+    ) => {
+      requireInternal(ctx);
+
+      try {
+        await ctx.prisma.run.update({
+          where: { id: args.runId },
+          data: { summary: args.summary },
+        });
+        return true;
+      } catch (e) {
+        logger.error(`Failed to save summary for run ${args.runId}: ${e}`);
+        return false;
+      }
+    },
   },
 };

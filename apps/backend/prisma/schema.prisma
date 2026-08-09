@@ -51,11 +51,13 @@ model Run {
   projectId     String
   project       Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  sandboxId     String?   
+  sandboxId     String?
   status        RunStatus  @default(IN_PROGRESS)
   userPrompt    String  @db.Text
 
-  currentStep     String? 
+  summary         String? @db.Text
+
+  currentStep     String?
   contextSnapshot String? @db.Text
   sessionSnapshot String? @db.Text
   

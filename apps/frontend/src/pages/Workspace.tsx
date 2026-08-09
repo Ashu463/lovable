@@ -23,6 +23,7 @@ const MODES = ["Build", "Plan"];
 
 function WorkspaceInput() {
   const { state, submit } = useRun();
+  const navigate = useNavigate();
   const [mode, setMode] = useState(MODES[0]);
   const [text, setText] = useState("");
 
@@ -33,8 +34,14 @@ function WorkspaceInput() {
   const handleSend = () => {
     if (!text.trim() || !canFollowUp) return;
     const projectId = state.status === "completed" || state.status === "failed" ? state.projectId : undefined;
-    void submit(text.trim(), projectId);
+    const prompt = text.trim();
     setText("");
+    // submit() starts a new run under the same project; the route still points
+    // at the previous run, so the page's isLive check would desync and fall
+    // back into the resume flow the moment this run's state attaches.
+    void submit(prompt, projectId).then((newRunId) => {
+      if (newRunId) navigate(`/w/${newRunId}`);
+    });
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {

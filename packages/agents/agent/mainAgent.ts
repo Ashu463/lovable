@@ -30,6 +30,7 @@ export class MainAgent{
     private r2: R2
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore() // I'm injectig skills into system prompt for main agent.
+    private editFailures = new Map<string, number>()
 
     constructor(
         private userPrompt: string,
@@ -307,13 +308,21 @@ export class MainAgent{
                 logger.info(`[MainAgent:${this.runId}] WriteFile: ${toolCall.path}`)
                 const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
                 if (!res.success) throw new Error(res.content)
+                this.editFailures.delete(toolCall.path)
                 return res.content
             }
 
             case 'editFile': {
                 logger.info(`[MainAgent:${this.runId}] EditFile: ${toolCall.path}`)
+                if((this.editFailures.get(toolCall.path) ?? 0) >= 2){
+                    throw new Error(`editFile on ${toolCall.path} has failed twice in a row. Stop editing it — call writeFile with the file's complete corrected content instead.`)
+                }
                 const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
-                if (!res.success) throw new Error(res.content)
+                if (!res.success){
+                    this.editFailures.set(toolCall.path, (this.editFailures.get(toolCall.path) ?? 0) + 1)
+                    throw new Error(res.content)
+                }
+                this.editFailures.delete(toolCall.path)
                 return res.content
             }
 

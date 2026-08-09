@@ -30,4 +30,6 @@ extend type Mutation {
   "Durably records an orchestrator event and applies any run status transition."
   recordRunEvent(runId: ID!, event: JSON!): Boolean!
   saveRunState(runId: ID!, contextSnapshot: String, sessionSnapshot: String, iteration: Int): Boolean!
+  "Writes the whole-run wrap-up summary once the run completes."
+  saveRunSummary(runId: ID!, summary: String!): Boolean!
 }
