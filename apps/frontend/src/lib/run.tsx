@@ -50,6 +50,8 @@ interface RunContextValue {
   // Kept beside state rather than inside it: the name is a property of the
   // project, so it outlives any one run's status transitions.
   projectName: string | null;
+  // Stitch is generating design variants — a ~1 minute wait worth calling out.
+  awaitingDesigns: boolean;
   messages: ChatMessage[];
   submit: (userPrompt: string, projectId?: string) => Promise<string | null>;
   submitAnswers: (answers: Answers[]) => Promise<string | null>;
@@ -87,6 +89,7 @@ function nextId(): string {
 export function RunProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<RunState>({ status: "idle" });
   const [projectName, setProjectName] = useState<string | null>(null);
+  const [awaitingDesigns, setAwaitingDesigns] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const closeStreamRef = useRef<(() => void) | null>(null);
 
@@ -102,6 +105,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
   const attachStream = useCallback(
     (runId: string, projectId: string, userPrompt: string) => {
       closeStreamRef.current?.();
+      setAwaitingDesigns(false);
       setState({ status: "running", runId, projectId, userPrompt, feed: [] });
 
       closeStreamRef.current = subscribe<{ runEvents: OrchestratorEvent }>(
@@ -118,6 +122,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 // The orchestrator has already returned for this run — nothing
                 // more will arrive on this connection until a new run picks up.
                 closeStreamRef.current?.();
+                setAwaitingDesigns(false);
                 pushMessage("system", "Here are a few design directions to start from.");
                 setState({ status: "select_design", runId, projectId, userPrompt, designs: event.designs });
                 return;
@@ -137,6 +142,10 @@ export function RunProvider({ children }: { children: ReactNode }) {
               case "run_failed":
                 pushMessage("system", `Failed: ${event.error}`);
                 setState({ status: "failed", runId, projectId, userPrompt, error: event.error });
+                return;
+              case "designs_generating":
+                setAwaitingDesigns(true);
+                pushMessage("system", describeEvent(event), "progress");
                 return;
               default:
                 pushMessage("system", describeEvent(event), "progress");
@@ -236,6 +245,10 @@ export function RunProvider({ children }: { children: ReactNode }) {
         const { projectId, userPrompt, projectName: name, status, stalled, pauseEvent, completedEvent, failedEvent } = res.runState;
         setProjectName(name);
 
+        // The message log is in-memory, so a reloaded session would otherwise
+        // show the agent's output with no visible prompt above it.
+        setMessages([{ id: nextId(), role: "user", content: userPrompt }]);
+
         // The row still says IN_PROGRESS but nothing is queued to advance it —
         // attaching a stream would just hang on "Building…" forever.
         if (status === "IN_PROGRESS" && stalled) {
@@ -272,6 +285,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
             userPrompt,
             result: { ...completedEvent.result, previewUrl: "" },
           });
+          if (completedEvent.result.summary) pushMessage("system", completedEvent.result.summary);
 
           void gql<{ projectSession: { previewUrl: string | null } }>(PROJECT_SESSION, { id: projectId })
             .then((session) =>
@@ -287,7 +301,9 @@ export function RunProvider({ children }: { children: ReactNode }) {
           return true;
         }
         if (status === "FAILED") {
-          setState({ status: "failed", runId, projectId, userPrompt, error: failedEvent?.error ?? "This run failed." });
+          const error = failedEvent?.error ?? "This run failed.";
+          setState({ status: "failed", runId, projectId, userPrompt, error });
+          pushMessage("system", `Failed: ${error}`);
           return true;
         }
         return false;
@@ -295,19 +311,20 @@ export function RunProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [attachStream],
+    [attachStream, pushMessage],
   );
 
   const reset = useCallback(() => {
     closeStreamRef.current?.();
     setState({ status: "idle" });
     setProjectName(null);
+    setAwaitingDesigns(false);
     setMessages([]);
   }, []);
 
   const value = useMemo(
-    () => ({ state, projectName, messages, submit, submitAnswers, selectDesign, resume, reset }),
-    [state, projectName, messages, submit, submitAnswers, selectDesign, resume, reset],
+    () => ({ state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, resume, reset }),
+    [state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, resume, reset],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

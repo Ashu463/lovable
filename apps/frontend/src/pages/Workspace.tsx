@@ -175,7 +175,7 @@ function ActivityFeed({ messages, live }: { messages: ChatMessage[]; live: boole
 }
 
 function ChatLog({ wide }: { wide: boolean }) {
-  const { state, messages, submitAnswers, selectDesign } = useRun();
+  const { state, messages, awaitingDesigns, submitAnswers, selectDesign } = useRun();
   const busy = state.status === "running" || state.status === "submitting";
   const groups = groupMessages(messages);
 
@@ -204,7 +204,21 @@ function ChatLog({ wide }: { wide: boolean }) {
         ),
       )}
 
-      {busy && (
+      {awaitingDesigns && state.status !== "select_design" && (
+        <div className="flex items-start gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3">
+          <span className="relative mt-1 flex h-2 w-2 shrink-0">
+            <span className="status-dot absolute inline-flex h-full w-full rounded-full bg-accent" />
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-foreground">Generating three design directions…</span>
+            <span className="text-xs text-muted">
+              This takes about a minute. You&rsquo;ll pick one before the build starts.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {busy && !awaitingDesigns && (
         <div className="flex items-center gap-2 font-mono text-xs text-muted">
           <span className="relative flex h-2 w-2">
             <span className="status-dot absolute inline-flex h-full w-full rounded-full bg-accent" />

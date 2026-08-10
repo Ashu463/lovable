@@ -14,6 +14,8 @@ export function describeEvent(event: OrchestratorEvent): string {
         : event.step === "llm_completed"
           ? "Model responded."
           : "Model call failed.";
+    case "designs_generating":
+      return `Generating ${event.count} design directions — this takes about a minute.`;
     case "subagent_progress":
       return event.subagentSummary ?? `${event.agent} is working…`;
     case "subagent_completed":

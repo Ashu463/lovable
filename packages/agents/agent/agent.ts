@@ -256,6 +256,9 @@ export class OrchestratorAgent{
                     ...(await this.skillStore.getRoleSkills('uiExpert')),
                     ...(await this.skillStore.getTaskSkillsFull('uiExpert')),
                 ]
+                // Stitch takes ~80s for the three variants, so say so up front
+                // rather than leaving the UI on a generic "building" spinner.
+                await this.emitter.emit({ type: 'designs_generating', count: 3 })
                 const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem, uiExpertSkills)
                 designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
             }
