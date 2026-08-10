@@ -11,6 +11,8 @@ type RunState {
   runId: ID!
   projectId: ID!
   userPrompt: String!
+  "The project's LLM-generated name, once its first run has finished naming it."
+  projectName: String
   status: RunStatus!
   """
   True when the run still says IN_PROGRESS but no queued or active job backs it,

@@ -246,6 +246,11 @@ compacting mid-task.
 Keep this dense and structured — goal, actions-so-far, current
 verification status, remaining steps. This gets re-injected on the next
 turn of the same task; it should be cheap to read, not a narrated replay.
+Write the summary in markdown; it is rendered to the user.
+
+Also return a title naming the project this run belongs to. Only the first
+run of a project keeps its title — on later runs yours is discarded — so
+title the project as a whole, not this particular task.
 `;
 
 // ============================================================================

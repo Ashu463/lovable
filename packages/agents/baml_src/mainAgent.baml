@@ -66,7 +66,19 @@ function MainLLMCall(
         {{ctx.output_format}}
     "#
 }
-function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> string{
+class MainAgentSummary {
+  title string @description(#"
+    A short label for this project — 2 to 5 words, title case, no trailing
+    punctuation, naming what was built rather than the action taken
+    ("Dark Todo App", not "Built a todo app"). Only used the first time a
+    project gets a name; later runs generate one that is thrown away.
+  "#)
+  summary string @description(#"
+    The task summary itself, in markdown.
+  "#)
+}
+
+function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> MainAgentSummary{
 
     client OpenAI
     prompt #"

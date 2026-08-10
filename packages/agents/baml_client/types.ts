@@ -274,6 +274,12 @@ export interface ItemRes {
   
 }
 
+export interface MainAgentSummary {
+  title: string
+  summary: string
+  
+}
+
 export interface Message {
   role: "user" | "assistant" | "toolCall" | "system"
   content: string

@@ -35,6 +35,9 @@ export interface ChatMessage {
   id: string;
   role: "user" | "system";
   content: string;
+  // "progress" is transient SSE chatter shown in the activity feed; "reply" is
+  // the agent's actual markdown answer, rendered like a chat response.
+  kind?: "progress" | "reply";
 }
 
 interface RunRef {
@@ -44,6 +47,9 @@ interface RunRef {
 
 interface RunContextValue {
   state: RunState;
+  // Kept beside state rather than inside it: the name is a property of the
+  // project, so it outlives any one run's status transitions.
+  projectName: string | null;
   messages: ChatMessage[];
   submit: (userPrompt: string, projectId?: string) => Promise<string | null>;
   submitAnswers: (answers: Answers[]) => Promise<string | null>;
@@ -57,6 +63,7 @@ interface RunStateResponse {
     runId: string;
     projectId: string;
     userPrompt: string;
+    projectName: string | null;
     status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED" | "STOPPED";
     stalled: boolean;
     pauseEvent: { type: "clarification_needed"; questions: Question[] } | { type: "select_design"; designs: DesignOption[] } | null;
@@ -79,14 +86,18 @@ function nextId(): string {
 
 export function RunProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<RunState>({ status: "idle" });
+  const [projectName, setProjectName] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const closeStreamRef = useRef<(() => void) | null>(null);
 
   useEffect(() => () => closeStreamRef.current?.(), []);
 
-  const pushMessage = useCallback((role: ChatMessage["role"], content: string) => {
-    setMessages((prev) => [...prev, { id: nextId(), role, content }]);
-  }, []);
+  const pushMessage = useCallback(
+    (role: ChatMessage["role"], content: string, kind: ChatMessage["kind"] = "reply") => {
+      setMessages((prev) => [...prev, { id: nextId(), role, content, kind }]);
+    },
+    [],
+  );
 
   const attachStream = useCallback(
     (runId: string, projectId: string, userPrompt: string) => {
@@ -114,6 +125,13 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 const result = event.result as CompletedResult;
                 pushMessage("system", result.summary);
                 setState({ status: "completed", runId, projectId, userPrompt, result });
+                // The agent names the project while building its summary, so the
+                // name only exists server-side by the time this event lands.
+                void gql<RunStateResponse>(RUN_STATE, { runId })
+                  .then((res) => setProjectName(res.runState.projectName))
+                  .catch(() => {
+                    /* title falls back to the prompt */
+                  });
                 return;
               }
               case "run_failed":
@@ -121,7 +139,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 setState({ status: "failed", runId, projectId, userPrompt, error: event.error });
                 return;
               default:
-                pushMessage("system", describeEvent(event));
+                pushMessage("system", describeEvent(event), "progress");
                 setState((prev) =>
                   prev.status === "running" ? { ...prev, feed: [...prev.feed, event] } : prev,
                 );
@@ -215,7 +233,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
     async (runId: string) => {
       try {
         const res = await gql<RunStateResponse>(RUN_STATE, { runId });
-        const { projectId, userPrompt, status, stalled, pauseEvent, completedEvent, failedEvent } = res.runState;
+        const { projectId, userPrompt, projectName: name, status, stalled, pauseEvent, completedEvent, failedEvent } = res.runState;
+        setProjectName(name);
 
         // The row still says IN_PROGRESS but nothing is queued to advance it —
         // attaching a stream would just hang on "Building…" forever.
@@ -282,12 +301,13 @@ export function RunProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(() => {
     closeStreamRef.current?.();
     setState({ status: "idle" });
+    setProjectName(null);
     setMessages([]);
   }, []);
 
   const value = useMemo(
-    () => ({ state, messages, submit, submitAnswers, selectDesign, resume, reset }),
-    [state, messages, submit, submitAnswers, selectDesign, resume, reset],
+    () => ({ state, projectName, messages, submit, submitAnswers, selectDesign, resume, reset }),
+    [state, projectName, messages, submit, submitAnswers, selectDesign, resume, reset],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

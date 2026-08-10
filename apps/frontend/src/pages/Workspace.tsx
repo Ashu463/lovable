@@ -1,4 +1,4 @@
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowUp, ChevronDown, Home, Plus, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useRun } from "@/lib/run";
+import { useRun, type ChatMessage } from "@/lib/run";
+import { Markdown } from "@/features/build/Markdown";
 import { StatusLine, StatusItem, StatusSep } from "@/features/shell/StatusLine";
 import { BrandMark } from "@/features/shell/BrandMark";
 import { PipelineStrip } from "@/features/build/PipelineStrip";
@@ -26,10 +27,20 @@ function WorkspaceInput() {
   const navigate = useNavigate();
   const [mode, setMode] = useState(MODES[0]);
   const [text, setText] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const busy = state.status === "running" || state.status === "submitting";
   const canFollowUp = state.status === "completed" || state.status === "failed";
   const disabled = !canFollowUp;
+
+  // Grow with the content up to a cap, then scroll — height has to be reset to
+  // auto first or scrollHeight keeps reporting the previous, taller box.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+  }, [text]);
 
   const handleSend = () => {
     if (!text.trim() || !canFollowUp) return;
@@ -55,13 +66,14 @@ function WorkspaceInput() {
     <div className="border-t border-border bg-surface px-6 py-4">
       <div className="mx-auto max-w-3xl rounded-2xl border border-border-hover bg-background p-3">
         <Textarea
+          ref={textareaRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder={busy ? "Building… you can queue a follow-up once this finishes." : "Queue follow-up…"}
           rows={1}
-          className="px-2 py-1"
+          className="max-h-[200px] overflow-y-auto px-2 py-1 leading-relaxed"
         />
         <div className="flex items-center justify-between pt-1">
           <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-hover hover:text-foreground">
@@ -106,29 +118,94 @@ function WorkspaceInput() {
   );
 }
 
-function ChatLog({ wide }: { wide: boolean }) {
-  const { state, messages, submitAnswers, selectDesign } = useRun();
+// Consecutive progress events collapse into one scrolling block so a long build
+// can't push the conversation off screen.
+type ChatGroup =
+  | { kind: "message"; message: ChatMessage }
+  | { kind: "activity"; id: string; messages: ChatMessage[] };
+
+function groupMessages(messages: ChatMessage[]): ChatGroup[] {
+  const groups: ChatGroup[] = [];
+  for (const message of messages) {
+    if (message.role === "system" && message.kind === "progress") {
+      const last = groups.at(-1);
+      if (last?.kind === "activity") {
+        last.messages.push(message);
+        continue;
+      }
+      groups.push({ kind: "activity", id: message.id, messages: [message] });
+      continue;
+    }
+    groups.push({ kind: "message", message });
+  }
+  return groups;
+}
+
+function ActivityFeed({ messages, live }: { messages: ChatMessage[]; live: boolean }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Pin to the newest line as events stream in.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages.length]);
 
   return (
-    <div className={cn("mx-auto flex flex-1 flex-col gap-3.5 overflow-y-auto px-6 py-6", wide ? "max-w-3xl" : "")}>
-      {messages.map((m) =>
-        m.role === "user" ? (
-          <div
-            key={m.id}
-            className="self-end whitespace-pre-wrap rounded-2xl rounded-br-sm border border-border-hover bg-surface px-4 py-2.5 text-sm"
-          >
+    <div className="rounded-xl border border-border bg-surface/40">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 font-mono text-[11px] text-muted">
+        {live ? (
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="status-dot absolute inline-flex h-full w-full rounded-full bg-accent" />
+          </span>
+        ) : (
+          <span className="h-1.5 w-1.5 rounded-full bg-ok" />
+        )}
+        activity
+        <span className="ml-auto tabular-nums">{messages.length}</span>
+      </div>
+      <div ref={scrollRef} className="max-h-40 overflow-y-auto px-3 py-2">
+        {messages.map((m) => (
+          <p key={m.id} className="truncate font-mono text-xs leading-6 text-muted" title={m.content}>
             {m.content}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ChatLog({ wide }: { wide: boolean }) {
+  const { state, messages, submitAnswers, selectDesign } = useRun();
+  const busy = state.status === "running" || state.status === "submitting";
+  const groups = groupMessages(messages);
+
+  return (
+    <div className={cn("mx-auto flex w-full flex-1 flex-col gap-3.5 overflow-y-auto px-6 py-6", wide ? "max-w-3xl" : "")}>
+      {groups.map((group, i) =>
+        group.kind === "activity" ? (
+          <ActivityFeed
+            key={group.id}
+            messages={group.messages}
+            live={busy && i === groups.length - 1}
+          />
+        ) : group.message.role === "user" ? (
+          <div
+            key={group.message.id}
+            className="max-w-[85%] self-end whitespace-pre-wrap rounded-2xl rounded-br-sm border border-border-hover bg-surface px-4 py-2.5 text-sm"
+          >
+            {group.message.content}
           </div>
         ) : (
-          <p key={m.id} className="flex gap-2.5 text-sm leading-relaxed text-muted">
-            <span className="shrink-0 pt-0.5 font-mono text-[11px] text-ok">sys</span>
-            <span className="whitespace-pre-wrap">{m.content}</span>
-          </p>
+          <Markdown
+            key={group.message.id}
+            content={group.message.content}
+            className="text-sm leading-relaxed text-muted"
+          />
         ),
       )}
 
-      {(state.status === "running" || state.status === "submitting") && (
-        <div className="flex items-center gap-2 pl-[30px] font-mono text-xs text-muted">
+      {busy && (
+        <div className="flex items-center gap-2 font-mono text-xs text-muted">
           <span className="relative flex h-2 w-2">
             <span className="status-dot absolute inline-flex h-full w-full rounded-full bg-accent" />
           </span>
@@ -178,19 +255,19 @@ function PreviewPane() {
 
 type ResumeStatus = "checking" | "not_found";
 
-// Placeholder title until projects get real LLM-generated names — the prompt
-// that started this run, taken from run state so it survives a page reload
-// (the in-memory message log is empty when a past session is reopened).
-function projectTitle(userPrompt: string | undefined): string {
-  const trimmed = userPrompt?.trim();
-  if (!trimmed) return "Untitled project";
+// The agent names a project once, when its first run finishes. Until that
+// lands the project is genuinely unnamed, so it shows as "New project" rather
+// than a title that would change on the next follow-up.
+function projectTitle(projectName: string | null): string {
+  const trimmed = projectName?.trim();
+  if (!trimmed) return "New project";
   return trimmed.length > 48 ? `${trimmed.slice(0, 48)}…` : trimmed;
 }
 
 export function Workspace() {
   const { runId } = useParams<{ runId: string }>();
   const navigate = useNavigate();
-  const { state, resume, reset } = useRun();
+  const { state, projectName, resume, reset } = useRun();
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
   const { stages, agents } = useWorkspacePipeline(state);
 
@@ -244,7 +321,7 @@ export function Workspace() {
             <span className="h-4 w-48 animate-pulse rounded bg-surface-hover" />
           ) : (
             <span className="truncate" title={isLive && "userPrompt" in state ? state.userPrompt : undefined}>
-              {notFound ? "Session not found" : projectTitle(isLive && "userPrompt" in state ? state.userPrompt : undefined)}
+              {notFound ? "Session not found" : projectTitle(projectName)}
             </span>
           )}
         </div>

@@ -208,5 +208,26 @@ export const internalResolvers = {
         return false;
       }
     },
+
+    nameProjectIfUnnamed: async (
+      _parent: unknown,
+      args: { projectId: string; name: string },
+      ctx: GraphQLContext,
+    ) => {
+      requireInternal(ctx);
+
+      try {
+        // updateMany with a name: null filter makes this a no-op once the
+        // project is named — the first run wins and follow-ups can't rename it.
+        const { count } = await ctx.prisma.project.updateMany({
+          where: { id: args.projectId, name: null },
+          data: { name: args.name },
+        });
+        return count > 0;
+      } catch (e) {
+        logger.error(`Failed to name project ${args.projectId}: ${e}`);
+        return false;
+      }
+    },
   },
 };
