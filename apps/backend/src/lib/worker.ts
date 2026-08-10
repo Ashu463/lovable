@@ -27,7 +27,11 @@ const worker = new Worker("run-agent", async (job) => {
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;
     }
-    },{connection: redis, lockDuration: 60_000, stalledInterval: 30_000, maxStalledCount: 1, concurrency: 5}
+    // lockDuration has to outlast the longest gap between job progress, and a
+    // cold sandbox (R2 restore + npm install) alone has taken ~60s, so the old
+    // 60s lock could stall a job that was working fine. maxStalledCount 1 also
+    // meant a single worker restart killed whatever run was in flight.
+    },{connection: redis, lockDuration: 300_000, stalledInterval: 30_000, maxStalledCount: 3, concurrency: 5}
 );
 
 worker.on("failed", (job, err) => {
