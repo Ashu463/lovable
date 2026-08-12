@@ -50,10 +50,16 @@ export const chatResolvers = {
         stalled = !pending.some((job) => job.data?.runId === run.id);
       }
 
+      const project = await ctx.prisma.project.findUnique({
+        where: { id: run.projectId },
+        select: { name: true },
+      });
+
       return {
         runId: run.id,
         projectId: run.projectId,
         userPrompt: run.userPrompt,
+        projectName: project?.name ?? null,
         status: run.status,
         stalled,
         pauseEvent: paused ? payload : null,

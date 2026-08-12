@@ -32,4 +32,6 @@ extend type Mutation {
   saveRunState(runId: ID!, contextSnapshot: String, sessionSnapshot: String, iteration: Int): Boolean!
   "Writes the whole-run wrap-up summary once the run completes."
   saveRunSummary(runId: ID!, summary: String!): Boolean!
+  "Names a project only if it has no name yet, so follow-up runs can't rename it."
+  nameProjectIfUnnamed(projectId: ID!, name: String!): Boolean!
 }

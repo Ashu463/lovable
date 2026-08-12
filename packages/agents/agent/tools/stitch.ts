@@ -39,8 +39,7 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
     const screen: Screen = await project.generate(prompt);
     logger.info(`Stitch screen generated: ${screen.screenId}`)
 
-    const htmlUrl = await screen.getHtml();
-    const imageUrl = await screen.getImage();
+    const [htmlUrl, imageUrl] = await Promise.all([screen.getHtml(), screen.getImage()])
     logger.info(
         `Stitch screen ${screen.screenId} html=${htmlUrl ? "ready" : "pending"} image=${imageUrl ? "ready" : "pending"}`
     )

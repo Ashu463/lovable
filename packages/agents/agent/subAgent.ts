@@ -72,11 +72,6 @@ export class SubAgent<T extends keyof ContextMap> {
         return String(res.action ?? 'unknown')
     }
 
-    // Bounded retry for a single call — a BAML parse failure or a transient
-    // tool error isn't the agent making a bad decision, it's the call itself
-    // not completing, and re-attempting it (not burning an `iteration`) is
-    // usually enough. Only once attempts are exhausted does it rethrow, for
-    // the caller to turn into a graceful task failure instead of a crash.
     private async withRetry<T>(label: string, maxAttempts: number, fn: () => Promise<T>): Promise<T> {
         let lastError: unknown
         for(let attempt = 1; attempt <= maxAttempts; attempt++){

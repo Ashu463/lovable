@@ -331,22 +331,11 @@ export class E2BSandbox{
             const status = await this.probePreviewStatus()
             if(status !== '' && status !== '000' && status !== '403') return url
 
-            // A 403 means a dev server is up but was started without the
-            // allowedHosts env var below (e.g. by the agent itself, or by an
-            // earlier run) — it will never accept the proxied host, so replace it.
             if(status === '403'){
                 logger.info('Dev server is rejecting the proxied host, restarting it with allowedHosts set')
                 await this.sandbox.commands.run('pkill -f vite || true', { cwd: PROJECT_ROOT })
             }
 
-            // --host is required because vite's default bind (127.0.0.1) is
-            // unreachable through E2B's proxy. The env var is vite's own escape
-            // hatch for proxied setups: without it server.allowedHosts answers
-            // the E2B hostname with a 403 "This host is not allowed", which
-            // renders as a blank preview. A leading dot allows all subdomains,
-            // covering every sandbox id and port without editing vite.config.ts.
-            // --strictPort so a leftover listener surfaces as a startup failure
-            // instead of vite silently drifting to 5174 and away from getHost().
             await this.sandbox.commands.run(
                 `npm run dev -- --host 0.0.0.0 --strictPort`,
                 {

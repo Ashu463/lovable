@@ -6,6 +6,7 @@ import { backendGql } from './utils/backendClient';
 export type OrchestratorEvent = MainAgentEvents |
     { type: "orchestrator_agent_started"; }
     | { type: "clarification_needed"; questions: Question[] }
+    | { type: "designs_generating"; count: number }
     | { type: "select_design"; designs: DesignOption[] }
     | { type: "main_agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
     | { type: "subagent_progress"; agent: string; taskId?: number; data?: unknown, subagentSummary?: string }

@@ -351,7 +351,23 @@ export class MainAgent{
     async BuildSummary(): Promise<string> {
         try {
             logger.info(`[MainAgent:${this.runId}] Building summary from ${this.session.length} session entries`)
-            return await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.session)
+            const { title, summary } = await b.GenerateMainAgentSummary(MAIN_AGENT_SUMMARY_PROMPT, this.session)
+
+            // The mutation only names a project that has no name yet, so every
+            // run generates a title but only the first one sticks — that's what
+            // keeps the chat title stable across follow-ups.
+            try{
+                await backendGql(
+                    `mutation NameProject($projectId: ID!, $name: String!) {
+                        nameProjectIfUnnamed(projectId: $projectId, name: $name)
+                    }`,
+                    { projectId: this.projectId, name: title }
+                )
+            } catch(e){
+                logger.error(`[MainAgent:${this.runId}] Failed to save project title: ${e}`)
+            }
+
+            return summary
         } catch (e) {
             logger.error(`[MainAgent:${this.runId}] Error occurred while generating summary: ${e instanceof Error ? e.message : String(e)}`)
             throw e
