@@ -144,8 +144,10 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 setState({ status: "failed", runId, projectId, userPrompt, error: event.error });
                 return;
               case "designs_generating":
+                // Rendered as its own banner, not another activity-feed line —
+                // pushing it as a message would duplicate the banner and place
+                // it wherever it lands in message order instead of always last.
                 setAwaitingDesigns(true);
-                pushMessage("system", describeEvent(event), "progress");
                 return;
               default:
                 pushMessage("system", describeEvent(event), "progress");
