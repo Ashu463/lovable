@@ -1,7 +1,6 @@
-import type { TaskSummary } from "../baml_client"
-import type { Answers, OrchestratorResponse } from "../types/agentTypes"
-import { OrchestratorAgent } from "./agent"
-import { createRunEmitter, type EventEmitter } from "./events";
+import type { Answers } from "../types/callAgentTypes"
+import { CallAgent } from "./callAgent"
+import { createRunEmitter } from "./events";
 import { E2BSandbox } from "./utils/sandbox"
 
 // export async function SpinUpSandbox(userId: string, projectId: string): Promise<string>{
@@ -23,10 +22,10 @@ export async function AgentCall(
   priorRunSummary?: string | null,
 ): Promise<any> {
 
-  const orchestrator: OrchestratorAgent = new OrchestratorAgent(userId, projectId, sandbox, runId, semanticMem, priorRunSummary ?? null)
+  const orchestrator: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem, priorRunSummary ?? null)
 
   try {
-    const result = await orchestrator.Orchestrate(userPrompt, answers, selectedDesignId)
+    const result = await orchestrator.Run(userPrompt, answers, selectedDesignId)
     return result
   } catch (err) {
     await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })

@@ -14,7 +14,7 @@ const STAGE_LABEL: Record<StageKey, string> = {
   preview: "preview",
 };
 
-// Bootstrap() picks either a single generalist MainAgent loop or the full
+// Bootstrap() picks either a single generalist Agent loop or the full
 // coder/tester/researcher/... DAG depending on request complexity — "main"
 // is what lights up for the simple path, since the others never fire then.
 const AGENT_NAMES = ["main", "coder", "debuggerr", "tester", "researcher", "uiExpert"] as const;
@@ -89,9 +89,9 @@ export function useWorkspacePipeline(state: RunState): { stages: PipelineStage[]
       if (event.type === "subagent_progress" || event.type === "subagent_completed") {
         seenAgents.add(event.agent);
       } else if (
-        event.type === "main_agent_progress" ||
-        event.type === "main_agent_tool_call" ||
-        event.type === "main_agent_success"
+        event.type === "agent_progress" ||
+        event.type === "agent_tool_call" ||
+        event.type === "agent_success"
       ) {
         seenAgents.add("main");
       }

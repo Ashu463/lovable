@@ -1,5 +1,5 @@
 import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type ResearcherContext, type Skill, type SubAgentsContext } from "../../baml_client"
-// import type { ContextStruct } from "../../types/mainAgentTypes"
+// import type { ContextStruct } from "../../types/agentTypes"
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/systemPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"

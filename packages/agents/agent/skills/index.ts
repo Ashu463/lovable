@@ -1,7 +1,7 @@
 import type { Skill } from "../../baml_client";
 import type { SubAgentType } from "../../types/subAgentsTypes";
 
-export type AgentKey = SubAgentType | "main";
+export type AgentKey = SubAgentType | "agent";
 
 const skillsMapper = {
     PROJECT_CONVENTION: 0,
@@ -87,7 +87,7 @@ const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
     researcher: [skillsMapper.REPORT_FORMAT, skillsMapper.SOURCE_QUALITY_RUBRIC],
     uiExpert: [skillsMapper.DESIGN_SYSTEM, skillsMapper.RESPONSIVE_RULES],
     
-    main: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+    agent: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
 };
 
 const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
@@ -102,7 +102,7 @@ const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
     tester: [skillsMapper.VISUAL_VERIFICATION],
     researcher: [],
     uiExpert: [skillsMapper.LAYOUT_PATTERNS, skillsMapper.ASSET_POLICY],
-    main: [
+    agent: [
         skillsMapper.SCAFFOLD_NEW_PROJECT,
         skillsMapper.ADD_A_ROUTE,
         skillsMapper.DATABASE_INTEGRATION,

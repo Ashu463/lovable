@@ -229,7 +229,7 @@ class SubAgentsContexts{
 }
 type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext
 
-function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
+function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
     client OpenAI
     prompt #"

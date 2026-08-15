@@ -9,7 +9,7 @@ export const PREVIEW_PORT = 5173
 export const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:3000`
 export const REDIS_HOST = process.env.REDIS_HOST ?? "redis"
 export const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6380)
-export const MAIN_AGENT_MAX_ITERATIONS = 25
+export const AGENT_MAX_ITERATIONS = 25
 // Must stay under the *model's* window, not a hypothetical one — at 200k with
 // gpt-4o-mini (128k) the threshold sat above the hard limit, so compaction never
 // fired and the API rejected the call instead. Raise this when the model changes.
@@ -46,7 +46,7 @@ export const TASK_SANDBOX_RETRY_LIMIT = 5
 export const SUBAGENT_LLM_RETRY_ATTEMPTS = 3
 export const SUBAGENT_TOOL_RETRY_ATTEMPTS = 2
 export const SUBAGENT_RETRY_BACKOFF_MS = 1000
-export const MAIN_AGENT_LLM_RETRY_ATTEMPTS = 3
+export const AGENT_LLM_RETRY_ATTEMPTS = 3
 // A 429 needs to wait out a window, not the ~1s a transient failure needs.
 export const RATE_LIMIT_BACKOFF_MS = 20_000
 export const RETRY_MAX_BACKOFF_MS = 60_000

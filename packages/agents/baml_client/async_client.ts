@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MainAgentSummary, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -97,6 +97,118 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
         }
 
         
+        async AgentLLMCall(
+        systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,callAgentContext: string,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.AgentLLMCall(
+          systemPrompt,userPrompt,context,semanticMem,design,callAgentContext,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "AgentLLMCall",
+            {
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"callAgentContext": callAgentContext
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
+        async CallAgentSummary(
+        systemPrompt: string,summaries: string[],
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<string> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.CallAgentSummary(
+          systemPrompt,summaries,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "CallAgentSummary",
+            {
+            "systemPrompt": systemPrompt,"summaries": summaries
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as string
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
         async CheckComplexityAndGenerateQuestions(
         systemPrompt: string,userPrompt: string,
         __baml_options__?: BamlCallOptions<never>
@@ -545,10 +657,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             }
             
-        async GenerateMainAgentSummary(
+        async GenerateAgentSummary(
         systemPrompt: string,context: types.Message[],
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.MainAgentSummary> {
+        ): Promise<types.AgentSummary> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -559,7 +671,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
 
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
-          const __stream__ = this.stream.GenerateMainAgentSummary(
+          const __stream__ = this.stream.GenerateAgentSummary(
           systemPrompt,context,
           __baml_options__
           );
@@ -582,7 +694,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
 
             const __raw__ = await this.runtime.callFunction(
-            "GenerateMainAgentSummary",
+            "GenerateAgentSummary",
             {
             "systemPrompt": systemPrompt,"context": context
             },
@@ -595,7 +707,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.MainAgentSummary
+            return __raw__.parsed(false) as types.AgentSummary
             } catch (error) {
             throw toBamlError(error);
             }
@@ -641,118 +753,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             "GenerateSubagentSummary",
             {
             "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
-            },
-            this.ctxManager.cloneContext(),
-            __options__.tb?.__tb(),
-            __clientRegistry__,
-            __collector__,
-            __options__.tags || {},
-            __env__,
-            __signal__,
-            __options__.watchers,
-            )
-            return __raw__.parsed(false) as string
-            } catch (error) {
-            throw toBamlError(error);
-            }
-            }
-            
-        async MainLLMCall(
-        systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
-        __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort> {
-          try {
-          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-          const __signal__ = __options__.signal;
-
-          if (__signal__?.aborted) {
-          throw new BamlAbortError('Operation was aborted', __signal__.reason);
-          }
-
-          // Check if onTick is provided - route through streaming if so
-          if (__options__.onTick) {
-          const __stream__ = this.stream.MainLLMCall(
-          systemPrompt,userPrompt,context,semanticMem,design,orchestratorContext,
-          __baml_options__
-          );
-
-          return await __stream__.getFinalResponse();
-          }
-
-          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-          [__options__.collector]) : [];
-          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-          const __env__: Record<string, string> = Object.fromEntries(
-            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-            );
-
-            // Resolve client option to clientRegistry (client takes precedence)
-            let __clientRegistry__ = __options__.clientRegistry;
-            if (__options__.client) {
-              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-              __clientRegistry__.setPrimary(__options__.client);
-            }
-
-            const __raw__ = await this.runtime.callFunction(
-            "MainLLMCall",
-            {
-            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
-            },
-            this.ctxManager.cloneContext(),
-            __options__.tb?.__tb(),
-            __clientRegistry__,
-            __collector__,
-            __options__.tags || {},
-            __env__,
-            __signal__,
-            __options__.watchers,
-            )
-            return __raw__.parsed(false) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
-            } catch (error) {
-            throw toBamlError(error);
-            }
-            }
-            
-        async OrchestratorSummary(
-        systemPrompt: string,summaries: string[],
-        __baml_options__?: BamlCallOptions<never>
-        ): Promise<string> {
-          try {
-          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-          const __signal__ = __options__.signal;
-
-          if (__signal__?.aborted) {
-          throw new BamlAbortError('Operation was aborted', __signal__.reason);
-          }
-
-          // Check if onTick is provided - route through streaming if so
-          if (__options__.onTick) {
-          const __stream__ = this.stream.OrchestratorSummary(
-          systemPrompt,summaries,
-          __baml_options__
-          );
-
-          return await __stream__.getFinalResponse();
-          }
-
-          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-          [__options__.collector]) : [];
-          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-          const __env__: Record<string, string> = Object.fromEntries(
-            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-            );
-
-            // Resolve client option to clientRegistry (client takes precedence)
-            let __clientRegistry__ = __options__.clientRegistry;
-            if (__options__.client) {
-              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-              __clientRegistry__.setPrimary(__options__.client);
-            }
-
-            const __raw__ = await this.runtime.callFunction(
-            "OrchestratorSummary",
-            {
-            "systemPrompt": systemPrompt,"summaries": summaries
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -1231,6 +1231,154 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
 
             
+            AgentLLMCall(
+            systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,callAgentContext: string,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort, types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for AgentLLMCall", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "AgentLLMCall",
+                {
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design ?? null,"callAgentContext": callAgentContext
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort, types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort>(
+                  __raw__,
+                  (a): partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort => a,
+                  (a): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
+            CallAgentSummary(
+            systemPrompt: string,summaries: string[],
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<string, string>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for CallAgentSummary", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "CallAgentSummary",
+                {
+                "systemPrompt": systemPrompt,"summaries": summaries
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<string, string>(
+                  __raw__,
+                  (a): string => a,
+                  (a): string => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
             CheckComplexityAndGenerateQuestions(
             systemPrompt: string,userPrompt: string,
             __baml_options__?: BamlCallOptions<never>
@@ -1823,10 +1971,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   }
                   
-            GenerateMainAgentSummary(
+            GenerateAgentSummary(
             systemPrompt: string,context: types.Message[],
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.MainAgentSummary, types.MainAgentSummary>
+            ): BamlStream<partial_types.AgentSummary, types.AgentSummary>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1852,7 +2000,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
               try {
               __options__.onTick!("Unknown", __log__);
               } catch (error) {
-              console.error("Error in onTick callback for GenerateMainAgentSummary", error);
+              console.error("Error in onTick callback for GenerateAgentSummary", error);
               }
               }
               };
@@ -1871,7 +2019,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 }
 
                 const __raw__ = this.runtime.streamFunction(
-                "GenerateMainAgentSummary",
+                "GenerateAgentSummary",
                 {
                 "systemPrompt": systemPrompt,"context": context
                 },
@@ -1885,10 +2033,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.MainAgentSummary, types.MainAgentSummary>(
+                return new BamlStream<partial_types.AgentSummary, types.AgentSummary>(
                   __raw__,
-                  (a): partial_types.MainAgentSummary => a,
-                  (a): types.MainAgentSummary => a,
+                  (a): partial_types.AgentSummary => a,
+                  (a): types.AgentSummary => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -1948,154 +2096,6 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 "GenerateSubagentSummary",
                 {
                 "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
-                },
-                undefined,
-                this.ctxManager.cloneContext(),
-                __options__.tb?.__tb(),
-                __clientRegistry__,
-                __collector__,
-                __options__.tags || {},
-                __env__,
-                __signal__,
-                __onTickWrapper__,
-                )
-                return new BamlStream<string, string>(
-                  __raw__,
-                  (a): string => a,
-                  (a): string => a,
-                  this.ctxManager.cloneContext(),
-                  __options__.signal,
-                  )
-                  } catch (error) {
-                  throw toBamlError(error);
-                  }
-                  }
-                  
-            MainLLMCall(
-            systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
-            __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort, types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort>
-              {
-              try {
-              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-              const __signal__ = __options__.signal;
-
-              if (__signal__?.aborted) {
-              throw new BamlAbortError('Operation was aborted', __signal__.reason);
-              }
-
-              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-              [__options__.collector]) : [];
-
-              let __onTickWrapper__: (() => void) | undefined;
-
-              // Create collector and wrap onTick if provided
-              if (__options__.onTick) {
-              const __tickCollector__ = new Collector("on-tick-collector");
-              __collector__ = [...__collector__, __tickCollector__];
-
-              __onTickWrapper__ = () => {
-              const __log__ = __tickCollector__.last;
-              if (__log__) {
-              try {
-              __options__.onTick!("Unknown", __log__);
-              } catch (error) {
-              console.error("Error in onTick callback for MainLLMCall", error);
-              }
-              }
-              };
-              }
-
-              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-              const __env__: Record<string, string> = Object.fromEntries(
-                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-                );
-
-                // Resolve client option to clientRegistry (client takes precedence)
-                let __clientRegistry__ = __options__.clientRegistry;
-                if (__options__.client) {
-                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-                  __clientRegistry__.setPrimary(__options__.client);
-                }
-
-                const __raw__ = this.runtime.streamFunction(
-                "MainLLMCall",
-                {
-                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design ?? null,"orchestratorContext": orchestratorContext
-                },
-                undefined,
-                this.ctxManager.cloneContext(),
-                __options__.tb?.__tb(),
-                __clientRegistry__,
-                __collector__,
-                __options__.tags || {},
-                __env__,
-                __signal__,
-                __onTickWrapper__,
-                )
-                return new BamlStream<partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort, types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort>(
-                  __raw__,
-                  (a): partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort => a,
-                  (a): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort => a,
-                  this.ctxManager.cloneContext(),
-                  __options__.signal,
-                  )
-                  } catch (error) {
-                  throw toBamlError(error);
-                  }
-                  }
-                  
-            OrchestratorSummary(
-            systemPrompt: string,summaries: string[],
-            __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<string, string>
-              {
-              try {
-              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-              const __signal__ = __options__.signal;
-
-              if (__signal__?.aborted) {
-              throw new BamlAbortError('Operation was aborted', __signal__.reason);
-              }
-
-              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
-              [__options__.collector]) : [];
-
-              let __onTickWrapper__: (() => void) | undefined;
-
-              // Create collector and wrap onTick if provided
-              if (__options__.onTick) {
-              const __tickCollector__ = new Collector("on-tick-collector");
-              __collector__ = [...__collector__, __tickCollector__];
-
-              __onTickWrapper__ = () => {
-              const __log__ = __tickCollector__.last;
-              if (__log__) {
-              try {
-              __options__.onTick!("Unknown", __log__);
-              } catch (error) {
-              console.error("Error in onTick callback for OrchestratorSummary", error);
-              }
-              }
-              };
-              }
-
-              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-              const __env__: Record<string, string> = Object.fromEntries(
-                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-                );
-
-                // Resolve client option to clientRegistry (client takes precedence)
-                let __clientRegistry__ = __options__.clientRegistry;
-                if (__options__.client) {
-                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-                  __clientRegistry__.setPrimary(__options__.client);
-                }
-
-                const __raw__ = this.runtime.streamFunction(
-                "OrchestratorSummary",
-                {
-                "systemPrompt": systemPrompt,"summaries": summaries
                 },
                 undefined,
                 this.ctxManager.cloneContext(),

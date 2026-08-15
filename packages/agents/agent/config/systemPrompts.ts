@@ -8,7 +8,7 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *
  * Architecture this version assumes (per Ashutosh, July 2026):
  *
- *   Orchestrator (owns the Run, no LLM prompt of its own — its decisions
+ *   CallAgent (owns the Run, no LLM prompt of its own — its decisions
  *   are just code branching on COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT's
  *   verdict)
  *     -> receives request
@@ -19,7 +19,7 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *        picks one, that design is fixed for the rest of the Run and is
  *        never regenerated
  *     -> branches on complexity verdict:
- *          simple  -> MAIN_AGENT_SYSTEM_PROMPT (single generalist, own tool loop)
+ *          simple  -> AGENT_SYSTEM_PROMPT (single generalist, own tool loop)
  *          complex -> PLAN_TASK_SYSTEM_PROMPT -> CODER_PROMPT loop,
  *                     reactively escalating to DEBUGGER_PROMPT on failure
  *
@@ -43,21 +43,21 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  */
 
 // ============================================================================
-// 1. MAIN_AGENT_SYSTEM_PROMPT
-//    The simple-path executor. Spawned by the orchestrator when the
+// 1. AGENT_SYSTEM_PROMPT
+//    The simple-path executor. Spawned by the CallAgent when the
 //    complexity checker judges a request doesn't need the full
 //    Coder/Debugger pipeline. Owns the whole task itself, tool-calling loop,
 //    self-verifies, no separate tester/debugger safety net underneath it.
 // ============================================================================
 
-// MainLLMCall returns a flat discriminated union, same shape as CoderAgent:
+// AgentLLMCall returns a flat discriminated union, same shape as CoderAgent:
 //   -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill
 //      | Apify | Context7 | Tavily | StitchTool | Done | Abort
 // Done/Abort are the terminal variants the loop-runner keys off of.
-export const MAIN_AGENT_SYSTEM_PROMPT = `
+export const AGENT_SYSTEM_PROMPT = `
 # ROLE
 
-You are the main agent for Lovable. You own one user request end to end:
+You are the Agent for Lovable. You own one user request end to end:
 implement it in the sandbox project, verify it builds, and report what you
 changed. Nothing checks your work after you finish, so "verified" means you
 ran a command and read its output — not that the code looks right.
@@ -209,13 +209,13 @@ it cannot be parsed and wastes the turn.
 `;
 
 // ============================================================================
-// 2. MAIN_AGENT_SUMMARY_PROMPT
+// 2. AGENT_SUMMARY_PROMPT
 //    Compacts a single Main agent task's own tool-call transcript — narrow,
 //    short-lived scope (one delegated task), not the whole conversation.
-//    That's ORCHESTRATOR_SUMMARY_PROMPT's job now.
+//    That's CALL_AGENT_SUMMARY_PROMPT's job now.
 // ============================================================================
 
-export const MAIN_AGENT_SUMMARY_PROMPT = `
+export const AGENT_SUMMARY_PROMPT = `
 -------------Update: Keep this really short-----------
 # ROLE
 
@@ -254,19 +254,19 @@ title the project as a whole, not this particular task.
 `;
 
 // ============================================================================
-// 3. ORCHESTRATOR_SUMMARY_PROMPT
-//    Compacts the orchestrator's persistent, Run-level context — this is
-//    now the big one, since orchestrator owns the whole Run across however
+// 3. CALL_AGENT_SUMMARY_PROMPT
+//    Compacts the CallAgent's persistent, Run-level context — this is
+//    now the big one, since CallAgent owns the whole Run across however
 //    many follow-up messages, path switches, and delegate executions.
 // ============================================================================
 
-export const ORCHESTRATOR_SUMMARY_PROMPT = `
+export const CALL_AGENT_SUMMARY_PROMPT = `
 # ROLE
 
-You compact the orchestrator's persistent context for the current Run. This
+You compact the CallAgent's persistent context for the current Run. This
 context spans the entire conversation with the user, not just one delegated
 task — it must survive across however many follow-up requests, complexity
-verdicts, and path switches (main agent vs coder/debugger pipeline) have
+verdicts, and path switches (Agent vs coder/debugger pipeline) have
 happened so far.
 
 # WHAT TO PRESERVE
@@ -278,9 +278,9 @@ happened so far.
   behavior stays consistent and auditable.
 - The current app state as it stands after all completed work so far
   (pages/features that exist, key structural decisions).
-- Whatever delegate is currently mid-task (main agent or coder/debugger
+- Whatever delegate is currently mid-task (Agent or coder/debugger
   pipeline) and that delegate's current state pointer, so a resumed
-  orchestrator can pick back up without re-deriving where things stand.
+  CallAgent can pick back up without re-deriving where things stand.
 - Any unresolved clarification_needed thread.
 
 # WHAT TO DISCARD
@@ -301,7 +301,7 @@ answer. When genuinely unsure whether to keep or drop something, keep it.
 
 // ============================================================================
 // 4. PLAN_TASK_SYSTEM_PROMPT
-//    Invoked only on the complex path, after the orchestrator has judged
+//    Invoked only on the complex path, after the CallAgent has judged
 //    the request complex and the design is already fixed. Coder is the
 //    only plannable delegate now — Debugger is reactive on failure, not
 //    planned upfront; Research/FetchDocs are inline tools Coder reaches
@@ -311,10 +311,10 @@ answer. When genuinely unsure whether to keep or drop something, keep it.
 export const PLAN_TASK_SYSTEM_PROMPT = `
 # ROLE
 
-You are the planner, invoked when the orchestrator has judged a request
+You are the planner, invoked when the CallAgent has judged a request
 complex enough to need the full pipeline. You decompose the request into
 SubAgentsTodo items for CoderAgent to execute one at a time, plus a
-PlannerTodo summary for the orchestrator to relay to the user in plain
+PlannerTodo summary for the CallAgent to relay to the user in plain
 language.
 
 Coder is the only executor you're planning for. Debugger is invoked
@@ -514,9 +514,9 @@ it cannot be parsed and wastes the turn.
 // ============================================================================
 // 6. DEBUGGER_PROMPT
 //    function DebuggerAgent(...) -> ReadFile | RunCommand | WriteFile | Research | DebuggingDone | Abort
-//    Invoked reactively by the orchestrator when a Coder item fails
+//    Invoked reactively by the CallAgent when a Coder item fails
 //    verification. Loops with its own RunCommand calls to check its own
-//    fixes; the orchestrator watches for no-progress across attempts using
+//    fixes; the CallAgent watches for no-progress across attempts using
 //    TESTER_ERROR_REFACTOR_PROMPT's normalized signature, independently of
 //    what you report.
 // ============================================================================
@@ -601,7 +601,7 @@ Reply with a single raw JSON object describing ONE action, and nothing else.
 // 7. TESTER_ERROR_REFACTOR_PROMPT
 //    Not pass/fail — that's just the exit code of whatever RunCommand ran.
 //    This structures raw failure output into a report + a normalized
-//    signature, primarily so the orchestrator can compare across Debugger
+//    signature, primarily so the CallAgent can compare across Debugger
 //    attempts for its no-progress cutoff. Secondarily useful as a cleaner
 //    starting point in {{error_report}} for Debugger's first attempt.
 // ============================================================================
@@ -611,7 +611,7 @@ export const TESTER_ERROR_REFACTOR_PROMPT = `
 
 You turn raw, noisy command failure output (stack traces, build/bundler
 errors, lint failures, test runner output) into a structured report and a
-normalized signature. Your primary consumer is the orchestrator's
+normalized signature. Your primary consumer is the CallAgent's
 no-progress detector, comparing this signature across successive Debugger
 attempts on the same item — Debugger also has direct RunCommand access and
 can read raw output itself, so treat your report as a clean starting point
@@ -688,7 +688,7 @@ direction, not a rough sketch to be refined later.
 // ============================================================================
 // 9. COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT
 //    Runs on EVERY incoming user message in a Run, not just at inception.
-//    Its verdict is what the orchestrator branches on for main-agent vs
+//    Its verdict is what the CallAgent branches on for main-agent vs
 //    pipeline routing — this is load-bearing, not just a clarification gate.
 // ============================================================================
 
@@ -699,7 +699,7 @@ You do two things for every incoming user message in a Run: judge whether
 it's simple enough for the single main-agent path or complex enough to need
 the full coder/debugger pipeline, and decide whether it can proceed as-is
 or needs clarifying questions first. The complexity verdict is not advisory
-— the orchestrator branches its execution path directly on it.
+— the CallAgent branches its execution path directly on it.
 
 # COMPLEXITY JUDGMENT
 
@@ -744,7 +744,7 @@ ask it at all.
 // ============================================================================
 // 10. COMPACT_CONTEXT_PROMPT
 //     Generic — used across whichever context is nearing threshold
-//     (orchestrator's persistent context, a main-agent task loop, a
+//     (CallAgent's persistent context, a main-agent task loop, a
 //     coder/debugger task loop). Lossless: relocates, never rewrites.
 // ============================================================================
 
@@ -826,7 +826,7 @@ this pass, its detail should survive with it, not just its existence.
 
 // ============================================================================
 // 12. SUBAGENT_SUMMARY_PROPMT
-//     Digests a finished Coder or Debugger run for the orchestrator's
+//     Digests a finished Coder or Debugger run for the CallAgent's
 //     persistent state (complex path only — UIExpert already ran once at
 //     inception and isn't a re-invoked delegate; Research is inline).
 // ============================================================================
@@ -836,13 +836,13 @@ export const SUBAGENT_SUMMARY_PROPMT = `
 # ROLE
 
 You summarize a single completed CoderAgent or DebuggerAgent run into a
-short digest attached to the orchestrator's persistent state. The
-orchestrator should never need to read a sub-agent's full action-by-action
+short digest attached to the CallAgent's persistent state. The
+CallAgent should never need to read a sub-agent's full action-by-action
 transcript once this digest exists.
 
 # RESPONSIBILITIES
 
-1. State what actually happened, in terms the orchestrator (and whichever
+1. State what actually happened, in terms the CallAgent (and whichever
    item comes next in the plan) can act on.
 2. List files touched, at the path level, with the action taken on each
    (created/modified/deleted).

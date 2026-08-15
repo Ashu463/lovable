@@ -33,6 +33,8 @@ export default class TypeBuilder {
     
     AgentResponse: ClassViewer<'AgentResponse'>;
     
+    AgentSummary: ClassViewer<'AgentSummary', "title" | "summary">;
+    
     Apify: ClassViewer<'Apify', "action" | "urls" | "maxPages">;
     
     ApifyRes: ClassViewer<'ApifyRes', "status" | "itemcount" | "scrapeRes">;
@@ -86,8 +88,6 @@ export default class TypeBuilder {
     GetSkill: ClassViewer<'GetSkill', "action" | "skillName">;
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
-    
-    MainAgentSummary: ClassViewer<'MainAgentSummary', "title" | "summary">;
     
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
@@ -150,7 +150,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MainAgentSummary","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType",
@@ -168,6 +168,10 @@ export default class TypeBuilder {
         
         this.AgentResponse = this.tb.classViewer("AgentResponse", [
           
+        ]);
+        
+        this.AgentSummary = this.tb.classViewer("AgentSummary", [
+          "title","summary",
         ]);
         
         this.Apify = this.tb.classViewer("Apify", [
@@ -276,10 +280,6 @@ export default class TypeBuilder {
         
         this.ItemRes = this.tb.classViewer("ItemRes", [
           "title","description","url",
-        ]);
-        
-        this.MainAgentSummary = this.tb.classViewer("MainAgentSummary", [
-          "title","summary",
         ]);
         
         this.Message = this.tb.classViewer("Message", [

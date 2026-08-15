@@ -77,6 +77,12 @@ export interface AgentResponse {
   
 }
 
+export interface AgentSummary {
+  title: string
+  summary: string
+  
+}
+
 export interface Apify {
   action: "apify"
   urls: string[]
@@ -271,12 +277,6 @@ export interface ItemRes {
   title: string
   description: string
   url: string
-  
-}
-
-export interface MainAgentSummary {
-  title: string
-  summary: string
   
 }
 

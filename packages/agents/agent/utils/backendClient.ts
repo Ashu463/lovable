@@ -30,7 +30,7 @@ export async function backendGql<T>(
   return res.data.data;
 }
 
-// Shared because both MainAgent and SubAgent checkpoint their own state.
+// Shared because both Agent and SubAgent checkpoint their own state.
 export const SAVE_RUN_STATE = `
   mutation SaveRunState($runId: ID!, $contextSnapshot: String, $sessionSnapshot: String, $iteration: Int) {
     saveRunState(
