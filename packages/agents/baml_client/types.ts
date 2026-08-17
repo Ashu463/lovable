@@ -47,14 +47,6 @@ export function all_succeeded<CheckName extends string>(checks: Record<CheckName
 export function get_checks<CheckName extends string>(checks: Record<CheckName, Check>): Check[] {
     return Object.values(checks)
 }
-export enum Agent {
-  CoderAgent = "CoderAgent",
-  DebuggerAgent = "DebuggerAgent",
-  TesterAgent = "TesterAgent",
-  UIExpertAgent = "UIExpertAgent",
-  ResearcherAgent = "ResearcherAgent",
-}
-
 export enum ContextType {
   CoderContext = "CoderContext",
   DebuggerContext = "DebuggerContext",

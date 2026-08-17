@@ -27,6 +27,15 @@ export class SubAgent<T extends keyof ContextMap> {
     private repoTree: string = ""
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore()
+    // Path -> consecutive editFile failure count, mirrors Agent's editFailures
+    // (agent.ts) so the coder/debugger get the same "stop editing, rewrite the
+    // whole file" nudge instead of retrying the same bad oldString forever.
+    private editFailures = new Map<string, number>()
+    // action+path/command signature -> consecutive failure count, independent of
+    // editFailures above. Catches any tool repeatedly failing the same way (not
+    // just edits) and halts the task instead of burning the rest of maxIterations.
+    private lastFailureSignature: string | null = null
+    private consecutiveFailureCount = 0
     constructor(
         private agentType: T,
         private input: InputMap[T],
@@ -133,12 +142,41 @@ export class SubAgent<T extends keyof ContextMap> {
             }
             // logger.info(`${this.agentType} tool call: ${this.summarizeToolCall(res)}`)
             let toolRes
-            try{
-                toolRes = await this.withRetry('tool call', SUBAGENT_TOOL_RETRY_ATTEMPTS, () => this.agentInstance.executeFunction(res))
+            if(res.action === 'editFile' && res.path && (this.editFailures.get(res.path) ?? 0) >= 2){
+                // Same nudge Agent gives via editFailures (agent.ts): two failed edits on
+                // one file means the model's mental model of it has drifted — stop feeding
+                // it more oldString guesses and point it at writeFile instead.
+                const msg = `editFile on ${res.path} has failed twice in a row. Stop editing it — call writeFile with the file's complete corrected content instead.`
+                logger.warn(`${this.agentType} task ${this.taskId}: ${msg}`)
+                toolRes = { success: false, response: msg, editedFiles: msg, toolResult: msg } as any
             }
-            catch(e){
-                return await this.haltTask(`Tool call failed after ${SUBAGENT_TOOL_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
+            else{
+                try{
+                    toolRes = await this.withRetry('tool call', SUBAGENT_TOOL_RETRY_ATTEMPTS, () => this.agentInstance.executeFunction(res))
+                }
+                catch(e){
+                    return await this.haltTask(`Tool call failed after ${SUBAGENT_TOOL_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
+                }
             }
+
+            if(res.action === 'editFile' && res.path){
+                if(toolRes?.success === false) this.editFailures.set(res.path, (this.editFailures.get(res.path) ?? 0) + 1)
+                else this.editFailures.delete(res.path)
+            }
+            if((res.action === 'writeFile' || res.action === 'delete') && res.path){
+                this.editFailures.delete(res.path)
+            }
+
+            const failureSignature = toolRes?.success === false ? `${res?.action ?? 'unknown'}:${res?.path ?? res?.command ?? ''}` : null
+            if(failureSignature){
+                this.consecutiveFailureCount = failureSignature === this.lastFailureSignature ? this.consecutiveFailureCount + 1 : 1
+                this.lastFailureSignature = failureSignature
+            }
+            else{
+                this.consecutiveFailureCount = 0
+                this.lastFailureSignature = null
+            }
+
             // Tool results are frequently whole file bodies — log the outcome
             // and a short excerpt, not the payload.
             const toolText = JSON.stringify(toolRes)
@@ -151,6 +189,11 @@ export class SubAgent<T extends keyof ContextMap> {
             this.SaveSessionState().catch(err => logger.error(`Failed to save session for task ${this.taskId}: ${err}`))
 
             this.iteration++
+            if (this.consecutiveFailureCount >= 3) {
+                logger.error(`${this.agentType} task ${this.taskId}: no progress — ${this.lastFailureSignature} failed ${this.consecutiveFailureCount} times in a row, halting`)
+                success = false
+                break
+            }
             if (this.iteration >= this.maxIterations()) {
                 success = false
                 break

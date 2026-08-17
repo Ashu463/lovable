@@ -10,7 +10,7 @@ import { E2BSandbox } from "./utils/sandbox"
     
 //     return sandboxId
 // }
-export async function AgentCall(
+export async function runCallAgent(
   userId: string,
   projectId: string,
   userPrompt: string,
@@ -25,7 +25,7 @@ export async function AgentCall(
   const orchestrator: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem, priorRunSummary ?? null)
 
   try {
-    const result = await orchestrator.Run(userPrompt, answers, selectedDesignId)
+    const result = await orchestrator.Execute(userPrompt, answers, selectedDesignId)
     return result
   } catch (err) {
     await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })

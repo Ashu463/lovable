@@ -142,8 +142,6 @@ export default class TypeBuilder {
     WriteFile: ClassViewer<'WriteFile', "action" | "path" | "content">;
     
     
-    Agent: EnumViewer<'Agent', "CoderAgent" | "DebuggerAgent" | "TesterAgent" | "UIExpertAgent" | "ResearcherAgent">;
-    
     ContextType: EnumViewer<'ContextType', "CoderContext" | "DebuggerContext" | "TesterContext" | "UIExpertContext" | "ResearcherContext">;
     
 
@@ -153,7 +151,7 @@ export default class TypeBuilder {
             "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexComplexity","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","SimpleComplexity","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
-            "Agent","ContextType",
+            "ContextType",
           ]),
           runtime: DO_NOT_USE_DIRECTLY_UNLESS_YOU_KNOW_WHAT_YOURE_DOING_RUNTIME
         });
@@ -386,10 +384,6 @@ export default class TypeBuilder {
           "action","path","content",
         ]);
         
-        
-        this.Agent = this.tb.enumViewer("Agent", [
-          "CoderAgent","DebuggerAgent","TesterAgent","UIExpertAgent","ResearcherAgent",
-        ]);
         
         this.ContextType = this.tb.enumViewer("ContextType", [
           "CoderContext","DebuggerContext","TesterContext","UIExpertContext","ResearcherContext",
