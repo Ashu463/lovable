@@ -2,7 +2,7 @@ import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/systemPrompts"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PREVIEW_PORT, PROJECT_ROOT } from "../config/systemConfig"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
 
@@ -27,11 +27,8 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
-        // Same flags GetPreviewUrl uses: a bare `vite` binds to localhost only, so
-        // E2B's proxy can't reach it, and it 403s the proxied host without allowedHosts.
-        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev -- --host 0.0.0.0 --strictPort`, {
+        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev`, {
             background: true,
-            envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' },
             onStdout: (data: string) => {stdOutBuf += data},
             onStderr: (data: string) => {stdErrBuf += data}
         })
@@ -64,9 +61,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         const deadline = Date.now() + MAX_BOOT_WAIT_MS
         while (Date.now() < deadline) {
             try {
-            // getHost() returns a bare host, so this needs the scheme — without it
-            // fetch throws "invalid URL" every time and the catch below hides it.
-            const response = await fetch(`https://${sandbox.getHost(PREVIEW_PORT)}`)
+            const response = await fetch(sandbox.getHost(PORT))
             if (response.ok) return true
             } catch {
             // connection refused / not up yet — keep polling

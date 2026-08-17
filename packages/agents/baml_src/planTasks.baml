@@ -1,3 +1,11 @@
+
+enum Agent {
+  CoderAgent
+  DebuggerAgent
+  TesterAgent
+  UIExpertAgent
+  ResearcherAgent
+}
 function PlanComplexTask(systemPrompt: string, userPrompt: string, context: string) -> PlannerTodo[]{
 // context here is the CallAgent context sended with Agent, subagent, and planner task
     client OpenAI

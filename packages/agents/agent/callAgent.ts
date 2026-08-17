@@ -27,14 +27,14 @@ type InputBuilder<T extends SubAgentType> = (
 ) => InputMap[T]
 
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
-type CallAgentContext = {
+export type CallAgentContext = {
     taskId: number,
-    task: string, 
-    agentAssigned: SubAgentType, 
-    success: boolean, 
+    task: string,
+    agentAssigned: SubAgentType,
+    success: boolean,
     summary: string,
 }
-type CallAgentState = {
+export type CallAgentState = {
     screenId: string | null // last most scrreen
     screenIdByTaskId: Map<number, string> // taskId (uiExpert) -> screenId, for dependency-specific lookups
     lastTestErrors: Error[]
@@ -420,8 +420,6 @@ export class CallAgent{
 
             let i = 0
             let sandboxRetries = 0
-
-            let dagFailureReason: string | null = null
             while(i < sequentialTodos.length){
                 const todo = sequentialTodos[i]!
 
@@ -434,7 +432,6 @@ export class CallAgent{
                 // #TODO: Failure handling of planner
                 if(!todo.agent){
                     logger.warn(`Task ${todo.id} has no agent assigned, stopping DAG execution`)
-                    dagFailureReason = `Task ${todo.id} ("${todo.task}") has no agent assigned`
                     break
                 }
 
@@ -454,32 +451,12 @@ export class CallAgent{
                 if(!result.success && await this.sandbox.EnsureAlive()){
                     if(++sandboxRetries >= TASK_SANDBOX_RETRY_LIMIT){
                         logger.error(`Task ${todo.id} lost its sandbox ${sandboxRetries} times, giving up`)
-                        dagFailureReason = `Task ${todo.id} ("${todo.task}") lost its sandbox ${sandboxRetries} times in a row`
                         break
                     }
                     logger.warn(`Sandbox died during task ${todo.id}, retrying it from the start (${sandboxRetries}/${TASK_SANDBOX_RETRY_LIMIT})`)
                     continue
                 }
                 sandboxRetries = 0
-
-                // A real (non-sandbox) failure: record it honestly rather than
-                // marking the todo completed and letting dependent tasks build on
-                // top of work that never landed. No retry/reassign logic yet — that's
-                // the LLM-triage work planned for later — so for now this halts the
-                // whole complex-task run rather than cascading a broken foundation.
-                if(!result.success){
-                    logger.error(`Task ${todo.id} (${agentType}) failed without a sandbox death, halting DAG execution`)
-                    summaries.push(result.summary)
-                    this.context.push({
-                        taskId: todo.id,
-                        task: todo.task,
-                        agentAssigned: agentType,
-                        summary: result.summary,
-                        success: false
-                    });
-                    dagFailureReason = `Task ${todo.id} ("${todo.task}") failed: ${result.summary}`
-                    break
-                }
 
                 // R2 is the only thing that outlives the sandbox, so checkpoint the
                 // finished task's work before moving to the next one.
@@ -521,13 +498,6 @@ export class CallAgent{
                 todo.status = 'completed'
                 i++
             }
-
-            if(dagFailureReason){
-                logger.error(`Complex-task run ${this.runId} did not complete: ${dagFailureReason}`)
-                await this.emitter.emit({ type: 'run_failed', error: dagFailureReason })
-                return { status: 'error', reason: dagFailureReason }
-            }
-
             callAgentSummary = await this.GenerateCallAgentSummary(summaries)
 
         }
@@ -613,19 +583,10 @@ export class CallAgent{
                 const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
 
                 const testerRes: TesterResponse = await tester.testCodebase(testerContext)
-                // The loop is only entered because `npm run build` failed, but vite
-                // serves happily through TS errors that break the build — so the dev
-                // server coming up doesn't mean there's nothing to fix. When the tester
-                // has nothing to report, fall back to the build error that opened this loop.
-                const error: Error = testerRes.errorRes
-                    ? {
-                        fileName: testerRes.errorRes.file,
-                        error: testerRes.errorRes.error + testerRes.errorRes.line
-                    }
-                    : this.state.lastTestErrors[this.state.lastTestErrors.length - 1] ?? {
-                        fileName: "BUILD_CHECKER_ERROR",
-                        error: "npm run build failed but neither the build nor the tester reported a specific error"
-                    }
+                const error: Error = {
+                    fileName: testerRes.errorRes!.file,
+                    error: testerRes.errorRes!.error + testerRes.errorRes!.line
+                }
                 // #CRITICAL: halt only after the debugger has had 2 attempts at the same
                 // error signature with no progress, not on the first repeat.
                 const currentErrorSignature = `${error.fileName}:${error.error}`

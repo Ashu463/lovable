@@ -22,15 +22,8 @@ function extractResultText(res: any, toolRes: any): string {
     return truncate(rawResultText(toolRes), res?.action === 'read' ? READ_RESULT_MAX_CHARS : TOOL_RESULT_MAX_CHARS)
 }
 
-// Drops a cached `read` of this path whenever it's about to go stale: either a
-// fresh read of the same path is landing right after (old copy redundant), or a
-// write/edit/delete just changed what's on disk (old copy now wrong). Without the
-// write/edit/delete cases, a coder that edits without re-reading keeps building its
-// next oldString off content that no longer exists on disk.
 function dropStaleReads(turns: Message[], res: any): Message[] {
-    if (!res?.path) return turns
-    const invalidatesCachedRead = res.action === 'read' || res.action === 'writeFile' || res.action === 'editFile' || res.action === 'delete'
-    if (!invalidatesCachedRead) return turns
+    if (res?.action !== 'read' || !res?.path) return turns
     return turns.filter(t => !t.content.startsWith(`read ${res.path} -> `))
 }
 
