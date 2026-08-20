@@ -16,7 +16,7 @@ class ComplexComplexity{
 type ComplexityLevel = SimpleComplexity | ComplexComplexity
 function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: string) -> SimpleComplexity | ComplexComplexity {
 
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.

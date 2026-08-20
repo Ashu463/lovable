@@ -132,9 +132,12 @@ model Design {
   projectId   String
   project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  screenId    String 
+  screenId    String
   // summary     String  @db.Text
   htmlContent String @db.Text
+  // The FramePrompts variant prompt that produced this design — kept for
+  // debugging bad Stitch output, not shown to end users.
+  prompt      String? @db.Text
   isSelected  Boolean @default(false)
 
   createdAt   DateTime @default(now())

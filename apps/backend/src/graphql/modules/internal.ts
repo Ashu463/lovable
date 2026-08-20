@@ -18,19 +18,20 @@ export const internalResolvers = {
   Mutation: {
     saveDesigns: async (
       _parent: unknown,
-      args: { projectId: string; designs: string[] },
+      args: { projectId: string; designs: { htmlContent: string; prompt?: string }[] },
       ctx: GraphQLContext,
     ) => {
       requireInternal(ctx);
 
       return ctx.prisma.$transaction(
-        args.designs.map((htmlContent) =>
+        args.designs.map(({ htmlContent, prompt }) =>
           ctx.prisma.design.create({
             data: {
               id: randomUUIDv7(),
               projectId: args.projectId,
               screenId: "",
               htmlContent,
+              prompt,
               createdAt: new Date(),
             },
           }),

@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{ _.role("system") }}
         {{systemPrompt}}

@@ -24,10 +24,10 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
         const res = await this.callLLM(request, context)
         return res.prompts
     }
-    async generateDesigns(userPrompt: string, semanticMem: string, skills: Skill[]): Promise<Screen[]> {
+    async generateDesigns(userPrompt: string, semanticMem: string, skills: Skill[]): Promise<{ screen: Screen, prompt: string }[]> {
         const variantPrompts: string[] = await this.craftDesignVariants({userPrompt, semanticMem}, skills)
         const settled = await Promise.allSettled(
-            variantPrompts.map((p) => makeOneScreen(p, this.userId))
+            variantPrompts.map((p) => makeOneScreen(p, this.userId).then((screen) => ({ screen, prompt: p })))
         )
 
         const designs = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
@@ -41,9 +41,11 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
 
         return designs
     }
-    async fetchDesigns(screens: Screen[]): Promise<string[]>{
+    // prompt is carried alongside html purely so it can be persisted for
+    // debugging bad Stitch output — not used for rendering.
+    async fetchDesigns(designs: { screen: Screen, prompt: string }[]): Promise<{ html: string, prompt: string }[]>{
         const settled = await Promise.allSettled(
-            screens.map(screen => this.fetchDesignHtml(screen))
+            designs.map(async (d) => ({ html: await this.fetchDesignHtml(d.screen), prompt: d.prompt }))
         )
 
         const html = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
@@ -51,7 +53,7 @@ export class UIExpert extends BaseAgent<UIExpertRequest, UIExpertContext, UIExpe
             if (r.status === "rejected") logger.warn(`Design HTML fetch failed, continuing with the rest: ${r.reason}`)
         }
         if (html.length === 0) {
-            throw new Error(`Could not fetch HTML for any of the ${screens.length} generated design(s)`)
+            throw new Error(`Could not fetch HTML for any of the ${designs.length} generated design(s)`)
         }
 
         return html

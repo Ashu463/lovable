@@ -191,9 +191,9 @@ export class Orchestrator {
     // as code yet; wire this up to it directly (subagents call it too, not
     // just the orchestrator — see the earlier discussion on pull-based
     // context).
-    private async pushToContextEngine(): Promise<void> {
-        logger.warn(`[orchestrator] pushToContextEngine is a stub — ${this.context.length} summar(ies) for run ${this.runId} were not ingested`)
-    }
+    // private async pushToContextEngine(): Promise<void> {
+    //     logger.warn(`[orchestrator] pushToContextEngine is a stub — ${this.context.length} summar(ies) for run ${this.runId} were not ingested`)
+    // }
 
     // TODO (replan decision) — deterministic stub, no LLM call yet. Needs a
     // new BAML function once you're ready to add it, roughly:
@@ -220,6 +220,12 @@ export class Orchestrator {
         return planned
     }
 
+    async makingPromise(taskId: number){
+        // create worktree
+        // spawn subagent
+        // subagent.runloop()
+        // merge WT
+    }
     // One level of the DAG: spawn every task in `taskIds`, wait for all of
     // them, return updated context/state. TODO above explains why this only
     // actually parallelizes once worktree isolation lands — until then,
@@ -230,6 +236,7 @@ export class Orchestrator {
         let state = this.state
         const results: { taskId: number, success: boolean, summary: string }[] = []
 
+        // Promise.allSettled( )
         for (const taskId of taskIds) {
             const todo = this.todos.find(t => t.id === taskId)
             if (!todo || !todo.agent) continue
@@ -357,7 +364,7 @@ export class Orchestrator {
             }
 
             await step.run(`level-${levelIndex}-commit-state`, () => this.commitState(levelOut.results))
-            await step.run(`level-${levelIndex}-context-engine-push`, () => this.pushToContextEngine())
+            // await step.run(`level-${levelIndex}-context-engine-push`, () => this.pushToContextEngine())
 
             const remaining = this.todos.filter(t => !this.context.some(c => c.taskId === t.id))
             const decision = await step.run(`level-${levelIndex}-decide`, () => this.decideNextStep(levelOut.results, remaining))
@@ -400,3 +407,21 @@ export const runComplexTaskFn = inngest.createFunction(
 )
 
 export const functions = [runComplexTaskFn]
+
+/*Ideas
+
+- can this happend that planner plans and then assign the subagents it's tasks according to dag and then it waits till their response get completed
+and wait till they can do their work? 
+- probably do toerh things like the merge worktree and context resolution and other things? 
+- probably replan mid way according to the filaures it facing? 
+- analyzing the result of subagents and then replanning or changing the context accordingly or spawning the subagents for fixing the mistake? 
+- how do inngest or langraph agents handles retries? 
+- Hey shouldn't my agent be self healing?
+- Shouldn't this be a graph flow? since it's a complex yet long running i.e. approx 10 mins
+
+Props of this orchestrator: 
+- observation and analysis of result by subagents. 
+- Storing artifacts generated midway along with the summary of the subagent. 
+- Should be stateful.
+
+*/

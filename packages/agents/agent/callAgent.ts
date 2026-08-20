@@ -247,7 +247,7 @@ export class CallAgent{
             }
         }
 
-        let designsHtml: string[] = []
+        let designsHtml: { html: string, prompt: string }[] = []
         if(designs.length === 0){
             logger.info(`Generating designs`)
             try{
@@ -271,12 +271,13 @@ export class CallAgent{
             }
             // Save right away so the response can hand back real ids — the
             // frontend/caller only ever needs to pass an id around after this,
-            // never the full htmlContent again.
+            // never the full htmlContent again. prompt is saved alongside
+            // purely so bad Stitch output can be traced back to what was asked.
             const saved = await backendGql<{saveDesigns: {id: string, htmlContent: string}[]}>(
-                `mutation SaveDesigns($projectId: ID!, $designs: [String!]!) {
+                `mutation SaveDesigns($projectId: ID!, $designs: [DesignInput!]!) {
                     saveDesigns(projectId: $projectId, designs: $designs) { id htmlContent }
                 }`,
-                { projectId: this.projectId, designs: designsHtml }
+                { projectId: this.projectId, designs: designsHtml.map(d => ({ htmlContent: d.html, prompt: d.prompt })) }
             )
             return {
                 status: 'select_design',

@@ -80,7 +80,7 @@ class AgentSummary {
 
 function GenerateAgentSummary(systemPrompt: string, context: Message[]) -> AgentSummary{
 
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.
