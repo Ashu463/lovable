@@ -3,7 +3,7 @@
 //     stopReason: string,
 //     toolCall?: ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
-import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertContext, Error, ResearcherContext, TesterContext } from "../baml_client"
+import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, Error, ResearcherContext, TesterContext } from "../baml_client"
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
@@ -36,7 +36,7 @@ export type TesterTaskInput = {}
 export type ResearchTaskInput = BaseTaskInput 
 
 export type UIExpertTaskInput = BaseTaskInput & {
-    query: string, // this all need to refactored, dw
+    updatedPrompt: string
 }
 export type InputMap = {
     coder: CoderTaskInput;
@@ -52,7 +52,7 @@ export type ContextMap = {
     debuggerr: DebuggerContext,
     tester: TesterContext,
     researcher: ResearcherContext,
-    uiExpert: UIExpertContext
+    uiExpert: CoderContext
 }
 // session types for subagents
 export type SessionMap = {

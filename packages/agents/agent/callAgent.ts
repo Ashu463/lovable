@@ -20,10 +20,11 @@ import type { TesterContext } from "../baml_client"
 
 
 type InputBuilder<T extends SubAgentType> = (
-    todo: PlannerTodo, 
+    todo: PlannerTodo,
     ctx: CallAgentContext[],
     callAgentState: CallAgentState,
-    semanticMem: string
+    semanticMem: string,
+    updatedPrompt: string
 ) => InputMap[T]
 
 type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
@@ -94,7 +95,7 @@ export class CallAgent{
             agentType: 'coder',
         }),
 
-        uiExpert: (todo, ctx, state, semanticMem) => ({
+        uiExpert: (todo, _ctx, state, _semanticMem, updatedPrompt) => ({
             task: {
                 taskId: todo.id,
                 task: todo.task,
@@ -107,10 +108,8 @@ export class CallAgent{
                 },
                 designNeeded: todo.designNeeded
             },
-            callAgentContext: ctx,
-            semanticMem: semanticMem,
-            query: "",
             agentType: 'uiExpert',
+            updatedPrompt,
         }),
 
         tester: (todo, ctx, state) => ({
@@ -248,7 +247,11 @@ export class CallAgent{
         }
 
         let designsHtml: { html: string, prompt: string }[] = []
-        if(designs.length === 0){
+        // Complex requests skip the upfront picker entirely — the planner
+        // emits UIExpert todos that generate and build each screen's design
+        // mid-DAG instead, precisely to avoid the ~80s-per-variant + user
+        // round trip this block costs.
+        if(designs.length === 0 && !complexity){
             logger.info(`Generating designs`)
             try{
                 const uiExpertSkills = [
@@ -359,6 +362,14 @@ export class CallAgent{
             }
         }
         this.selectedDesign = data.selectedDesign ?? ""
+        if (this.selectedDesign) {
+            const path = `design/main-${this.projectId}.html`
+            const writeRes = await this.sandbox.Execute(this.sandbox.sandboxId, { action: 'writeFile', path, content: this.selectedDesign })
+            if (!writeRes.success) {
+                logger.warn(`Failed to save selected design to sandbox at ${path}: ${writeRes.content}`)
+            }
+            await this.sandbox.SyncR2()
+        }
 
         let callAgentSummary: string = ""
         let todos: PlannerTodo[] = []
@@ -441,7 +452,7 @@ export class CallAgent{
                 await this.sandbox.EnsureAlive()
 
                 const agentType = todo.agent
-                const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem)
+                const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem, data.updatedPrompt)
                 const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
                 logger.info(`Starting runloop for ${agentType} (task ${todo.id})`)
                 const result = await subagent.runLoop()
@@ -483,7 +494,7 @@ export class CallAgent{
                 if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
                     logger.info(`Starting tester debugger loop`)
                     testsPassing = false;
-                    testResults = await this.TesterDebuggerLoop(this.semanticMem)
+                    testResults = await this.TesterDebuggerLoop(this.semanticMem, data.updatedPrompt)
                     if(testResults.success) testsPassing = true
                 }
                 // this.shouldBatchTest()
@@ -563,7 +574,7 @@ export class CallAgent{
         return await b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, summaries)
     }
     // that tester <-> debugger loop
-    async TesterDebuggerLoop(semanticMem: string, ): Promise<{success: true | false, summaries: string[], lastError?: Error}>{
+    async TesterDebuggerLoop(semanticMem: string, updatedPrompt: string = ""): Promise<{success: true | false, summaries: string[], lastError?: Error}>{
         let loopCount = 0;
         let summaries: string[] = []
         let lastError
@@ -615,7 +626,7 @@ export class CallAgent{
                     status: 'pending',
                     designNeeded: false
                 }
-                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem)
+                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem, updatedPrompt)
                 const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
                 const debuggerResult = await debuggerAgent.runLoop()
                 await this.sandbox.SyncR2()

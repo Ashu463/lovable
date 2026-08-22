@@ -109,10 +109,8 @@ export class Orchestrator {
                             referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
                         },
                     },
-                    callAgentContext: this.context,
-                    semanticMem: this.semanticMem,
-                    query: "",
                     agentType: 'uiExpert',
+                    updatedPrompt: this.updatedPrompt,
                 } as unknown as InputMap[T]
             case 'tester':
                 return { task: { ...base, agentType: 'tester', agentSpecificData: {} }, agentType: 'tester' } as unknown as InputMap[T]
@@ -350,8 +348,16 @@ export class Orchestrator {
             this.context = levelOut.context
             this.state = levelOut.state
 
-            const hadCoderTask = taskIds.some(id => this.todos.find(t => t.id === id)?.agent === 'coder')
-            if (hadCoderTask) {
+            // Both coder and uiExpert write files into the sandbox now, so both
+            // need the post-level build check + sync — a UI-only level was
+            // previously skipping this entirely, meaning its files never got a
+            // build check or an R2 sync until some later coder-containing level
+            // happened to trigger one.
+            const hadFileWritingTask = taskIds.some(id => {
+                const agent = this.todos.find(t => t.id === id)?.agent
+                return agent === 'coder' || agent === 'uiExpert'
+            })
+            if (hadFileWritingTask) {
                 const gateOut = await step.run(`level-${levelIndex}-merge-gate`, () => this.runMergeGate()) as unknown as {
                     success: boolean, state: SerializableState, summaries: string[]
                 }

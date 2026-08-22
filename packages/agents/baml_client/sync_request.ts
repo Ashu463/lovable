@@ -666,8 +666,8 @@ export class HttpRequest {
   }
   
   UIExpertAgent(
-      
-      __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
+      systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+      __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
@@ -685,7 +685,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "UIExpertAgent",
         {
-          
+          "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1332,8 +1332,8 @@ export class HttpStreamRequest {
   }
   
   UIExpertAgent(
-      
-      __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
+      systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+      __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
@@ -1351,7 +1351,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "UIExpertAgent",
         {
-          
+          "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

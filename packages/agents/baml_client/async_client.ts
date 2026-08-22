@@ -1162,9 +1162,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async UIExpertAgent(
-        
-        __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
-        ): Promise<string> {
+        systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -1176,7 +1176,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.UIExpertAgent(
-          
+          systemPrompt,htmlDesign,context,
           __baml_options__
           );
 
@@ -1200,7 +1200,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "UIExpertAgent",
             {
-            
+            "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -1211,7 +1211,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as string
+            return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort
             } catch (error) {
             throw toBamlError(error);
             }
@@ -2638,9 +2638,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             UIExpertAgent(
-            
-            __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
-            ): BamlStream<string | null, string>
+            systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -2687,7 +2687,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "UIExpertAgent",
                 {
-                
+                "systemPrompt": systemPrompt,"htmlDesign": htmlDesign ?? null,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -2699,10 +2699,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<string | null, string>(
+                return new BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort>(
                   __raw__,
-                  (a): string | null => a,
-                  (a): string => a,
+                  (a): partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort => a,
+                  (a): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

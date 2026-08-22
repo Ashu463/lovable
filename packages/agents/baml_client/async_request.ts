@@ -670,8 +670,8 @@ env?: Record<string, string | undefined>
       }
       
   async UIExpertAgent(
-  
-  __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
+  systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+  __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
     const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
@@ -689,7 +689,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "UIExpertAgent",
       {
-      
+      "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -1336,8 +1336,8 @@ env?: Record<string, string | undefined>
           }
           
       async UIExpertAgent(
-      
-      __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
+      systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+      __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
         const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
@@ -1355,7 +1355,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "UIExpertAgent",
           {
-          
+          "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),
