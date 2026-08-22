@@ -424,4 +424,16 @@ Props of this orchestrator:
 - Storing artifacts generated midway along with the summary of the subagent. 
 - Should be stateful.
 
+
+Todo list for later (say which one when ready):
+
+- state.screenId / screenIdByTaskId never assigned in orchestrator.ts — kills per-task design continuity across a multi-task run (uiExpert always creates instead of updates, referenceScreenIds always empty).
+errorsByTaskId in orchestrator.ts — declared, converted, never populated or read. Dead state.
+- Worktree isolation (orchestrator.ts) — ensureGitRepo/createWorktree/mergeWorktree exist but unwired; needs cwd-aware resolvePath in E2BSandbox.Execute before parallel levels are safe.
+makingPromise stub in orchestrator.ts — empty, no TODO tag, dead code.
+- PLAN_TASK_SYSTEM_PROMPT has zero mention of the selected design — planner never scopes a dedicated todo around implementing it.
+RUN_MAX_LLM_CALLS = 120 — commented as "the money guard," never actually enforced anywhere.
+- Model choice (client OpenAI → gpt-4o-mini) pinned across every BAML function including the planner — likely root cause of shallow/few-todo decomposition vs. what you saw in ChatGPT/DeepSeek UI. Suggested test: swap just PlanComplexTask's client to CustomGPT5Mini/CustomSonnet4 and rerun unchanged prompt.
+Frontend: three generated designs not visible at selection time — not yet investigated.
+- Other TODOs outside orchestrator.ts (subAgent.ts, callAgent.ts, context.ts, debugger.ts) — not yet inventoried in detail.
 */

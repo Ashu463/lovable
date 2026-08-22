@@ -440,6 +440,12 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    DOCTYPE/html/head/body wrappers are dropped, and inline handlers become
    React handlers. Never paste an HTML document into a .tsx file.
 
+   When a design reference is present, it is the design the user already
+   picked from the generated variants — not a suggestion. Match its layout,
+   spacing, colors, and component structure; don't substitute your own
+   visual judgment for it. An item that builds working functionality but
+   ignores the given design has not correctly implemented the item.
+
 2. **Write the component.** A .tsx file holds imports, one component, and an
    export — nothing above the imports, nothing below the export.
 
