@@ -53,7 +53,7 @@ export function Docs() {
           first question was: what does the browser actually receive, and
           when? That meant reading <code>packages/agents/agent/events.ts</code>{" "}
           and <code>agent.ts</code> before touching React at all. It&rsquo;s
-          also why the frontend imports <code>OrchestratorEvent</code>,{" "}
+          also why the frontend imports <code>CallAgentEvent</code>,{" "}
           <code>DesignOption</code>, and <code>Question</code> directly from{" "}
           <code>packages/agents</code> as type-only imports, rather than
           redefining lighter-weight versions locally — they get erased at
@@ -66,7 +66,7 @@ export function Docs() {
         <p>
           <code>Bootstrap()</code> deliberately front-loads every expensive
           decision — complexity, clarification, and design selection —
-          before <code>Orchestrate()</code> commits to actually running
+          before <code>Run()</code> commits to actually running
           agents. The reasoning: asking a clarifying question costs one round
           trip, but building the wrong thing and redoing it costs an entire
           pipeline run. It also means a returning user with an

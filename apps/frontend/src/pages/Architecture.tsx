@@ -42,7 +42,7 @@ export function Architecture() {
           queuing (BullMQ over Redis), and the HTTP surface. It never talks to
           an LLM directly — it enqueues a job and a worker process picks it
           up. <code>packages/agents</code> is where the actual agent logic
-          lives: an <code>OrchestratorAgent</code>, a planner, and a set of
+          lives: an <code>CallAgent</code>, a planner, and a set of
           sub-agents (coder, tester, researcher, UI expert), all calling out
           to the LLM via BAML-generated clients. The frontend never
           duplicates any of this — it imports the orchestrator&rsquo;s own
@@ -53,13 +53,13 @@ export function Architecture() {
 
       <FieldNoteEntry n="02" tag="orchestration model" title="Bootstrap, then plan, then run">
         <p>
-          Every run starts in <code>Orchestrate()</code>, which calls{" "}
+          Every run starts in <code>Run()</code>, which calls{" "}
           <code>Bootstrap()</code> first. Bootstrap decides three things
           before any code gets written: is this request complex enough to
           need clarifying questions, does the project have a selected design
           yet, and is the request simple enough for one generalist agent or
           does it need the full pipeline. Simple requests go to a single{" "}
-          <code>MainAgent</code> loop. Complex requests get planned into a
+          <code>Agent</code> loop. Complex requests get planned into a
           dependency graph (<code>PlannerTodo[]</code>), topologically
           sorted, and executed as a sequence of <code>SubAgent</code> runs —
           coder tasks are followed by a tester/debugger loop that keeps
@@ -72,7 +72,7 @@ export function Architecture() {
       <FieldNoteEntry n="03" tag="real-time updates" title="A bug I found in my own pipeline">
         <p>
           Every meaningful state change is supposed to be pushed to the
-          browser as an <code>OrchestratorEvent</code> — published to Redis
+          browser as an <code>CallAgentEvent</code> — published to Redis
           by the worker process, replayed from Postgres on reconnect, and
           streamed to the client as SSE. While wiring the frontend against
           this, I traced the emit path end to end and found that three of the

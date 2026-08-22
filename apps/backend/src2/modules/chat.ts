@@ -6,8 +6,8 @@ import { prisma } from "../../src/lib/prisma";
 import { redis } from "../../src/lib/redis";
 import { logger } from "../../src/lib/utils";
 import { runQueue } from "../../src/lib/queue";
-import type { OrchestratorEvent } from "../../../../packages/agents";
-import type { Answers } from "../../../../packages/agents/types/agentTypes";
+import type { CallAgentEvent } from "../../../../packages/agents";
+import type { Answers } from "../../../../packages/agents/types/callAgentTypes";
 
 const chatRouter = Router()
 /*
@@ -228,7 +228,7 @@ chatRouter.get('/:runId/stream', auth, async (req: Request, res: Response) =>{
     await subscriber.subscribe(`run:${runId}`);
 
     const onMessage = async (_channel: string, message: string) => {
-        let event: OrchestratorEvent;
+        let event: CallAgentEvent;
         try{
             event = JSON.parse(message)
         } catch(e){

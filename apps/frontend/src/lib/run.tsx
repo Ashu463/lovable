@@ -16,16 +16,16 @@ import CONTINUE_RUN from "@/graphql/continueRun.graphql?raw";
 import RUN_STATE from "@/graphql/runState.graphql?raw";
 import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
 import RUN_EVENTS from "@/graphql/runEvents.graphql?raw";
-import type { OrchestratorEvent } from "../../../../packages/agents/agent/events";
-import type { Answers, DesignOption, OrchestratorResponse } from "../../../../packages/agents/types/agentTypes";
+import type { CallAgentEvent } from "../../../../packages/agents/agent/events";
+import type { Answers, DesignOption, CallAgentResponse } from "../../../../packages/agents/types/callAgentTypes";
 import type { Question } from "../../../../packages/agents/baml_client/types";
 
-type CompletedResult = Extract<OrchestratorResponse, { status: "completed" }>;
+type CompletedResult = Extract<CallAgentResponse, { status: "completed" }>;
 
 export type RunState =
   | { status: "idle" }
   | { status: "submitting" }
-  | { status: "running"; runId: string; projectId: string; userPrompt: string; feed: OrchestratorEvent[] }
+  | { status: "running"; runId: string; projectId: string; userPrompt: string; feed: CallAgentEvent[] }
   | { status: "clarification_needed"; runId: string; projectId: string; userPrompt: string; questions: Question[] }
   | { status: "select_design"; runId: string; projectId: string; userPrompt: string; designs: DesignOption[] }
   | { status: "completed"; runId: string; projectId: string; userPrompt: string; result: CompletedResult }
@@ -108,7 +108,7 @@ export function RunProvider({ children }: { children: ReactNode }) {
       setAwaitingDesigns(false);
       setState({ status: "running", runId, projectId, userPrompt, feed: [] });
 
-      closeStreamRef.current = subscribe<{ runEvents: OrchestratorEvent }>(
+      closeStreamRef.current = subscribe<{ runEvents: CallAgentEvent }>(
         RUN_EVENTS,
         { runId },
         {

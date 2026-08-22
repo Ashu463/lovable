@@ -1,14 +1,14 @@
-import type { OrchestratorEvent } from "../../../../../packages/agents/agent/events";
+import type { CallAgentEvent } from "../../../../../packages/agents/agent/events";
 
-export function describeEvent(event: OrchestratorEvent): string {
+export function describeEvent(event: CallAgentEvent): string {
   switch (event.type) {
-    case "orchestrator_agent_started":
+    case "call_agent_started":
       return "Planning the build…";
-    case "main_agent_success":
+    case "agent_success":
       return "Agent finished its task.";
-    case "main_agent_tool_call":
+    case "agent_tool_call":
       return `Running ${event.toolName}…`;
-    case "main_agent_progress":
+    case "agent_progress":
       return event.step === "toolCall"
         ? `Calling ${event.toolCall ?? "a tool"}…`
         : event.step === "llm_completed"
@@ -20,7 +20,7 @@ export function describeEvent(event: OrchestratorEvent): string {
       return event.subagentSummary ?? `${event.agent} is working…`;
     case "subagent_completed":
       return `${event.agent} finished: ${event.summary}`;
-    case "orchestrator_completed":
+    case "call_agent_completed":
       return event.summary;
     default:
       return "Working…";

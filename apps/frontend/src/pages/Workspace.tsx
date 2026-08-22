@@ -174,13 +174,15 @@ function ActivityFeed({ messages, live }: { messages: ChatMessage[]; live: boole
   );
 }
 
-function ChatLog({ wide }: { wide: boolean }) {
+function ChatLog({ wide, extraWide }: { wide: boolean; extraWide?: boolean }) {
   const { state, messages, awaitingDesigns, submitAnswers, selectDesign } = useRun();
   const busy = state.status === "running" || state.status === "submitting";
   const groups = groupMessages(messages);
 
+  // Design selection needs room to actually show the designs — the normal
+  // chat-width cap (max-w-3xl) is what made the picker read as a tiny box.
   return (
-    <div className={cn("mx-auto flex w-full flex-1 flex-col gap-3.5 overflow-y-auto px-6 py-6", wide ? "max-w-3xl" : "")}>
+    <div className={cn("mx-auto flex w-full flex-1 flex-col gap-3.5 overflow-y-auto px-6 py-6", extraWide ? "max-w-6xl" : wide ? "max-w-3xl" : "")}>
       {groups.map((group, i) =>
         group.kind === "activity" ? (
           <ActivityFeed
@@ -382,7 +384,7 @@ export function Workspace() {
       ) : (
         <div className={cn("flex flex-1 overflow-hidden", showSplit && "divide-x divide-border")}>
           <div className={cn("flex flex-col", showSplit ? "w-[400px] shrink-0" : "flex-1")}>
-            <ChatLog wide={!showSplit} />
+            <ChatLog wide={!showSplit} extraWide={!showSplit && state.status === "select_design"} />
             <WorkspaceInput />
           </div>
 

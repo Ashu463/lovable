@@ -5,6 +5,8 @@ type Design {
   projectId: ID!
   screenId: String!
   htmlContent: String!
+  "The FramePrompts variant prompt that produced this design, if saved."
+  prompt: String
   isSelected: Boolean!
   createdAt: DateTime!
 }

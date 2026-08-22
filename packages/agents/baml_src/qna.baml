@@ -6,66 +6,43 @@ class Question{
       renders these as the only way the user can answer.
     "#)
 }
-class SimpleComplexity{
-    complex false
+class ComplexityVerdict{
+    complex bool
 }
-class ComplexComplexity{
-    complex true
-    questions Question[]
-}
-type ComplexityLevel = SimpleComplexity | ComplexComplexity
-function CheckComplexityAndGenerateQuestions(systemPrompt: string, userPrompt: string) -> SimpleComplexity | ComplexComplexity {
 
-    client OpenAI
+function CheckComplexity(systemPrompt: string, userPrompt: string) -> ComplexityVerdict {
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
-        {# {{app_context}} — current app state. #}
-        {# {{run_stage}} — whether this is the Run's first message (design not yet
-  chosen) or a follow-up (design already fixed — never ask design-related
-  questions on a follow-up, and don't factor design selection into this
-  message's complexity judgment). #}
 
         {{ctx.output_format}}
     "#
 }
-// class ComplexityLevel{
-//     complex bool
-//     qnaNeeded bool
-// }
-// function CheckComplexity(userPrompt: string, systemPrompt: string) -> ComplexityLevel{
 
-//     client OpenAI
-//     prompt #"
-//         {{systemPrompt}}
-//         {{userPrompt}}
+function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, isComplex: bool) -> Question[] {
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}} - the message to assess.
+        {{isComplex}} - whether this request was already judged complex,
+  for context only — this does not gate whether you ask.
 
-//         {{ctx.output_format}}
-//     "#
-// }
+        {{ctx.output_format}}
+    "#
+}
 
-// function GenerateQuestion(userPrompt: string, systemPrompt: string) -> Question[]{
-
-//     client OpenAI
-//     prompt #"
-//         {{systemPrompt}}
-//         {{userPrompt}}
-
-//         {{ctx.output_format}}
-//     "#
-// }
-
-test TestName {
-  functions [CheckComplexityAndGenerateQuestions]
+test CheckComplexityTest {
+  functions [CheckComplexity]
   args {
     systemPrompt #"
       # ROLE
 
-You do two things for every incoming user message in a Run: judge whether
-it's simple enough for the single main-agent path or complex enough to need
-the full coder/debugger pipeline, and decide whether it can proceed as-is
-or needs clarifying questions first. The complexity verdict is not advisory
-— the orchestrator branches its execution path directly on it.
+You judge whether an incoming Run message is simple enough for the single
+main-agent path or complex enough to need the full coder/debugger pipeline.
+This verdict is not advisory — the CallAgent branches its execution path
+directly on it. You do not ask questions or judge clarity; that is a
+separate, independent step.
 
 # COMPLEXITY JUDGMENT
 
@@ -75,33 +52,33 @@ change where a single generalist pass without a debugger safety net is a
 real risk of shipping something broken. Judge simple when it's a bounded,
 single-surface change a capable generalist could implement and verify
 directly — copy changes, small isolated features, single-component fixes.
-
-# CLARIFICATION JUDGMENT
-
-Default toward proceeding with stated assumptions — asking costs the user a
-full round trip, and most ambiguity has a reasonable default. Proceed when
-a reasonable default exists and a wrong guess would be cheap to redo. Ask
-when the request implies a data-model or permissions decision that would be
-expensive to unwind if guessed wrong, when two plausible interpretations
-would lead to materially different scopes of work (not just different
-details within the same scope), or when the request conflicts with a prior
-stated constraint and it's unclear which should win.
-
-Batch genuinely necessary questions together rather than trickling them out
-turn by turn. Questions must be specific and answerable in one line each —
-not open-ended.
-
-# CONSTRAINTS
-
-- Complexity and clarification are separate judgments — a request can be
-  simple but ambiguous, or complex but unambiguous. Don't conflate them.
-- Never ask about anything resolvable from {{app_context}} or reasonable
-  convention.
-- Never revisit design selection on a follow-up message.
-
     "#
     userPrompt #"
       Built a very complex todo app with black background.
     "#
+  }
+}
+
+test GenerateClarifyingQuestionsTest {
+  functions [GenerateClarifyingQuestions]
+  args {
+    systemPrompt #"
+      # ROLE
+
+You decide whether an incoming Run message needs clarifying questions before
+it can proceed, independent of whether it was judged simple or complex.
+
+# CLARIFICATION JUDGMENT
+
+Default toward proceeding with stated assumptions — asking costs the user a
+full round trip, and most ambiguity has a reasonable default. Ask when the
+request implies a decision that would be expensive to unwind if guessed
+wrong, or when two plausible interpretations would lead to materially
+different scopes of work.
+    "#
+    userPrompt #"
+      Built a very complex todo app with black background.
+    "#
+    isComplex true
   }
 }

@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{ _.role("system") }}
         {{systemPrompt}}
@@ -60,6 +60,40 @@ function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: str
         {{ctx.output_format}}
     "#
 }
-function UIExpertAgent() -> string{
+function UIExpertAgent(
+    systemPrompt: string,
+    htmlDesign: string?,
+    context: CoderContext,
+) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Done | Abort
+{
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        Whatever else {{context}} carries about the current codebase state.
 
+        {% if htmlDesign %}{{ htmlDesign }} - the Stitch-generated design for
+  this screen. Translate it into the base template; do not add business
+  logic or state beyond what the layout structurally implies.{% endif %}
+
+        {{ctx.output_format}}
+    "#
+}
+
+test UIExpertAgentTest {
+  functions [UIExpertAgent]
+  args {
+    systemPrompt #"
+      You are the UIExpert base-template agent.
+    "#
+    htmlDesign "<div class=\"p-4\"><h1>Dashboard</h1></div>"
+    context {
+        task "Build the dashboard screen base template"
+        dependentSummary []
+        repoTree #"
+        src/App.tsx
+        "#
+        skills []
+        recentTurns []
+    }
+  }
 }

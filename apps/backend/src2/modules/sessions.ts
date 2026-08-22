@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { internalAuth } from "../../src/lib/middleware";
 import { prisma } from "../../src/lib/prisma";
 import { randomUUIDv7 } from "bun";
-import type { OrchestratorEvent } from "../../../../packages/agents";
+import type { CallAgentEvent } from "../../../../packages/agents";
 import { logger } from "../../src/lib/utils";
 
 /*
@@ -14,7 +14,7 @@ const sessionRouter = Router();
 sessionRouter.post('/:runId/events', internalAuth, async (req: Request, res: Response) =>{
 
     const {runId} = req.params
-    const event: OrchestratorEvent = req.body
+    const event: CallAgentEvent = req.body
 
     if(typeof runId !== 'string'){
         return res.status(400).json({success: false, message: `Invalid runId type`})

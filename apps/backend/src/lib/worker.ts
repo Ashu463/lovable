@@ -3,7 +3,7 @@ import { redis } from "./redis";
 import { logger } from "./utils";
 import { prisma } from "./prisma";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
-import { AgentCall } from "../../../../packages/agents";
+import { runCallAgent } from "../../../../packages/agents";
 
 const worker = new Worker("run-agent", async (job) => {
     const {userId, projectId, prompt, runId, semanticMem, sandboxId, answers, selectedDesignId, priorRunSummary } = job.data;
@@ -22,7 +22,7 @@ const worker = new Worker("run-agent", async (job) => {
 
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
-      await AgentCall(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId, priorRunSummary);
+      await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId, priorRunSummary);
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;

@@ -22,7 +22,7 @@ import type { BamlRuntime, FunctionResult, BamlCtxManager, Image, Audio, Pdf, Vi
 import { toBamlError, BamlAbortError, ClientRegistry, type HTTPRequest } from "@boundaryml/baml"
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MainAgentSummary, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { HttpRequest, HttpStreamRequest } from "./sync_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -97,10 +97,10 @@ export class BamlSyncClient {
   }
 
   
-  CheckComplexityAndGenerateQuestions(
-      systemPrompt: string,userPrompt: string,
+  AgentLLMCall(
+      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,callAgentContext: string,
       __baml_options__?: BamlCallOptions<never>
-  ): types.SimpleComplexity | types.ComplexComplexity {
+  ): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -128,7 +128,107 @@ export class BamlSyncClient {
       }
 
       const __raw__ = this.runtime.callFunctionSync(
-        "CheckComplexityAndGenerateQuestions",
+        "AgentLLMCall",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"callAgentContext": callAgentContext
+        },
+        this.ctxManager.cloneContext(),
+        __options__.tb?.__tb(),
+        __clientRegistry__,
+        __collector__,
+        __options__.tags || {},
+        __env__,
+        __signal__,
+        __options__.watchers,
+      )
+      return __raw__.parsed(false) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
+    } catch (error: any) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CallAgentSummary(
+      systemPrompt: string,summaries: string[],
+      __baml_options__?: BamlCallOptions<never>
+  ): string {
+    try {
+      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const __signal__ = __options__.signal;
+
+      if (__signal__?.aborted) {
+        throw new BamlAbortError('Operation was aborted', __signal__.reason);
+      }
+
+      // Check if onTick is provided and reject for sync operations
+      if (__options__.onTick) {
+        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
+      }
+
+      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __options__.clientRegistry;
+      if (__options__.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__options__.client);
+      }
+
+      const __raw__ = this.runtime.callFunctionSync(
+        "CallAgentSummary",
+        {
+          "systemPrompt": systemPrompt,"summaries": summaries
+        },
+        this.ctxManager.cloneContext(),
+        __options__.tb?.__tb(),
+        __clientRegistry__,
+        __collector__,
+        __options__.tags || {},
+        __env__,
+        __signal__,
+        __options__.watchers,
+      )
+      return __raw__.parsed(false) as string
+    } catch (error: any) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CheckComplexity(
+      systemPrompt: string,userPrompt: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): types.ComplexityVerdict {
+    try {
+      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const __signal__ = __options__.signal;
+
+      if (__signal__?.aborted) {
+        throw new BamlAbortError('Operation was aborted', __signal__.reason);
+      }
+
+      // Check if onTick is provided and reject for sync operations
+      if (__options__.onTick) {
+        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
+      }
+
+      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __options__.clientRegistry;
+      if (__options__.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__options__.client);
+      }
+
+      const __raw__ = this.runtime.callFunctionSync(
+        "CheckComplexity",
         {
           "systemPrompt": systemPrompt,"userPrompt": userPrompt
         },
@@ -141,7 +241,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.SimpleComplexity | types.ComplexComplexity
+      return __raw__.parsed(false) as types.ComplexityVerdict
     } catch (error: any) {
       throw toBamlError(error);
     }
@@ -497,10 +597,10 @@ export class BamlSyncClient {
     }
   }
   
-  GenerateMainAgentSummary(
+  GenerateAgentSummary(
       systemPrompt: string,context: types.Message[],
       __baml_options__?: BamlCallOptions<never>
-  ): types.MainAgentSummary {
+  ): types.AgentSummary {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -528,7 +628,7 @@ export class BamlSyncClient {
       }
 
       const __raw__ = this.runtime.callFunctionSync(
-        "GenerateMainAgentSummary",
+        "GenerateAgentSummary",
         {
           "systemPrompt": systemPrompt,"context": context
         },
@@ -541,7 +641,57 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as types.MainAgentSummary
+      return __raw__.parsed(false) as types.AgentSummary
+    } catch (error: any) {
+      throw toBamlError(error);
+    }
+  }
+  
+  GenerateClarifyingQuestions(
+      systemPrompt: string,userPrompt: string,isComplex: boolean,
+      __baml_options__?: BamlCallOptions<never>
+  ): types.Question[] {
+    try {
+      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const __signal__ = __options__.signal;
+
+      if (__signal__?.aborted) {
+        throw new BamlAbortError('Operation was aborted', __signal__.reason);
+      }
+
+      // Check if onTick is provided and reject for sync operations
+      if (__options__.onTick) {
+        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
+      }
+
+      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __options__.clientRegistry;
+      if (__options__.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__options__.client);
+      }
+
+      const __raw__ = this.runtime.callFunctionSync(
+        "GenerateClarifyingQuestions",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"isComplex": isComplex
+        },
+        this.ctxManager.cloneContext(),
+        __options__.tb?.__tb(),
+        __clientRegistry__,
+        __collector__,
+        __options__.tags || {},
+        __env__,
+        __signal__,
+        __options__.watchers,
+      )
+      return __raw__.parsed(false) as types.Question[]
     } catch (error: any) {
       throw toBamlError(error);
     }
@@ -581,106 +731,6 @@ export class BamlSyncClient {
         "GenerateSubagentSummary",
         {
           "systemPrompt": systemPrompt,"subagentType": subagentType,"session": session
-        },
-        this.ctxManager.cloneContext(),
-        __options__.tb?.__tb(),
-        __clientRegistry__,
-        __collector__,
-        __options__.tags || {},
-        __env__,
-        __signal__,
-        __options__.watchers,
-      )
-      return __raw__.parsed(false) as string
-    } catch (error: any) {
-      throw toBamlError(error);
-    }
-  }
-  
-  MainLLMCall(
-      systemPrompt: string,userPrompt: string,context: types.Message[],semanticMem: string,design?: string | null,orchestratorContext: string,
-      __baml_options__?: BamlCallOptions<never>
-  ): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort {
-    try {
-      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-      const __signal__ = __options__.signal;
-
-      if (__signal__?.aborted) {
-        throw new BamlAbortError('Operation was aborted', __signal__.reason);
-      }
-
-      // Check if onTick is provided and reject for sync operations
-      if (__options__.onTick) {
-        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
-      }
-
-      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __options__.clientRegistry;
-      if (__options__.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__options__.client);
-      }
-
-      const __raw__ = this.runtime.callFunctionSync(
-        "MainLLMCall",
-        {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"semanticMem": semanticMem,"design": design?? null,"orchestratorContext": orchestratorContext
-        },
-        this.ctxManager.cloneContext(),
-        __options__.tb?.__tb(),
-        __clientRegistry__,
-        __collector__,
-        __options__.tags || {},
-        __env__,
-        __signal__,
-        __options__.watchers,
-      )
-      return __raw__.parsed(false) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
-    } catch (error: any) {
-      throw toBamlError(error);
-    }
-  }
-  
-  OrchestratorSummary(
-      systemPrompt: string,summaries: string[],
-      __baml_options__?: BamlCallOptions<never>
-  ): string {
-    try {
-      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
-      const __signal__ = __options__.signal;
-
-      if (__signal__?.aborted) {
-        throw new BamlAbortError('Operation was aborted', __signal__.reason);
-      }
-
-      // Check if onTick is provided and reject for sync operations
-      if (__options__.onTick) {
-        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
-      }
-
-      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-
-      // Resolve client option to clientRegistry (client takes precedence)
-      let __clientRegistry__ = __options__.clientRegistry;
-      if (__options__.client) {
-        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
-        __clientRegistry__.setPrimary(__options__.client);
-      }
-
-      const __raw__ = this.runtime.callFunctionSync(
-        "OrchestratorSummary",
-        {
-          "systemPrompt": systemPrompt,"summaries": summaries
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -1048,9 +1098,9 @@ export class BamlSyncClient {
   }
   
   UIExpertAgent(
-      
-      __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
-  ): string {
+      systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+      __baml_options__?: BamlCallOptions<never>
+  ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -1080,7 +1130,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "UIExpertAgent",
         {
-          
+          "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -1091,7 +1141,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as string
+      return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort
     } catch (error: any) {
       throw toBamlError(error);
     }

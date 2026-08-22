@@ -30,7 +30,14 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
 
     override async callLLM(input: CoderTaskInput, context: CoderContext): Promise<CoderLLMResponse> {
         const relatedDesignRef = (input.task.agentSpecificData as { relatedDesignRef?: { screenId: string } }).relatedDesignRef
-        const figmaBoilerPlate = relatedDesignRef ? `Reference design screen: ${relatedDesignRef.screenId}` : undefined
+        // this.selectedDesign is the actual HTML the user picked at design
+        // selection time — it was being threaded down to this constructor and
+        // then dropped; relatedDesignRef.screenId alone isn't resolvable into
+        // content, there's no tool for the coder to fetch it by id.
+        const parts: string[] = []
+        if (relatedDesignRef) parts.push(`Reference design screen: ${relatedDesignRef.screenId}`)
+        if (this.selectedDesign) parts.push(this.selectedDesign)
+        const figmaBoilerPlate = parts.length > 0 ? parts.join("\n\n") : undefined
         return await b.CoderAgent(CODER_PROMPT, figmaBoilerPlate, context)
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {

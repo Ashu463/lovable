@@ -87,7 +87,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -229,9 +229,9 @@ class SubAgentsContexts{
 }
 type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext
 
-function OrchestratorSummary(systemPrompt: string, summaries: string[]) -> string{
+function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the
@@ -242,3 +242,4 @@ currently active.
         {{ctx.output_format}}
     "#
 }
+ 
