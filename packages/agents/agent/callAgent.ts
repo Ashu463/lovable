@@ -1,8 +1,8 @@
 import type { CallAgentResponse, CallAgentSSE, Project, User, Answers, BootstrapResponse, DesignOption } from "../types/callAgentTypes"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
-import {type ComplexityLevel, type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, CALL_AGENT_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/systemPrompts"
+import {type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
+import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, CALL_AGENT_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/systemPrompts"
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import { Agent } from "./agent"
@@ -161,7 +161,6 @@ export class CallAgent{
     }
 
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
-        let isComplex
         let complexity: boolean = false
         logger.info(`Starting to fetch qeustions and designs`)
         // graphql power. 3 in 1
@@ -189,68 +188,80 @@ export class CallAgent{
                 .map((ans) => `- ${ans.question}\n  Answer: ${ans.answer}`)
                 .join('\n')
             userPrompt += `\n\nThe user was asked clarifying questions and answered:\n${qa}`
-            complexity = true
+            // Complexity was already decided (and cached) before these questions
+            // were asked — reuse it rather than assuming complex. Clarification
+            // isn't exclusive to the complex path anymore, so answering a
+            // question no longer implies anything about complexity.
+            complexity = cachedIsComplex ?? false
         }
         else if(!pastClarificationStage && questions.length > 0){
-            logger.info(`Reusing previously generated questions, skipping complexity check`)
+            logger.info(`Reusing previously generated questions, skipping complexity/clarification checks`)
             return {
                 status: 'clarification_needed',
                 questions: questions,
                 alreadySaved: true
             }
         }
-        else if(cachedIsComplex !== null && cachedIsComplex !== undefined){
-            logger.info(`Reusing cached complexity verdict (${cachedIsComplex}) for project ${this.projectId}, skipping complexity checker LLM call`)
-            complexity = cachedIsComplex
-        }
         else{
+            // Complexity and clarification are independent judgments — two
+            // separate calls, not one combined verdict. Complexity runs (or
+            // reuses its cache) first so clarification's isComplex param
+            // reflects a real decision; clarification always runs after,
+            // regardless of what that decision was.
+            if(cachedIsComplex !== null && cachedIsComplex !== undefined){
+                logger.info(`Reusing cached complexity verdict (${cachedIsComplex}) for project ${this.projectId}, skipping complexity checker LLM call`)
+                complexity = cachedIsComplex
+            }
+            else{
+                let complexityVerdict
+                try{
+                    logger.info(`Running complexity checker`)
+                    complexityVerdict = await b.CheckComplexity(COMPLEXITY_CHECKER_PROMPT, userPrompt)
+                }
+                catch(e){
+                    logger.error(`Failed complexity checker ${e}`)
+                    return {
+                        status: 'error',
+                        error: `Error occurred while checking complexity: ${e instanceof Error ? e.message : String(e)}`
+                    }
+                }
+                complexity = complexityVerdict.complex
+                logger.info(`Complexity checker result: complex=${complexity}`)
+                try{
+                    await backendGql(
+                        `mutation CacheComplexity($id: ID!, $isComplex: Boolean!) {
+                            updateProject(id: $id, isComplex: $isComplex) { id }
+                        }`,
+                        { id: this.projectId, isComplex: complexity }
+                    )
+                } catch(e){
+                    logger.error(`Failed to cache complexity verdict for project ${this.projectId}: ${e}`)
+                }
+            }
+
+            let clarifyingQuestions: Question[]
             try{
-                logger.info(`Running complexity checker`)
-                isComplex = await b.CheckComplexityAndGenerateQuestions(COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT, userPrompt)
+                logger.info(`Running clarification checker`)
+                clarifyingQuestions = await b.GenerateClarifyingQuestions(CLARIFICATION_PROMPT, userPrompt, complexity)
             }
             catch(e){
-                logger.error(`Failed complexity checker ${e}`)
+                logger.error(`Failed clarification checker ${e}`)
                 return {
                     status: 'error',
-                    error: `Error occurred while checking complexity: ${e instanceof Error ? e.message : String(e)}`
+                    error: `Error occurred while checking for clarification: ${e instanceof Error ? e.message : String(e)}`
                 }
             }
-            if(!isComplex){
-                return {
-                    status: 'error',
-                    error: `Error occurred while generating`
-                }
-            }
-            logger.info(`Complexity checker result: complex=${isComplex.complex}, questions=${JSON.stringify(isComplex.complex ? isComplex.questions : [])}`)
-            complexity = isComplex.complex
-            try{
-                await backendGql(
-                    `mutation CacheComplexity($id: ID!, $isComplex: Boolean!) {
-                        updateProject(id: $id, isComplex: $isComplex) { id }
-                    }`,
-                    { id: this.projectId, isComplex: complexity }
-                )
-            } catch(e){
-                logger.error(`Failed to cache complexity verdict for project ${this.projectId}: ${e}`)
-            }
-            if(isComplex.complex && isComplex.questions.length === 0){
-                logger.error(`Complexity checker returned complex=true with zero questions for project ${this.projectId} — proceeding without clarification`)
-                complexity = false
-            }
-            if(isComplex.complex && isComplex.questions.length > 0){
+            if(clarifyingQuestions.length > 0){
+                logger.info(`Clarification needed: ${JSON.stringify(clarifyingQuestions)}`)
                 // db request should hit isnt't it to save the questions
                 return {
                     status: 'clarification_needed',
-                    questions: isComplex.questions
+                    questions: clarifyingQuestions
                 }
             }
         }
 
         let designsHtml: { html: string, prompt: string }[] = []
-        // Complex requests skip the upfront picker entirely — the planner
-        // emits UIExpert todos that generate and build each screen's design
-        // mid-DAG instead, precisely to avoid the ~80s-per-variant + user
-        // round trip this block costs.
         if(designs.length === 0 && !complexity){
             logger.info(`Generating designs`)
             try{

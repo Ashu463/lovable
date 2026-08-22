@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexComplexity,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  SimpleComplexity,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -83,9 +83,8 @@ export namespace partial_types {
       timestamp?: string | null
       content?: string | null
     }
-    export interface ComplexComplexity {
-      complex?: true | null
-      questions: Question[]
+    export interface ComplexityVerdict {
+      complex?: boolean | null
     }
     export interface Context7 {
       action?: "context7" | null
@@ -244,9 +243,6 @@ export namespace partial_types {
       researcher?: ResearcherSession | null
       uiExpert?: UIExpertSession | null
     }
-    export interface SimpleComplexity {
-      complex?: false | null
-    }
     export interface Skill {
       name?: string | null
       description?: string | null
@@ -322,8 +318,6 @@ export namespace partial_types {
       path?: string | null
       content?: string | null
     }
-export type ComplexityLevel = SimpleComplexity | ComplexComplexity | null
-
 export type Role = "user" | "assistant" | "tool" | null
 
 export type Status = "in_progress" | "halted" | "resolved" | "done" | null

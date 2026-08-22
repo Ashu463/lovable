@@ -195,7 +195,13 @@ build on it instead of starting from the stock starter.
 
 - Exact slug derivation for `screenName` — implementation detail, not a
   design fork.
-- Decoupling general clarification from the complexity verdict into its own
-  independent LLM call (currently `CheckComplexityAndGenerateQuestions` does
-  both in one call) — confirmed as wanted, scoped as separate follow-up
-  work, not part of this spec.
+- ~~Decoupling general clarification from the complexity verdict~~ — done.
+  `CheckComplexityAndGenerateQuestions` split into independent
+  `CheckComplexity` and `GenerateClarifyingQuestions` (`qna.baml`), with
+  matching `COMPLEXITY_CHECKER_PROMPT` / `CLARIFICATION_PROMPT` split in
+  `systemPrompts.ts` and `callAgent.ts`'s `Bootstrap()` restructured to run
+  both independently. `CLARIFICATION_PROMPT` also now covers "what is this
+  person actually trying to build" ambiguity (including UI mood/direction)
+  as one eligible question category — explicitly not gated to UI requests,
+  not mandatory, and never asked per-screen inside an already-planned
+  complex build (that's UIExpert's own call at build time).

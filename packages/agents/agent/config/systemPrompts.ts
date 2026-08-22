@@ -9,18 +9,21 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  * Architecture this version assumes (per Ashutosh, July 2026):
  *
  *   CallAgent (owns the Run, no LLM prompt of its own — its decisions
- *   are just code branching on COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT's
- *   verdict)
+ *   are just code branching on COMPLEXITY_CHECKER_PROMPT's verdict and
+ *   CLARIFICATION_PROMPT's questions)
  *     -> receives request
- *     -> runs COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT on every
- *        incoming user message in the Run (not just at inception)
- *     -> asks questions if needed
- *     -> at Run inception ONLY: runs UI_VARIANTS_PROMPT (3 designs), user
- *        picks one, that design is fixed for the rest of the Run and is
- *        never regenerated
+ *     -> runs COMPLEXITY_CHECKER_PROMPT on every incoming user message in
+ *        the Run (not just at inception)
+ *     -> separately, independently, runs CLARIFICATION_PROMPT on every
+ *        incoming user message too — asks questions if needed, regardless
+ *        of the complexity verdict
  *     -> branches on complexity verdict:
- *          simple  -> AGENT_SYSTEM_PROMPT (single generalist, own tool loop)
- *          complex -> PLAN_TASK_SYSTEM_PROMPT -> CODER_PROMPT loop,
+ *          simple  -> at Run inception ONLY: runs UI_VARIANTS_PROMPT (3
+ *                     designs), user picks one, fixed for the rest of the
+ *                     Run and never regenerated; then AGENT_SYSTEM_PROMPT
+ *                     (single generalist, own tool loop)
+ *          complex -> skips the upfront picker entirely; PLAN_TASK_SYSTEM_PROMPT
+ *                     -> CODER_PROMPT / UI_EXPERT_BASE_TEMPLATE_PROMPT loop,
  *                     reactively escalating to DEBUGGER_PROMPT on failure
  *
  *   Research (web search / scrape) is an INLINE ACTION available to Coder
@@ -687,20 +690,24 @@ direction, not a rough sketch to be refined later.
 `;
 
 // ============================================================================
-// 9. COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT
+// 9. COMPLEXITY_CHECKER_PROMPT
 //    Runs on EVERY incoming user message in a Run, not just at inception.
 //    Its verdict is what the CallAgent branches on for main-agent vs
-//    pipeline routing — this is load-bearing, not just a clarification gate.
+//    pipeline routing. Independent of CLARIFICATION_PROMPT below — this
+//    function used to do both judgments in one call; splitting them means a
+//    simple request can still get clarifying questions and a complex one can
+//    sail through unambiguous, instead of clarification being implicitly
+//    gated on a complex verdict.
 // ============================================================================
 
-export const COMPLEXITY_CHECKER_AND_QUESTION_GENERATOR_PROMPT = `
+export const COMPLEXITY_CHECKER_PROMPT = `
 # ROLE
 
-You do two things for every incoming user message in a Run: judge whether
-it's simple enough for the single main-agent path or complex enough to need
-the full coder/debugger pipeline, and decide whether it can proceed as-is
-or needs clarifying questions first. The complexity verdict is not advisory
-— the CallAgent branches its execution path directly on it.
+You judge whether an incoming Run message is simple enough for the single
+main-agent path or complex enough to need the full coder/debugger pipeline.
+This verdict is not advisory — the CallAgent branches its execution path
+directly on it. You do not ask questions or judge clarity here; that is a
+separate, independent step that runs regardless of your verdict.
 
 # COMPLEXITY JUDGMENT
 
@@ -710,6 +717,25 @@ change where a single generalist pass without a debugger safety net is a
 real risk of shipping something broken. Judge simple when it's a bounded,
 single-surface change a capable generalist could implement and verify
 directly — copy changes, small isolated features, single-component fixes.
+`;
+
+// ============================================================================
+// 9b. CLARIFICATION_PROMPT
+//    Runs on every incoming user message, independent of the complexity
+//    verdict — a simple request can be ambiguous, a complex one can be
+//    unambiguous. Deliberately not UI-specific: mood/palette/visual intent
+//    only comes up here as one instance of the general "what is this person
+//    actually trying to build" judgment, never as a mandatory or separately
+//    gated question. UIExpert decides visual details itself when this
+//    doesn't surface them — it never blocks on a per-screen round trip.
+// ============================================================================
+
+export const CLARIFICATION_PROMPT = `
+# ROLE
+
+You decide whether an incoming Run message needs clarifying questions before
+it can proceed. This is independent of whether the request was judged simple
+or complex — you're given that verdict as context, not as a gate.
 
 # CLARIFICATION JUDGMENT
 
@@ -721,6 +747,15 @@ expensive to unwind if guessed wrong, when two plausible interpretations
 would lead to materially different scopes of work (not just different
 details within the same scope), or when the request conflicts with a prior
 stated constraint and it's unclear which should win.
+
+This includes genuinely not knowing what the person is trying to build —
+not the implementation, the actual goal. If the request is vague enough that
+two reasonable builds would look nothing alike (e.g. the overall mood, tone,
+or visual direction of a new UI surface is left completely open and matters
+to what "correct" even means here), that is exactly the kind of ambiguity
+worth one round trip. This is not a mandatory question and has no fixed
+category — ask it only when the request is genuinely open on this axis, the
+same bar as any other clarification.
 
 Batch genuinely necessary questions together rather than trickling them out
 turn by turn. Questions must be specific and answerable in one line each —
@@ -735,11 +770,12 @@ ask it at all.
 
 # CONSTRAINTS
 
-- Complexity and clarification are separate judgments — a request can be
-  simple but ambiguous, or complex but unambiguous. Don't conflate them.
 - Never ask about anything resolvable from the project context you were
   given, or from reasonable convention.
 - Never revisit design selection on a follow-up message.
+- Never ask a UI mood/palette/visual-direction question about an individual
+  screen inside a complex, already-planned build — that decision belongs to
+  UIExpert when it builds that screen, not to a pre-flight round trip.
 `;
 
 // ============================================================================
