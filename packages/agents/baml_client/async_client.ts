@@ -24,7 +24,7 @@ import { toBamlError, BamlStream, BamlAbortError, Collector, ClientRegistry } fr
 import type { Checked, Check, RecursivePartialNull as MovedRecursivePartialNull } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import { AsyncHttpRequest, AsyncHttpStreamRequest } from "./async_request"
 import { LlmResponseParser, LlmStreamParser } from "./parser"
@@ -209,10 +209,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             }
             
-        async CheckComplexityAndGenerateQuestions(
+        async CheckComplexity(
         systemPrompt: string,userPrompt: string,
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<types.SimpleComplexity | types.ComplexComplexity> {
+        ): Promise<types.ComplexityVerdict> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -223,7 +223,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
 
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
-          const __stream__ = this.stream.CheckComplexityAndGenerateQuestions(
+          const __stream__ = this.stream.CheckComplexity(
           systemPrompt,userPrompt,
           __baml_options__
           );
@@ -246,7 +246,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
 
             const __raw__ = await this.runtime.callFunction(
-            "CheckComplexityAndGenerateQuestions",
+            "CheckComplexity",
             {
             "systemPrompt": systemPrompt,"userPrompt": userPrompt
             },
@@ -259,7 +259,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as types.SimpleComplexity | types.ComplexComplexity
+            return __raw__.parsed(false) as types.ComplexityVerdict
             } catch (error) {
             throw toBamlError(error);
             }
@@ -708,6 +708,62 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __options__.watchers,
             )
             return __raw__.parsed(false) as types.AgentSummary
+            } catch (error) {
+            throw toBamlError(error);
+            }
+            }
+            
+        async GenerateClarifyingQuestions(
+        systemPrompt: string,userPrompt: string,isComplex: boolean,
+        __baml_options__?: BamlCallOptions<never>
+        ): Promise<types.Question[]> {
+          try {
+          const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+          const __signal__ = __options__.signal;
+
+          if (__signal__?.aborted) {
+          throw new BamlAbortError('Operation was aborted', __signal__.reason);
+          }
+
+          // Check if onTick is provided - route through streaming if so
+          if (__options__.onTick) {
+          const __stream__ = this.stream.GenerateClarifyingQuestions(
+          systemPrompt,userPrompt,isComplex,
+          __baml_options__
+          );
+
+          return await __stream__.getFinalResponse();
+          }
+
+          const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+          [__options__.collector]) : [];
+          const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+          const __env__: Record<string, string> = Object.fromEntries(
+            Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+            );
+
+            // Resolve client option to clientRegistry (client takes precedence)
+            let __clientRegistry__ = __options__.clientRegistry;
+            if (__options__.client) {
+              __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+              __clientRegistry__.setPrimary(__options__.client);
+            }
+
+            const __raw__ = await this.runtime.callFunction(
+            "GenerateClarifyingQuestions",
+            {
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"isComplex": isComplex
+            },
+            this.ctxManager.cloneContext(),
+            __options__.tb?.__tb(),
+            __clientRegistry__,
+            __collector__,
+            __options__.tags || {},
+            __env__,
+            __signal__,
+            __options__.watchers,
+            )
+            return __raw__.parsed(false) as types.Question[]
             } catch (error) {
             throw toBamlError(error);
             }
@@ -1379,10 +1435,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   }
                   
-            CheckComplexityAndGenerateQuestions(
+            CheckComplexity(
             systemPrompt: string,userPrompt: string,
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<partial_types.SimpleComplexity | partial_types.ComplexComplexity, types.SimpleComplexity | types.ComplexComplexity>
+            ): BamlStream<partial_types.ComplexityVerdict, types.ComplexityVerdict>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1408,7 +1464,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
               try {
               __options__.onTick!("Unknown", __log__);
               } catch (error) {
-              console.error("Error in onTick callback for CheckComplexityAndGenerateQuestions", error);
+              console.error("Error in onTick callback for CheckComplexity", error);
               }
               }
               };
@@ -1427,7 +1483,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 }
 
                 const __raw__ = this.runtime.streamFunction(
-                "CheckComplexityAndGenerateQuestions",
+                "CheckComplexity",
                 {
                 "systemPrompt": systemPrompt,"userPrompt": userPrompt
                 },
@@ -1441,10 +1497,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<partial_types.SimpleComplexity | partial_types.ComplexComplexity, types.SimpleComplexity | types.ComplexComplexity>(
+                return new BamlStream<partial_types.ComplexityVerdict, types.ComplexityVerdict>(
                   __raw__,
-                  (a): partial_types.SimpleComplexity | partial_types.ComplexComplexity => a,
-                  (a): types.SimpleComplexity | types.ComplexComplexity => a,
+                  (a): partial_types.ComplexityVerdict => a,
+                  (a): types.ComplexityVerdict => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )
@@ -2037,6 +2093,80 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   __raw__,
                   (a): partial_types.AgentSummary => a,
                   (a): types.AgentSummary => a,
+                  this.ctxManager.cloneContext(),
+                  __options__.signal,
+                  )
+                  } catch (error) {
+                  throw toBamlError(error);
+                  }
+                  }
+                  
+            GenerateClarifyingQuestions(
+            systemPrompt: string,userPrompt: string,isComplex: boolean,
+            __baml_options__?: BamlCallOptions<never>
+            ): BamlStream<partial_types.Question[], types.Question[]>
+              {
+              try {
+              const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+              const __signal__ = __options__.signal;
+
+              if (__signal__?.aborted) {
+              throw new BamlAbortError('Operation was aborted', __signal__.reason);
+              }
+
+              let __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector :
+              [__options__.collector]) : [];
+
+              let __onTickWrapper__: (() => void) | undefined;
+
+              // Create collector and wrap onTick if provided
+              if (__options__.onTick) {
+              const __tickCollector__ = new Collector("on-tick-collector");
+              __collector__ = [...__collector__, __tickCollector__];
+
+              __onTickWrapper__ = () => {
+              const __log__ = __tickCollector__.last;
+              if (__log__) {
+              try {
+              __options__.onTick!("Unknown", __log__);
+              } catch (error) {
+              console.error("Error in onTick callback for GenerateClarifyingQuestions", error);
+              }
+              }
+              };
+              }
+
+              const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+              const __env__: Record<string, string> = Object.fromEntries(
+                Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+                );
+
+                // Resolve client option to clientRegistry (client takes precedence)
+                let __clientRegistry__ = __options__.clientRegistry;
+                if (__options__.client) {
+                  __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+                  __clientRegistry__.setPrimary(__options__.client);
+                }
+
+                const __raw__ = this.runtime.streamFunction(
+                "GenerateClarifyingQuestions",
+                {
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"isComplex": isComplex
+                },
+                undefined,
+                this.ctxManager.cloneContext(),
+                __options__.tb?.__tb(),
+                __clientRegistry__,
+                __collector__,
+                __options__.tags || {},
+                __env__,
+                __signal__,
+                __onTickWrapper__,
+                )
+                return new BamlStream<partial_types.Question[], types.Question[]>(
+                  __raw__,
+                  (a): partial_types.Question[] => a,
+                  (a): types.Question[] => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

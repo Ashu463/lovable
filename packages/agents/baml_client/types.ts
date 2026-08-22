@@ -130,9 +130,8 @@ export interface CoderSession {
   
 }
 
-export interface ComplexComplexity {
-  complex: true
-  questions: Question[]
+export interface ComplexityVerdict {
+  complex: boolean
   
 }
 
@@ -353,11 +352,6 @@ export interface SessionMap {
   
 }
 
-export interface SimpleComplexity {
-  complex: false
-  
-}
-
 export interface Skill {
   name: string
   description: string
@@ -462,8 +456,6 @@ export interface WriteFile {
   content: string
   
 }
-
-export type ComplexityLevel = SimpleComplexity | ComplexComplexity
 
 export type Role = "user" | "assistant" | "tool"
 
