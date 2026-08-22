@@ -470,7 +470,7 @@ export class LlmResponseParser {
   UIExpertAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
+  ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -484,7 +484,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string
+      ) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort
     } catch (error) {
       throw toBamlError(error);
     }
@@ -936,7 +936,7 @@ export class LlmStreamParser {
   UIExpertAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string | null {
+  ): partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -950,7 +950,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string | null
+      ) as partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort
     } catch (error) {
       throw toBamlError(error);
     }

@@ -1048,9 +1048,9 @@ export class BamlSyncClient {
   }
   
   UIExpertAgent(
-      
-      __baml_options__?: BamlCallOptions<events.UIExpertAgentEventCollector>
-  ): string {
+      systemPrompt: string,htmlDesign?: string | null,context: types.CoderContext,
+      __baml_options__?: BamlCallOptions<never>
+  ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -1080,7 +1080,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "UIExpertAgent",
         {
-          
+          "systemPrompt": systemPrompt,"htmlDesign": htmlDesign?? null,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -1091,7 +1091,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as string
+      return __raw__.parsed(false) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort
     } catch (error: any) {
       throw toBamlError(error);
     }

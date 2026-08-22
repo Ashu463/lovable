@@ -18,11 +18,14 @@ export const COMPACTION_PARAMETER = 10
 export const COMPACT_THRESHOLD = 0.8*MAX_CONTEXT_WINDOW_LENGTH
 export const CODER_MAX_ITERATIONS = 18
 export const DEBUGGERR_MAX_ITERATIONS = 10
-// Researcher/tester/uiExpert are single-shot (see SubAgent.isSingleShotAgent), so
-// their loop breaks on the first pass and these caps never actually bind.
+// Researcher/tester are single-shot (see SubAgent.isSingleShotAgent), so their
+// loop breaks on the first pass and these caps never actually bind.
 export const RESEARCHER_MAX_ITERATIONS = 1
 export const TESTER_MAX_ITERATIONS = 1
-export const UI_EXPERT_MAX_ITERATIONS = 1
+// UIExpert runs a real tool loop (translate design -> write component -> wire
+// into App.tsx -> verify build) but its scope is narrower than Coder's, so it
+// gets a smaller cap.
+export const UI_EXPERT_MAX_ITERATIONS = 8
 // Each pass costs a full tester boot-wait plus a whole debugger run, and the
 // error-signature halt already catches a stuck debugger after 2 repeats.
 export const TESTER_DEBUGGER_LOOP_MAX_ITERATIONS = 3

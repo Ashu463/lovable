@@ -1,4 +1,4 @@
-import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary,  type UIExpertContext, type ResearcherContext, type TesterContext } from "../baml_client";
+import { b, type CoderContext, type DebuggerContext, type SubAgentsContext, type TaskSummary, type ResearcherContext, type TesterContext } from "../baml_client";
 import { CoderAgent } from "./subagents/coder";
 import { DebuggerAgent } from "./subagents/debugger";
 import { Researcher } from "./subagents/researcher";
@@ -61,7 +61,7 @@ export class SubAgent<T extends keyof ContextMap> {
     }
 
     private isSingleShotAgent(): boolean {
-        return this.agentType === 'tester' || this.agentType === 'researcher' || this.agentType === 'uiExpert'
+        return this.agentType === 'tester' || this.agentType === 'researcher'
     }
 
     private summarizeToolCall(res: any): string {
@@ -187,8 +187,12 @@ export class SubAgent<T extends keyof ContextMap> {
             default: throw new Error(`No such context builder for ${this.agentType}`)
         }
     }
-    async BuildCoderContext(): Promise<CoderContext>{
-        logger.info(`Building context for coder`)
+    // Shared by coder and uiExpert — they're structurally identical (task +
+    // dependent summaries + repo tree + skills + recent turns), differing
+    // only in which role's skills get loaded. UIExpert reuses this rather
+    // than its own context shape because Phase B of UIExpert (base-template
+    // writing) is mechanically the same tool loop as Coder's.
+    private async buildToolLoopContext(role: 'coder' | 'uiExpert'): Promise<CoderContext> {
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
             this.repoTree = await this.sandbox.getRepoTree()
@@ -204,11 +208,15 @@ export class SubAgent<T extends keyof ContextMap> {
             .map(s => ({ taskId: String(s.todo.taskId), summary: s.summary }))
 
         const skills = [
-            ...(await this.skillStore.globalSkills('coder')),
-            ...(await this.skillStore.getRoleSkills('coder')),
-            ...(await this.skillStore.getTaskCatalog('coder')),
+            ...(await this.skillStore.globalSkills(role)),
+            ...(await this.skillStore.getRoleSkills(role)),
+            ...(await this.skillStore.getTaskCatalog(role)),
         ]
         return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills, recentTurns: [] }
+    }
+    async BuildCoderContext(): Promise<CoderContext>{
+        logger.info(`Building context for coder`)
+        return this.buildToolLoopContext('coder')
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
@@ -243,29 +251,9 @@ export class SubAgent<T extends keyof ContextMap> {
         ]
         return { query: (this.input as BaseTaskInput).task.task, skills }
     }
-    async BuildUIExpertContext(): Promise<UIExpertContext>{
-        const priorDesigns = await backendGql<{designs: {id: string, htmlContent: string, isSelected: boolean}[]}>(
-            `query Designs($projectId: ID!) {
-                designs(projectId: $projectId) { id htmlContent isSelected }
-            }`,
-            { projectId: this.projectId }
-        )
-        const skills = [
-            ...(await this.skillStore.globalSkills('uiExpert')),
-            ...(await this.skillStore.getRoleSkills('uiExpert')),
-            ...(await this.skillStore.getTaskSkillsFull('uiExpert')),
-        ]
-        // #TODO: backend returns the raw Design rows (htmlContent/screenId/...), but
-        // UIExpertContext.priorDesigns expects baml's Design{taskId, summary} shape —
-        // these don't line up yet, needs a product decision on what "prior designs"
-        // should mean here before mapping it properly.
-        return {
-            userPrompt: (this.input as BaseTaskInput).task.task,
-            // Passed through as-is, exactly as before. The cast makes the shape gap
-            // described above explicit — it used to be hidden by an untyped axios call.
-            priorDesigns: priorDesigns.designs as unknown as UIExpertContext["priorDesigns"],
-            skills
-        }
+    async BuildUIExpertContext(): Promise<CoderContext>{
+        logger.info(`Building context for uiExpert`)
+        return this.buildToolLoopContext('uiExpert')
     }
     private maxIterations(): number {
         switch (this.agentType) {
