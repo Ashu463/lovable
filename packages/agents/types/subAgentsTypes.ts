@@ -3,7 +3,7 @@
 //     stopReason: string,
 //     toolCall?: ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
-import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, UIExpertContext, Error, ResearcherContext, TesterContext } from "../baml_client"
+import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, Error, ResearcherContext, TesterContext } from "../baml_client"
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
@@ -14,10 +14,14 @@ export type SubAgentsTodo = {
     agentSpecificData: SubAgentTodoDataMap[SubAgentType]
 }
 type SubAgentTodoDataMap = {
-    coder: { relatedDesignRef?: { screenId: string } }
-    uiExpert: { screenId: string; mode: 'create' | 'update' | 'create-consistent'; referenceScreenIds?: string[] }
-    debuggerr: {} 
-    tester: {} 
+    // Coder discovers prior screens/design by reading the sandbox (repoTree +
+    // ReadFile) — it never needed a side-channel reference, and the state
+    // that used to feed one (CallAgentState.screenId) was never assigned
+    // anyway.
+    coder: {}
+    uiExpert: {}
+    debuggerr: {}
+    tester: {}
     researcher: { query: string; maxResults?: number }
 }
 export interface BaseTaskInput{
@@ -36,7 +40,7 @@ export type TesterTaskInput = {}
 export type ResearchTaskInput = BaseTaskInput 
 
 export type UIExpertTaskInput = BaseTaskInput & {
-    query: string, // this all need to refactored, dw
+    updatedPrompt: string
 }
 export type InputMap = {
     coder: CoderTaskInput;
@@ -52,7 +56,7 @@ export type ContextMap = {
     debuggerr: DebuggerContext,
     tester: TesterContext,
     researcher: ResearcherContext,
-    uiExpert: UIExpertContext
+    uiExpert: CoderContext
 }
 // session types for subagents
 export type SessionMap = {

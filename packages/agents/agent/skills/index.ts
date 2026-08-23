@@ -1,7 +1,7 @@
 import type { Skill } from "../../baml_client";
 import type { SubAgentType } from "../../types/subAgentsTypes";
 
-export type AgentKey = SubAgentType | "main";
+export type AgentKey = SubAgentType | "agent";
 
 const skillsMapper = {
     PROJECT_CONVENTION: 0,
@@ -22,6 +22,7 @@ const skillsMapper = {
     LAYOUT_PATTERNS: 15,
     ASSET_POLICY: 16,
     VISUAL_VERIFICATION: 17,
+    UI_BASE_TEMPLATE: 18,
 } as const;
 
 type SkillId = (typeof skillsMapper)[keyof typeof skillsMapper];
@@ -45,6 +46,7 @@ const skillFiles: Record<SkillId, string> = {
     [skillsMapper.ASSET_POLICY]: "asset-policy",
     [skillsMapper.VISUAL_VERIFICATION]: "visual-verification",
     [skillsMapper.PROJECT_CONVENTION]: "project-conventions",
+    [skillsMapper.UI_BASE_TEMPLATE]: "ui-base-template",
 };
 
 // canonical `name:` frontmatter value per id — the reverse of this table is
@@ -68,6 +70,7 @@ const skillNames: Record<SkillId, string> = {
     [skillsMapper.ASSET_POLICY]: "asset-policy",
     [skillsMapper.VISUAL_VERIFICATION]: "visual-verification",
     [skillsMapper.PROJECT_CONVENTION]: "project-conventions",
+    [skillsMapper.UI_BASE_TEMPLATE]: "ui-base-template",
 };
 
 // FIX: Please fix this whenever you're updating whole UI expert agent, temporarily
@@ -81,13 +84,13 @@ const skillFileOverrides: Partial<Record<AgentKey, Partial<Record<SkillId, strin
 const GLOBAL_SKILLS: SkillId[] = [skillsMapper.PROJECT_CONVENTION];
 
 const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
-    coder: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY, skillsMapper.ADD_A_ROUTE],
+    coder: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY, skillsMapper.ADD_A_ROUTE, skillsMapper.UI_BASE_TEMPLATE],
     debuggerr: [skillsMapper.TRIAGE_PROTOCOL],
     tester: [skillsMapper.DERIVE_ACCEPTANCE_CRITERIA, skillsMapper.SMOKE_CHECKLIST],
     researcher: [skillsMapper.REPORT_FORMAT, skillsMapper.SOURCE_QUALITY_RUBRIC],
-    uiExpert: [skillsMapper.DESIGN_SYSTEM, skillsMapper.RESPONSIVE_RULES],
-    
-    main: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+    uiExpert: [skillsMapper.DESIGN_SYSTEM, skillsMapper.RESPONSIVE_RULES, skillsMapper.UI_BASE_TEMPLATE],
+
+    agent: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
 };
 
 const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
@@ -102,7 +105,7 @@ const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
     tester: [skillsMapper.VISUAL_VERIFICATION],
     researcher: [],
     uiExpert: [skillsMapper.LAYOUT_PATTERNS, skillsMapper.ASSET_POLICY],
-    main: [
+    agent: [
         skillsMapper.SCAFFOLD_NEW_PROJECT,
         skillsMapper.ADD_A_ROUTE,
         skillsMapper.DATABASE_INTEGRATION,

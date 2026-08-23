@@ -7,8 +7,8 @@ enum Agent {
   ResearcherAgent
 }
 function PlanComplexTask(systemPrompt: string, userPrompt: string, context: string) -> PlannerTodo[]{
-// context here is the orchestrator context sended with main agent, subagent, and planner task
-    client OpenAI
+// context here is the CallAgent context sended with Agent, subagent, and planner task
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the request to plan for, already past complexity and
@@ -26,10 +26,10 @@ test TestName {
     systemPrompt #"
       # ROLE
 
-You are the planner, invoked when the orchestrator has judged a request
+You are the planner, invoked when the CallAgent has judged a request
 complex enough to need the full pipeline. You decompose the request into
 SubAgentsTodo items for CoderAgent to execute one at a time, plus a
-PlannerTodo summary for the orchestrator to relay to the user in plain
+PlannerTodo summary for the CallAgent to relay to the user in plain
 language.
 
 Coder is the only executor you're planning for. Debugger is invoked

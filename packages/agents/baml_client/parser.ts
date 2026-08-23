@@ -23,31 +23,77 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexComplexity, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MainAgentSummary, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, SimpleComplexity, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
   constructor(private runtime: BamlRuntime, private ctxManager: BamlCtxManager) {}
 
   
-  CheckComplexityAndGenerateQuestions(
+  AgentLLMCall(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.SimpleComplexity | types.ComplexComplexity {
+  ): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexityAndGenerateQuestions",
+        "AgentLLMCall",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.SimpleComplexity | types.ComplexComplexity
+      ) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CallAgentSummary(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CallAgentSummary",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CheckComplexity(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.ComplexityVerdict {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CheckComplexity",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.ComplexityVerdict
     } catch (error) {
       throw toBamlError(error);
     }
@@ -214,24 +260,47 @@ export class LlmResponseParser {
     }
   }
   
-  GenerateMainAgentSummary(
+  GenerateAgentSummary(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.MainAgentSummary {
+  ): types.AgentSummary {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "GenerateMainAgentSummary",
+        "GenerateAgentSummary",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as types.MainAgentSummary
+      ) as types.AgentSummary
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  GenerateClarifyingQuestions(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.Question[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "GenerateClarifyingQuestions",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.Question[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -248,52 +317,6 @@ export class LlmResponseParser {
       );
       return this.runtime.parseLlmResponse(
         "GenerateSubagentSummary",
-        llmResponse,
-        false,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as string
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  MainLLMCall(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "MainLLMCall",
-        llmResponse,
-        false,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as types.ReadFile | types.WriteFile | types.EditFile | types.DeleteFile | types.RunCommand | types.GetSkill | types.Apify | types.Context7 | types.Tavily | types.StitchTool | types.Done | types.Abort
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  OrchestratorSummary(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "OrchestratorSummary",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
@@ -470,7 +493,7 @@ export class LlmResponseParser {
   UIExpertAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
+  ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -484,7 +507,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string
+      ) as types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Done | types.Abort
     } catch (error) {
       throw toBamlError(error);
     }
@@ -496,24 +519,70 @@ export class LlmStreamParser {
   constructor(private runtime: BamlRuntime, private ctxManager: BamlCtxManager) {}
 
   
-  CheckComplexityAndGenerateQuestions(
+  AgentLLMCall(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.SimpleComplexity | partial_types.ComplexComplexity {
+  ): partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "CheckComplexityAndGenerateQuestions",
+        "AgentLLMCall",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.SimpleComplexity | partial_types.ComplexComplexity
+      ) as partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CallAgentSummary(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): string {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CallAgentSummary",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as string
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CheckComplexity(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.ComplexityVerdict {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CheckComplexity",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.ComplexityVerdict
     } catch (error) {
       throw toBamlError(error);
     }
@@ -680,24 +749,47 @@ export class LlmStreamParser {
     }
   }
   
-  GenerateMainAgentSummary(
+  GenerateAgentSummary(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.MainAgentSummary {
+  ): partial_types.AgentSummary {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "GenerateMainAgentSummary",
+        "GenerateAgentSummary",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as partial_types.MainAgentSummary
+      ) as partial_types.AgentSummary
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  GenerateClarifyingQuestions(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.Question[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "GenerateClarifyingQuestions",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.Question[]
     } catch (error) {
       throw toBamlError(error);
     }
@@ -714,52 +806,6 @@ export class LlmStreamParser {
       );
       return this.runtime.parseLlmResponse(
         "GenerateSubagentSummary",
-        llmResponse,
-        true,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as string
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  MainLLMCall(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "MainLLMCall",
-        llmResponse,
-        true,
-        this.ctxManager.cloneContext(),
-        __baml_options__?.tb?.__tb(),
-        __baml_options__?.clientRegistry,
-        __env__,
-      ) as partial_types.ReadFile | partial_types.WriteFile | partial_types.EditFile | partial_types.DeleteFile | partial_types.RunCommand | partial_types.GetSkill | partial_types.Apify | partial_types.Context7 | partial_types.Tavily | partial_types.StitchTool | partial_types.Done | partial_types.Abort
-    } catch (error) {
-      throw toBamlError(error);
-    }
-  }
-  
-  OrchestratorSummary(
-      llmResponse: string,
-      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
-    try {
-      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
-      const __env__: Record<string, string> = Object.fromEntries(
-        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
-      );
-      return this.runtime.parseLlmResponse(
-        "OrchestratorSummary",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),
@@ -936,7 +982,7 @@ export class LlmStreamParser {
   UIExpertAgent(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string | null {
+  ): partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -950,7 +996,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string | null
+      ) as partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Done | partial_types.Abort
     } catch (error) {
       throw toBamlError(error);
     }

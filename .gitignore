@@ -39,3 +39,5 @@ yarn-error.log*
 /apps/backend/run.log
 # TypeScript build info
 *.tsbuildinfo
+
+demo*.html

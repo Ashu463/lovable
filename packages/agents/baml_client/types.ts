@@ -77,6 +77,12 @@ export interface AgentResponse {
   
 }
 
+export interface AgentSummary {
+  title: string
+  summary: string
+  
+}
+
 export interface Apify {
   action: "apify"
   urls: string[]
@@ -124,9 +130,8 @@ export interface CoderSession {
   
 }
 
-export interface ComplexComplexity {
-  complex: true
-  questions: Question[]
+export interface ComplexityVerdict {
+  complex: boolean
   
 }
 
@@ -274,12 +279,6 @@ export interface ItemRes {
   
 }
 
-export interface MainAgentSummary {
-  title: string
-  summary: string
-  
-}
-
 export interface Message {
   role: "user" | "assistant" | "toolCall" | "system"
   content: string
@@ -350,11 +349,6 @@ export interface SessionMap {
   tester: TesterSession
   researcher: ResearcherSession
   uiExpert: UIExpertSession
-  
-}
-
-export interface SimpleComplexity {
-  complex: false
   
 }
 
@@ -462,8 +456,6 @@ export interface WriteFile {
   content: string
   
 }
-
-export type ComplexityLevel = SimpleComplexity | ComplexComplexity
 
 export type Role = "user" | "assistant" | "tool"
 

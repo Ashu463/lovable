@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Question } from "../../../../../packages/agents/baml_client/types";
-import type { Answers } from "../../../../../packages/agents/types/agentTypes";
+import type { Answers } from "../../../../../packages/agents/types/callAgentTypes";
 
 export function ClarifyingQuestions({
   questions,

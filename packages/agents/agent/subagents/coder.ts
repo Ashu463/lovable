@@ -29,8 +29,11 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
 
 
     override async callLLM(input: CoderTaskInput, context: CoderContext): Promise<CoderLLMResponse> {
-        const relatedDesignRef = (input.task.agentSpecificData as { relatedDesignRef?: { screenId: string } }).relatedDesignRef
-        const figmaBoilerPlate = relatedDesignRef ? `Reference design screen: ${relatedDesignRef.screenId}` : undefined
+        // this.selectedDesign is the run's selected design HTML (simple path)
+        // or undefined on the complex path, where each screen's design lives
+        // in the sandbox (design/<taskId>-slug.html) for Coder to read itself
+        // via repoTree/ReadFile — no side-channel reference needed here.
+        const figmaBoilerPlate = this.selectedDesign || undefined
         return await b.CoderAgent(CODER_PROMPT, figmaBoilerPlate, context)
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {

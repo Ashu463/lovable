@@ -2,7 +2,7 @@
 // subagents live in agents.baml, so this file only declares what's unique here.
 //
 // Each carries a literal `action` discriminator, matching CoderAgent's union —
-// this is what MainLLMCall returns directly. The previous shape wrapped every
+// this is what AgentLLMCall returns directly. The previous shape wrapped every
 // tool in a `ToolCall` class of ten mutually-exclusive optional fields, which
 // models kept getting wrong in three separate ways: omitting the redundant
 // `type` discriminator (which nulled the whole ToolCall), carrying over the
@@ -34,16 +34,16 @@ class Tavily {
   maxResults int
 }
 
-function MainLLMCall(
+function AgentLLMCall(
   systemPrompt: string, 
   userPrompt: string, 
   context: Message[], 
   semanticMem: string, 
   design: string?,
-  orchestratorContext: string
+  callAgentContext: string
   ) -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort{
 
-    client OpenAI
+    client OpenAIGeneric
     // Ordering is deliberate: everything above {{context}} is fixed for the whole
     // run, so it forms a stable prefix the provider's prompt cache can reuse on
     // every iteration. {{context}} is the only part that grows per turn, so it
@@ -59,14 +59,14 @@ function MainLLMCall(
   this Run (layout, visual language, conventions). Never regenerate or
   second-guess this; treat it as settled. {% endif %}
         {{semanticMem}}
-        {{orchestratorContext}}
+        {{callAgentContext}}
 
-        {{context}} - is the context of main agent
+        {{context}} - is the context of Agent
 
         {{ctx.output_format}}
     "#
 }
-class MainAgentSummary {
+class AgentSummary {
   title string @description(#"
     A short label for this project — 2 to 5 words, title case, no trailing
     punctuation, naming what was built rather than the action taken
@@ -78,9 +78,9 @@ class MainAgentSummary {
   "#)
 }
 
-function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> MainAgentSummary{
+function GenerateAgentSummary(systemPrompt: string, context: Message[]) -> AgentSummary{
 
-    client OpenAI
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.
@@ -91,13 +91,13 @@ function GenerateMainAgentSummary(systemPrompt: string, context: Message[]) -> M
 }
 
 test TestName {
-  functions [MainLLMCall]
+  functions [AgentLLMCall]
   args {
     systemPrompt #"
       # ROLE
 
-You are the main agent for Lovable. You've been assigned a single user
-request that the orchestrator has already judged simple enough not to need
+You are the Agent for Lovable. You've been assigned a single user
+request that the CallAgent has already judged simple enough not to need
 the full coder/debugger/tester pipeline. You own this task end to end —
 there is no separate agent checking your work afterward, so you are
 responsible for verifying it yourself before you consider it finished.
@@ -163,7 +163,7 @@ call depends on what an earlier one returns.
       
     "#
     design null
-    orchestratorContext #"
+    callAgentContext #"
       
     "#
   }

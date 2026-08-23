@@ -1,25 +1,25 @@
-import type { DesignOption, OrchestratorResponse } from '../types/agentTypes';
+import type { DesignOption, CallAgentResponse } from '../types/callAgentTypes';
 import type { Question } from '../baml_client/types';
 import { REDIS_HOST, REDIS_PORT } from './config/systemConfig';
 import IORedis from "ioredis";
 import { backendGql } from './utils/backendClient';
-export type OrchestratorEvent = MainAgentEvents |
-    { type: "orchestrator_agent_started"; }
+export type CallAgentEvent = AgentEvents |
+    { type: "call_agent_started"; }
     | { type: "clarification_needed"; questions: Question[] }
     | { type: "designs_generating"; count: number }
     | { type: "select_design"; designs: DesignOption[] }
-    | { type: "main_agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
+    | { type: "agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
     | { type: "subagent_progress"; agent: string; taskId?: number; data?: unknown, subagentSummary?: string }
     | { type: "subagent_completed"; agent: string; taskId?: number; summary: string }
-    | { type: "run_completed"; result: OrchestratorResponse }
+    | { type: "run_completed"; result: CallAgentResponse }
     | { type: "run_failed"; taskId?: string, error: string }
-    | { type: "orchestrator_completed"; summary: string};
+    | { type: "call_agent_completed"; summary: string};
 
-type MainAgentEvents = 
-    | {type : 'main_agent_success'}
-    | {type: 'main_agent_tool_call', step: number, toolName: string}
+type AgentEvents = 
+    | {type : 'agent_success'}
+    | {type: 'agent_tool_call', step: number, toolName: string}
 export interface EventEmitter {
-  emit(event: OrchestratorEvent): Promise<void>;
+  emit(event: CallAgentEvent): Promise<void>;
 }
 
 // Every call the agent/worker package makes back to the backend is a
@@ -31,7 +31,7 @@ export function internalAuthHeader(): Record<string, string>{
 // Persists every event to Postgres via the backend's internal API, for history/replay.
 export function createBackendEmitter(runId: string): EventEmitter{
     return {
-        async emit(event: OrchestratorEvent){
+        async emit(event: CallAgentEvent){
             try{
                 await backendGql(
                     `mutation RecordRunEvent($runId: ID!, $event: JSON!) { recordRunEvent(runId: $runId, event: $event) }`,
@@ -54,7 +54,7 @@ const redisPublisher = new IORedis({
 
 export function createRedisEmitter(runId: string): EventEmitter{
     return {
-        async emit(event: OrchestratorEvent){
+        async emit(event: CallAgentEvent){
             try{
                 await redisPublisher.publish(`run:${runId}`, JSON.stringify(event))
             } catch(err){
@@ -68,7 +68,7 @@ export function createRunEmitter(runId: string): EventEmitter{
     const backend = createBackendEmitter(runId)
     const redis = createRedisEmitter(runId)
     return {
-        async emit(event: OrchestratorEvent){
+        async emit(event: CallAgentEvent){
             await Promise.all([backend.emit(event), redis.emit(event)])
         }
     }

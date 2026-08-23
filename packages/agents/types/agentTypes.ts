@@ -1,66 +1,36 @@
-import type { Screen } from "@google/stitch-sdk"
-import type { Design, Error, Message, PlannerTodo, Question } from "../baml_client"
+import Sandbox from "e2b"
+import type { DeleteFile, Done, EditFile, Error, FetchDocs, Question, ReadFile, Research, RunCommand, PlannerTodo, ToolResult, WriteFile } from "../baml_client"
+import type { CoderAgent } from "../agent/subagents/coder"
+import type { DebuggerAgent } from "../agent/subagents/debugger"
+import type { TesterAgent } from "../agent/subagents/tester"
+import type { UIExpert } from "../agent/subagents/uiExpert"
+import type { Researcher } from "../agent/subagents/researcher"
 
-
-// -----Updated types, Jul 7 2026 -------
-
-export interface User{
-    userId: string
-    projects: Project[],
-    semanticMem: string,
-}
-export interface Project{
-    projectId: string, 
-    sessions: Message[],
-    context: Message[]
-}
-
-export type OrchestratorSSE = {
-    taskCompleted?: string,
-    status: "failed" |  "success",
-    summary: string,
-    errors: Error | null | string
-}
-// export type OrchestratorResponse = {
-//     success: 'failed' | 'pass' | 'in_progress'
-//     design: Screen,
-//     todos?: PlannerTodo[],
-//     projectUrl?: string,
-//     summary: string
+// export interface ContextStruct{
+//     systemPrompt: string, 
+//     originalTask: string, 
+//     semanticMem: string, 
+//     episodicMem: string, 
+//     compactedEntries: Pointer[],
+//     recentRaw: Message[]
 // }
-// clarification_needed, select_design, 
-export type OrchestratorResponse = 
-      clarification_needed 
-    | design_needed 
-    | {status: 'error', reason: string, data?: any}
-    | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
-export type clarification_needed = {
-    status: 'clarification_needed',
-    questions: Question[],
-    alreadySaved?: boolean
+export interface SessionData{
+    current_step: string, 
+    question?: Question,
+    context_snapshot: string, 
+    session_snapshot: string
 }
-export type DesignOption = {
-    id: string,
-    htmlContent: string
+export interface SSEBody{
+    type: "llm_response" | "tool_call" | "tool_result" | "clarification_needed" | "completed" | "aborted"
+    content?: string, 
+    toolType?: string,
+    iteration: number
 }
-export type design_needed = {
-    status: 'select_design',
-    designs: DesignOption[],
-    alreadySaved?: boolean
-}
-// export interface BootstrapResponse{
-//     status: 'ready_to_act' | 'select_design' | 'clarification_needed' | 'error'
-//     isComplex: boolean,
-//     designs?: Screen[],
-//     selectedDesign?: Screen,
-//     questions?: Question[]
-//     error?: string
-// }
-export type BootstrapResponse = clarification_needed | design_needed 
-    | {status: 'error', error: string} 
-    | {status: 'pass', isComplex: boolean, updatedPrompt: string, questions?: Question[], selectedDesign?: string}
 
-export interface Answers{
-    question: string, 
-    answer: string
+export type SubAgentInstance = CoderAgent | DebuggerAgent | TesterAgent | UIExpert | Researcher
+export type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
+
+export type AgentResponse = {
+    success: boolean, 
+    summary: string
 }
