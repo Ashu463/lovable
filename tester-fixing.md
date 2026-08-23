@@ -68,6 +68,29 @@ bundled into this spec.
 - Simple-path picker persists only `htmlContent` + `prompt` to Postgres
   (`Design` table) for the selected variant — no image URL saved.
 
+## Related pre-existing gap: `errorsByTaskId`
+
+Found while auditing state that's declared but never wired up
+(`CallAgentState`/orchestrator's `SerializableState`, both `callAgent.ts` and
+`orchestrator.ts`): `errorsByTaskId: Map<number, Error[]>` — comment says
+`taskId (tester) -> errors, if debugger needs a specific tester's output`.
+Declared, initialized empty, converted between serializable/Map forms — never
+`.set()` anywhere. The field that's actually written to and read is
+`lastTestErrors: Error[]`, a flat list with no task attribution, and that's
+what Debugger currently receives: just the most recent error, not "the
+error(s) tied to task X" when a level has multiple tasks and more than one
+fails.
+
+This is the same category of gap this spec is already closing for visual
+feedback — Debugger going from an undifferentiated blob to structured,
+attributable context. Worth doing in the same pass as the `DebuggerContext`
+extension (§4) rather than as a separate change: if `originalError` is being
+widened to optionally carry a visual-mismatch shape anyway, that's the
+natural point to also make it (or `fixHistory`) carry which task an error
+actually came from, using `errorsByTaskId` as the real source instead of
+leaving it dead. Not designed in detail here — flagging the connection so
+whoever picks up §4 doesn't reinvent task-attribution separately.
+
 ## Design
 
 ### 1. Screenshot acquisition — third-party service, not a local browser

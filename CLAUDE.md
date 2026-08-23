@@ -10,7 +10,7 @@ packages/eslint-config, packages/typescript-config.
 - Build: turbo run build
 - Lint: turbo run lint
 - Typecheck: turbo run typecheck
-
+- **DO NOT MAKE ANY COMMITS AT ALL**
 # Workspace boundaries
 - packages/agents holds the core orchestrator/agent logic
   (BaseAgent, SubAgent, DAG planner, etc). Both backend and frontend

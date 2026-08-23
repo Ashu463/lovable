@@ -43,8 +43,6 @@ export const inngest = new Inngest({ id: "lovable-agents" })
 // stored on `this` in Map form.
 // ---------------------------------------------------------------------------
 type SerializableState = {
-    screenId: string | null
-    screenIdByTaskId: Record<number, string>
     lastTestErrors: AgentError[]
     lastToolResult: ToolResult | null
     errorsByTaskId: Record<number, AgentError[]>
@@ -52,8 +50,6 @@ type SerializableState = {
 
 function toCallAgentState(s: SerializableState): CallAgentState {
     return {
-        screenId: s.screenId,
-        screenIdByTaskId: new Map(Object.entries(s.screenIdByTaskId).map(([k, v]) => [Number(k), v])),
         lastTestErrors: s.lastTestErrors,
         lastToolResult: s.lastToolResult,
         lastError: s.lastTestErrors[s.lastTestErrors.length - 1] ?? null,
@@ -65,7 +61,7 @@ type RunDecision = { action: 'continue' } | { action: 'replan' } | { action: 'ab
 
 export class Orchestrator {
     private context: CallAgentContext[] = []
-    private state: SerializableState = { screenId: null, screenIdByTaskId: {}, lastTestErrors: [], lastToolResult: null, errorsByTaskId: {} }
+    private state: SerializableState = { lastTestErrors: [], lastToolResult: null, errorsByTaskId: {} }
     private todos: PlannerTodo[] = []
     private allSummaries: string[] = []
     private emitter: EventEmitter
@@ -93,22 +89,14 @@ export class Orchestrator {
         switch (agentType) {
             case 'coder':
                 return {
-                    task: { ...base, agentType: 'coder', agentSpecificData: { relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined } },
+                    task: { ...base, agentType: 'coder', agentSpecificData: {} },
                     callAgentContext: this.context,
                     semanticMem: this.semanticMem,
                     agentType: 'coder',
                 } as unknown as InputMap[T]
             case 'uiExpert':
                 return {
-                    task: {
-                        ...base,
-                        agentType: 'uiExpert',
-                        agentSpecificData: {
-                            screenId: state.screenId ?? `screen_${todo.id}_${Date.now()}`,
-                            mode: state.screenId ? 'update' : 'create',
-                            referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
-                        },
-                    },
+                    task: { ...base, agentType: 'uiExpert', agentSpecificData: {} },
                     agentType: 'uiExpert',
                     updatedPrompt: this.updatedPrompt,
                 } as unknown as InputMap[T]
@@ -249,13 +237,6 @@ export class Orchestrator {
 
             results.push({ taskId, success: result.success, summary: result.summary })
             context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
-
-            if (todo.agent === 'uiExpert') {
-                // TODO: state.screenId is never actually assigned in the
-                // current callAgent.ts either (see the earlier naming-review
-                // finding) — fix belongs in the uiExpert subagent response
-                // shape, not here.
-            }
         }
 
         return { context, state, results }

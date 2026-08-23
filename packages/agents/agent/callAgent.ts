@@ -36,8 +36,6 @@ export type CallAgentContext = {
     summary: string,
 }
 export type CallAgentState = {
-    screenId: string | null // last most scrreen
-    screenIdByTaskId: Map<number, string> // taskId (uiExpert) -> screenId, for dependency-specific lookups
     lastTestErrors: Error[]
     lastToolResult: ToolResult | null
     lastError: Error | null
@@ -64,8 +62,6 @@ export class CallAgent{
         this.emitter = createRunEmitter(runId)
         this.context = []
         this.state = {
-            screenId: null,
-            screenIdByTaskId: new Map(),
             lastTestErrors: [],
             lastToolResult: null,
             lastError: null,
@@ -73,21 +69,14 @@ export class CallAgent{
         }
     }
 
-    
-    generateScreenId(todo: PlannerTodo): string {
-        return `screen_${todo.id}_${Date.now()}`
-    }
-
     inputBuilders: InputBuilders = {
-        coder: (todo, ctx, state, semanticMem) => ({
+        coder: (todo, ctx, _state, semanticMem) => ({
             task: {
                 taskId: todo.id,
                 task: todo.task,
                 dependentTasks: todo.dependency,
                 agentType: 'coder',
-                agentSpecificData: {
-                    relatedDesignRef: state.screenId ? { screenId: state.screenId } : undefined,
-                },
+                agentSpecificData: {},
                 designNeeded: todo.designNeeded
             },
             callAgentContext: ctx,
@@ -95,17 +84,13 @@ export class CallAgent{
             agentType: 'coder',
         }),
 
-        uiExpert: (todo, _ctx, state, _semanticMem, updatedPrompt) => ({
+        uiExpert: (todo, _ctx, _state, _semanticMem, updatedPrompt) => ({
             task: {
                 taskId: todo.id,
                 task: todo.task,
                 dependentTasks: todo.dependency,
                 agentType: 'uiExpert',
-                agentSpecificData: {
-                    screenId: state.screenId ?? this.generateScreenId(todo),
-                    mode: state.screenId ? 'update' : 'create',
-                    referenceScreenIds: Array.from(state.screenIdByTaskId.values()),
-                },
+                agentSpecificData: {},
                 designNeeded: todo.designNeeded
             },
             agentType: 'uiExpert',
