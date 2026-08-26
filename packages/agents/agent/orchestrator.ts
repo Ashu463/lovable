@@ -15,7 +15,7 @@
 //   - context engine push/pull
 //   - the LLM continue/replan/abort decision at each level boundary
 
-import { Inngest, type GetStepTools } from "inngest"
+import { Inngest } from "inngest"
 import { b } from "../baml_client"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
 import type { TesterContext } from "../baml_client"
@@ -26,7 +26,7 @@ import { TesterAgent, type TesterResponse } from "./subagents/tester"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { CallAgentContext, CallAgentState } from "./callAgent"
 import { PLAN_TASK_SYSTEM_PROMPT, CALL_AGENT_SUMMARY_PROMPT } from "./config/systemPrompts"
-import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
+import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SANDBOX_HOME, SUBAGENT_TASK_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
 import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
@@ -60,6 +60,7 @@ function toCallAgentState(s: SerializableState): CallAgentState {
 }
 
 type RunDecision = { action: 'continue' } | { action: 'replan' } | { action: 'abort', reason: string }
+export type StepRunner = { run: (id: string, fn: () => Promise<any>) => Promise<any> }
 
 export class Orchestrator {
     private context: CallAgentContext[] = []
@@ -212,6 +213,22 @@ export class Orchestrator {
         return planned
     }
 
+    private async runSubAgentWithRetry<T extends SubAgentType>(
+        agentType: T, input: InputMap[T], sandbox: E2BSandbox, baseDir: string,
+    ): Promise<{ success: boolean, summary: string }> {
+        let result: { success: boolean, summary: string } = { success: false, summary: "" }
+        for (let attempt = 1; attempt <= SUBAGENT_TASK_RETRY_ATTEMPTS; attempt++) {
+            const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, baseDir)
+            result = await subagent.runLoop()
+            if (result.success) return result
+            logger.warn(`${agentType} task failed (attempt ${attempt}/${SUBAGENT_TASK_RETRY_ATTEMPTS}): ${result.summary}`)
+            if (attempt < SUBAGENT_TASK_RETRY_ATTEMPTS) {
+                await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
+            }
+        }
+        return result
+    }
+
     // One level of the DAG. A level of size 1 runs directly against
     // PROJECT_ROOT — there's nothing to isolate it from, so a worktree would
     // be pure overhead (create + merge + remove, on top of zero collision
@@ -238,8 +255,7 @@ export class Orchestrator {
                 const worktreePath = await this.createWorktree(taskSandbox, taskId)
 
                 const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
-                const subagent = new SubAgent(todo.agent, input, this.userId, this.projectId, this.runId, taskSandbox, this.selectedDesign, worktreePath)
-                const result = await subagent.runLoop()
+                const result = await this.runSubAgentWithRetry(todo.agent, input, taskSandbox, worktreePath)
 
                 return { taskId, todo, result, taskSandbox }
             }))
@@ -272,8 +288,7 @@ export class Orchestrator {
                 await this.ensureGitRepo(sandbox)
 
                 const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
-                const subagent = new SubAgent(todo.agent, input, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, PROJECT_ROOT)
-                const result = await subagent.runLoop()
+                const result = await this.runSubAgentWithRetry(todo.agent, input, sandbox, PROJECT_ROOT)
 
                 results.push({ taskId, success: result.success, summary: result.summary })
                 context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
@@ -351,7 +366,7 @@ export class Orchestrator {
         }
     }
 
-    async Execute(step: GetStepTools<typeof inngest>): Promise<{ status: 'completed' | 'error', summary?: string, todos?: PlannerTodo[], reason?: string }> {
+    async Execute(step: StepRunner): Promise<{ status: 'completed' | 'error', summary?: string, todos?: PlannerTodo[], reason?: string }> {
         this.todos = await step.run("plan", () => this.plan()) as unknown as PlannerTodo[]
 
         const dag = new DAG(this.todos)
@@ -366,11 +381,17 @@ export class Orchestrator {
             this.context = levelOut.context
             this.state = levelOut.state
 
-            // Both coder and uiExpert write files into the sandbox now, so both
-            // need the post-level build check + sync — a UI-only level was
-            // previously skipping this entirely, meaning its files never got a
-            // build check or an R2 sync until some later coder-containing level
-            // happened to trigger one.
+            // A task that's still failed after runSubAgentWithRetry's attempts
+            // is a run-level failure, not something to paper over — previously
+            // this was recorded into context and silently ignored, and the
+            // loop moved on to the next DAG level as if everything succeeded.
+            const failedTasks = levelOut.results.filter(r => !r.success)
+            if (failedTasks.length > 0) {
+                const reason = `Task(s) ${failedTasks.map(t => t.taskId).join(', ')} failed after ${SUBAGENT_TASK_RETRY_ATTEMPTS} attempt(s) in level ${levelIndex}: ${failedTasks.map(t => t.summary).join(' | ')}`
+                await this.emitter.emit({ type: 'run_failed', error: reason })
+                return { status: 'error', reason }
+            }
+
             const hadFileWritingTask = taskIds.some(id => {
                 const agent = this.todos.find(t => t.id === id)?.agent
                 return agent === 'coder' || agent === 'uiExpert'
@@ -402,7 +423,7 @@ export class Orchestrator {
         }
 
         const summary = await step.run("summarize", () => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.allSummaries))
-        await this.emitter.emit({ type: 'call_agent_completed', summary })
+        logger.info(`Orchestrator run ${this.runId} completed`)
         return { status: 'completed', summary, todos: this.todos }
     }
 }

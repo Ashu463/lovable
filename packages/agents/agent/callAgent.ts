@@ -2,32 +2,19 @@ import type { CallAgentResponse, CallAgentSSE, Project, User, Answers, Bootstrap
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, CALL_AGENT_SUMMARY_PROMPT, PLAN_TASK_SYSTEM_PROMPT} from "./config/systemPrompts"
-import { DAG } from "./services/dag"
-import { Screen } from "@google/stitch-sdk"
+import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT } from "./config/systemPrompts"
 import { Agent } from "./agent"
-import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT, PROJECT_ROOT } from "./config/systemConfig"
-import { SubAgent } from "./subAgent"
+import { PROJECT_ROOT } from "./config/systemConfig"
+import { Orchestrator, type StepRunner } from "./orchestrator"
 import { UIExpert } from "./subagents/uiExpert"
-import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
-import { TesterAgent, type TesterResponse } from "./subagents/tester"
+import type { SubAgentType } from "../types/subAgentsTypes"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
-import { createRunEmitter, type EventEmitter, type CallAgentEvent } from "./events"
+import { createRunEmitter, type EventEmitter } from "./events"
 import { backendGql } from "./utils/backendClient"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
-import type { TesterContext } from "../baml_client"
 
 
-type InputBuilder<T extends SubAgentType> = (
-    todo: PlannerTodo,
-    ctx: CallAgentContext[],
-    callAgentState: CallAgentState,
-    semanticMem: string,
-    updatedPrompt: string
-) => InputMap[T]
-
-type InputBuilders = { [K in SubAgentType]: InputBuilder<K> }
 export type CallAgentContext = {
     taskId: number,
     task: string,
@@ -46,7 +33,6 @@ export type CallAgentState = {
 export class CallAgent{
     private uiExpert: UIExpert
     private context: CallAgentContext[]
-    private state: CallAgentState
     private selectedDesign: string = ""
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore()
@@ -61,88 +47,6 @@ export class CallAgent{
         this.uiExpert = new UIExpert(userId, projectId, sandbox, PROJECT_ROOT)
         this.emitter = createRunEmitter(runId)
         this.context = []
-        this.state = {
-            lastTestErrors: [],
-            lastToolResult: null,
-            lastError: null,
-            errorsByTaskId: new Map(),
-        }
-    }
-
-    inputBuilders: InputBuilders = {
-        coder: (todo, ctx, _state, semanticMem) => ({
-            task: {
-                taskId: todo.id,
-                task: todo.task,
-                dependentTasks: todo.dependency,
-                agentType: 'coder',
-                agentSpecificData: {},
-                designNeeded: todo.designNeeded
-            },
-            callAgentContext: ctx,
-            semanticMem: semanticMem,
-            agentType: 'coder',
-        }),
-
-        uiExpert: (todo, _ctx, _state, _semanticMem, updatedPrompt) => ({
-            task: {
-                taskId: todo.id,
-                task: todo.task,
-                dependentTasks: todo.dependency,
-                agentType: 'uiExpert',
-                agentSpecificData: {},
-                designNeeded: todo.designNeeded
-            },
-            agentType: 'uiExpert',
-            updatedPrompt,
-        }),
-
-        tester: (todo, ctx, state) => ({
-            task: {
-                taskId: todo.id,
-                task: todo.task,
-                dependentTasks: todo.dependency,
-                agentType: 'tester',
-                agentSpecificData: {},
-            },
-            agentType: 'tester',
-        }),
-
-        debuggerr: (todo, ctx, state, semanticMem) => {
-            if(!this.state.lastToolResult){
-                throw new Error(`debuggerr builder called without last tool result`)
-            }
-            const toolResult = this.state.lastToolResult
-            return {
-                task: {
-                    taskId: todo.id,
-                    task: todo.task,
-                    dependentTasks: todo.dependency,
-                    agentType: 'debuggerr',
-                    agentSpecificData: {},
-                },
-                agentType: 'debuggerr',
-                callAgentContext: ctx,
-                semanticMem: semanticMem,
-                designNeeded: todo.designNeeded,
-                errors: state.lastTestErrors,
-                toolResult: toolResult,
-            }
-        },
-
-        researcher: (todo, ctx, state) => ({
-            task: {
-                taskId: todo.id,
-                task: todo.task,
-                dependentTasks: todo.dependency,
-                agentType: 'researcher',
-                agentSpecificData: {
-                    query: todo.task,
-                    maxResults: 5,
-                },
-            },
-            agentType: 'researcher',
-        }),
     }
 
     async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
@@ -173,10 +77,6 @@ export class CallAgent{
                 .map((ans) => `- ${ans.question}\n  Answer: ${ans.answer}`)
                 .join('\n')
             userPrompt += `\n\nThe user was asked clarifying questions and answered:\n${qa}`
-            // Complexity was already decided (and cached) before these questions
-            // were asked — reuse it rather than assuming complex. Clarification
-            // isn't exclusive to the complex path anymore, so answering a
-            // question no longer implies anything about complexity.
             complexity = cachedIsComplex ?? false
         }
         else if(!pastClarificationStage && questions.length > 0){
@@ -188,11 +88,6 @@ export class CallAgent{
             }
         }
         else{
-            // Complexity and clarification are independent judgments — two
-            // separate calls, not one combined verdict. Complexity runs (or
-            // reuses its cache) first so clarification's isComplex param
-            // reflects a real decision; clarification always runs after,
-            // regardless of what that decision was.
             if(cachedIsComplex !== null && cachedIsComplex !== undefined){
                 logger.info(`Reusing cached complexity verdict (${cachedIsComplex}) for project ${this.projectId}, skipping complexity checker LLM call`)
                 complexity = cachedIsComplex
@@ -255,8 +150,6 @@ export class CallAgent{
                     ...(await this.skillStore.getRoleSkills('uiExpert')),
                     ...(await this.skillStore.getTaskSkillsFull('uiExpert')),
                 ]
-                // Stitch takes ~80s for the three variants, so say so up front
-                // rather than leaving the UI on a generic "building" spinner.
                 await this.emitter.emit({ type: 'designs_generating', count: 3 })
                 const generatedDesigns = await this.uiExpert.generateDesigns(userPrompt, this.semanticMem, uiExpertSkills)
                 designsHtml = await this.uiExpert.fetchDesigns(generatedDesigns)
@@ -268,10 +161,6 @@ export class CallAgent{
                     error: `Error occurred while generating designs: ${e instanceof Error ? e.message : String(e)}`
                 }
             }
-            // Save right away so the response can hand back real ids — the
-            // frontend/caller only ever needs to pass an id around after this,
-            // never the full htmlContent again. prompt is saved alongside
-            // purely so bad Stitch output can be traced back to what was asked.
             const saved = await backendGql<{saveDesigns: {id: string, htmlContent: string}[]}>(
                 `mutation SaveDesigns($projectId: ID!, $designs: [DesignInput!]!) {
                     saveDesigns(projectId: $projectId, designs: $designs) { id htmlContent }
@@ -370,9 +259,6 @@ export class CallAgent{
         let callAgentSummary: string = ""
         let todos: PlannerTodo[] = []
         if(!data.isComplex){
-            // this.context is always empty at this point (it only ever accumulates
-            // on the complex/DAG path below), so the prior run's summary is the
-            // only real orchestrator-level context a fresh simple-path run has.
             const priorContext = this.priorRunSummary ?? JSON.stringify(this.context)
             const agent: Agent = new Agent(data.updatedPrompt, this.userId, this.projectId, this.runId, this.semanticMem, this.selectedDesign, this.sandbox, priorContext)
 
@@ -388,129 +274,24 @@ export class CallAgent{
 
         }
         else{
-            logger.info(`Given task is complex, generating todos`)
-            // this.context is always empty here (only the DAG loop below fills it),
-            // so a follow-up's prior run summary is the real signal to plan against.
+            logger.info(`Given task is complex, delegating to Orchestrator`)
             const priorContext = this.priorRunSummary ?? JSON.stringify(this.context)
-            todos = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, data.updatedPrompt, priorContext)
 
-            try{
-                await backendGql(
-                    `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
-                        saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
-                    }`,
-                    { projectId: this.projectId, runId: this.runId, todos }
-                )
-            } catch(e){
-                logger.error(`Failed to save todos for run ${this.runId}: ${e}`)
+            const orchestrator = new Orchestrator(
+                this.userId, this.projectId, this.runId, this.sandbox.sandboxId,
+                this.semanticMem, this.selectedDesign, data.updatedPrompt, priorContext,
+            )
+            const directStep: StepRunner = { run: (_id, fn) => fn() }
+            const orchestratorResult = await orchestrator.Execute(directStep)
+
+            if(orchestratorResult.status === 'error'){
+                return {
+                    status: 'error',
+                    reason: orchestratorResult.reason ?? 'Complex run failed'
+                }
             }
-
-            const dag: DAG = new DAG(todos)
-            let sequentialTodos: PlannerTodo[] = dag.TopologicalSort()
-            let parallelTodos = dag.TopologicalSortParallel()
-            let it = 0;
-            // while(it < parallelTodos.length){
-
-            //     const response = await Promise.allSettled([
-            //         // frame the input for the subagent
-            //         // copy paste the below logic of spawning subagent here
-            //         // and do the run loop call
-            //         // I'm still confused how will the run logic works parallely. 
-            //         // and I've to do this with git worktrees into the sandbox, IDK how would it done.
-            //         // will probably have to resolve the merge conflicts as well. 
-            //         // 
-            //     ])
-            // }
-            logger.info(`todos generated and arranged sequentially`)
-            let summaries: string[] = []
-
-            sequentialTodos.forEach(t => t.status = 'pending')
-
-            let i = 0
-            let sandboxRetries = 0
-            while(i < sequentialTodos.length){
-                const todo = sequentialTodos[i]!
-
-                if(todo.status !== 'pending'){
-                    i++
-                    continue
-                }
-
-                logger.info(`Task ${todo.id}: ${todo.task}`)
-                // #TODO: Failure handling of planner
-                if(!todo.agent){
-                    logger.warn(`Task ${todo.id} has no agent assigned, stopping DAG execution`)
-                    break
-                }
-
-                // The previous task may have run past E2B's runtime cap, so the
-                // sandbox is checked (and rebuilt from R2) before every spawn.
-                await this.sandbox.EnsureAlive()
-
-                const agentType = todo.agent
-                const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem, data.updatedPrompt)
-                // This loop always runs sequentially against PROJECT_ROOT — it
-                // doesn't get the worktree-isolation treatment orchestrator.ts's
-                // runLevel now has (that was scoped to orchestrator.ts only).
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign, PROJECT_ROOT)
-                logger.info(`Starting runloop for ${agentType} (task ${todo.id})`)
-                const result = await subagent.runLoop()
-
-                // A failed task plus a dead sandbox means the sandbox is why it
-                // failed — its partial work is gone, so leave the todo pending and
-                // redo it whole on the replacement rather than trusting half of it.
-                if(!result.success && await this.sandbox.EnsureAlive()){
-                    if(++sandboxRetries >= TASK_SANDBOX_RETRY_LIMIT){
-                        logger.error(`Task ${todo.id} lost its sandbox ${sandboxRetries} times, giving up`)
-                        break
-                    }
-                    logger.warn(`Sandbox died during task ${todo.id}, retrying it from the start (${sandboxRetries}/${TASK_SANDBOX_RETRY_LIMIT})`)
-                    continue
-                }
-                sandboxRetries = 0
-
-                // R2 is the only thing that outlives the sandbox, so checkpoint the
-                // finished task's work before moving to the next one.
-                await this.sandbox.SyncR2()
-
-                summaries.push(result.summary)
-
-                try{
-                    await backendGql(
-                        `mutation SaveTaskSummary($projectId: ID!, $runId: ID!, $taskId: Int!, $summary: String!) {
-                            saveTaskSummary(projectId: $projectId, runId: $runId, taskId: $taskId, summary: $summary) { id }
-                        }`,
-                        { projectId: this.projectId, runId: this.runId, taskId: todo.id, summary: result.summary }
-                    )
-                } catch(e){
-                    logger.error(`Failed to save summary for task ${todo.id} on run ${this.runId}: ${e}`)
-                }
-
-                let testsPassing: boolean | null = null;
-                let lastErrors = null
-                let testResults
-                // TODO: Changing the condition to i % no of tasks/2, please bring some good logic for this.
-                if (agentType === 'coder') { // #TODO: Make this below loop as batch testing of dependent DAG tasks
-                    logger.info(`Starting tester debugger loop`)
-                    testsPassing = false;
-                    testResults = await this.TesterDebuggerLoop(this.semanticMem, data.updatedPrompt)
-                    if(testResults.success) testsPassing = true
-                }
-                // this.shouldBatchTest()
-
-                this.context.push({
-                    taskId: todo.id,
-                    task: todo.task,
-                    agentAssigned: agentType,
-                    summary: result.summary,
-                    success: result.success
-                });
-
-                todo.status = 'completed'
-                i++
-            }
-            callAgentSummary = await this.GenerateCallAgentSummary(summaries)
-
+            todos = orchestratorResult.todos ?? []
+            callAgentSummary = orchestratorResult.summary ?? ""
         }
         // Start your dev server first (e.g. npm run dev)
         try{
@@ -563,113 +344,12 @@ export class CallAgent{
     
 
     // -------------Everything below is for subagents ----------------
-    shouldBatchTest(completedTaskIds: number[], dagState: DAG): boolean {
-        // TODO: implement DAG-based batching — test after independent task groups complete,
-        // not after every single coder task. Stubbed for now, always returns true (test every time).
-        return true
-    }
-    
-    async GenerateCallAgentSummary(summaries: string[]): Promise<string>{
-        return await b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, summaries)
-    }
-    // that tester <-> debugger loop
-    async TesterDebuggerLoop(semanticMem: string, updatedPrompt: string = ""): Promise<{success: true | false, summaries: string[], lastError?: Error}>{
-        let loopCount = 0;
-        let summaries: string[] = []
-        let lastError
-
-        let deployReady = await this.preDeployCheck()
-        const testerContext: TesterContext = {
-            skills: [
-                ...(await this.skillStore.globalSkills('tester')),
-                ...(await this.skillStore.getRoleSkills('tester')),
-                ...(await this.skillStore.getTaskSkillsFull('tester')),
-            ],
-        }
-
-        try{
-            let previousErrorSignature: string | null = null
-            let repeatCount = 0
-            while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
-                const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
-
-                const testerRes: TesterResponse = await tester.testCodebase(testerContext)
-                const error: Error = {
-                    fileName: testerRes.errorRes!.file,
-                    error: testerRes.errorRes!.error + testerRes.errorRes!.line
-                }
-                // #CRITICAL: halt only after the debugger has had 2 attempts at the same
-                // error signature with no progress, not on the first repeat.
-                const currentErrorSignature = `${error.fileName}:${error.error}`
-                if(currentErrorSignature === previousErrorSignature){
-                    repeatCount++
-                    if(repeatCount >= 2){
-                        return {
-                            success: false,
-                            summaries: summaries,
-                            lastError: error
-                        }
-                    }
-                }
-                else{
-                    repeatCount = 0
-                }
-                previousErrorSignature = currentErrorSignature
-                this.state.lastTestErrors.push(error)
-    
-                const debugTodo: PlannerTodo = {
-                    task: "",
-                    id: Math.floor(Math.random() * 1000), // debugger task starting from 1000 id number.
-                    dependency: [],
-                    agent: 'debuggerr',
-                    status: 'pending',
-                    designNeeded: false
-                }
-                const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem, updatedPrompt)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign, PROJECT_ROOT)
-                const debuggerResult = await debuggerAgent.runLoop()
-                await this.sandbox.SyncR2()
-                this.state.lastToolResult = {
-                    success: debuggerResult.success,                                
-                }
-                summaries.push(debuggerResult.summary)
-                lastError = error
-                // if(testerRes.success === true){
-                //     testsPassing = true
-                // }
-                // else{
-                // }
-                deployReady = await this.preDeployCheck()
-                loopCount++;
-            }
-            return {
-                success: true,
-                summaries: summaries, 
-                lastError: lastError
-            }
-        }
-        catch(e){
-            logger.error(`TesterDebuggerLoop failed: ${e}`)
-            return{
-                success: false,
-                summaries,
-            }
-        }
-    }
-
-    async preDeployCheck(): Promise<boolean> {
-        const buildResult = await this.sandbox.Execute(this.sandbox.sandboxId, {action: 'runCommand', command: 'npm run build'})
-
-        if (buildResult.success === false) {
-            this.state.lastTestErrors.push({
-                fileName: "BUILD_CHECKER_ERROR",
-                error: buildResult.stderr ?? `Unknown build error`
-            })
-            this.state.lastToolResult = {success: false}
-            return false
-        }
-        return true
-    }
+    // shouldBatchTest, GenerateCallAgentSummary, TesterDebuggerLoop, and
+    // preDeployCheck used to live here — they were the complex path's own
+    // planning/DAG-loop/tester-debugger machinery, now fully superseded by
+    // Orchestrator (which has its own equivalent plan()/runLevel()/
+    // runMergeGate()/preDeployCheck internally). Removed rather than kept
+    // dead, since nothing calls them anymore.
 
     async Deploy(path: string): Promise<DeploymentResult>{
         const result = await deployReactApp(path)
