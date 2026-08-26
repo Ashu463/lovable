@@ -22,6 +22,7 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
         projectId: string,
         sandbox: E2BSandbox,
         private selectedDesign: string,
+        private baseDir: string,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
     ){super(userId, projectId, sandbox)
         this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)
@@ -45,7 +46,7 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
                 || response.action === 'runCommand'
                 || response.action === 'editFile'
             ){
-                const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
+                const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response, this.baseDir)
                 return {
                     success: sandboxRes.success,
                     response: sandboxRes.content

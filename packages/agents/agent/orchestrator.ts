@@ -5,13 +5,15 @@
 // What's REAL here (works, typechecks, mostly lifted from callAgent.ts):
 //   - planning, DAG leveling, subagent spawn, tester/debugger merge gate,
 //     state/context bookkeeping, run summary.
+//   - git worktree isolation for parallel same-level tasks (runLevel):
+//     size-1 levels run directly against PROJECT_ROOT (no isolation needed,
+//     nothing to collide with); size 2+ levels run concurrently, each task
+//     in its own worktree, merged back to trunk one at a time afterward. A
+//     real merge conflict (e.g. two UI tasks both wiring into src/App.tsx)
+//     surfaces as that task's result being marked failed, not silently lost.
 // What's a STUB (interface only, marked TODO, does not silently pretend to work):
-//   - git worktree isolation for parallel same-level tasks
 //   - context engine push/pull
 //   - the LLM continue/replan/abort decision at each level boundary
-//
-// Read the three TODO blocks before wiring this in — each one is a real gap,
-// not a formality.
 
 import { Inngest, type GetStepTools } from "inngest"
 import { b } from "../baml_client"
@@ -124,30 +126,15 @@ export class Orchestrator {
     }
 
     // -------------------------------------------------------------------------
-    // TODO (worktree isolation) — NOT implemented, do not wire parallel spawn
-    // to this until it's real.
-    //
-    // The plan is: one git worktree per task in a level, subagents write
-    // inside their own worktree, a merge gate reconciles them back to trunk
-    // before the next level starts. Two things are missing before that's true:
-    //
-    //   1. The sandbox is never `git init`'d. Bootstrap (sandbox.ts
-    //      restoreOrBootstrap) curls + untars the react-template and npm
-    //      installs it — there is no repo, so `git worktree add` has nothing
-    //      to attach to. ensureGitRepo() below makes that init idempotent,
-    //      but something has to call it before the first worktree is created.
-    //   2. E2BSandbox.Execute() resolves every read/write/edit path against
-    //      the fixed PROJECT_ROOT constant (see resolvePath in sandbox.ts) —
-    //      there is no per-call cwd override for file ops (RunCommand has
-    //      `cwd`, the file ops don't). Two subagents "in different worktrees"
-    //      would currently both write to PROJECT_ROOT and collide exactly as
-    //      they do today. This needs a cwd-aware resolvePath on E2BSandbox
-    //      before parallel spawn is safe — that's a real, separate change,
-    //      not something to fake here.
-    //
-    // Until both are done, treat every level as size 1 (see runLevel below) —
-    // this class is written so switching to true parallel spawn later is a
-    // scheduling change, not a rewrite.
+    // Worktree isolation for parallel same-level tasks. A DAG level is a set
+    // of tasks with no dependency edges between them, but that does NOT mean
+    // their file operations are disjoint — every UI-touching task is required
+    // (ui-base-template skill) to wire into src/App.tsx, so two UI tasks in
+    // the same level are near-guaranteed to touch the same file. Isolation
+    // via worktrees prevents them from clobbering each other's writes while
+    // running; the merge step below is where an actual App.tsx-level
+    // conflict between them would surface — handled as a failed task, not
+    // silently ignored (see mergeWorktree).
     // -------------------------------------------------------------------------
     private async ensureGitRepo(sandbox: E2BSandbox): Promise<void> {
         const check = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `test -d ${PROJECT_ROOT}/.git && echo yes || echo no` })
@@ -159,18 +146,37 @@ export class Orchestrator {
         }
     }
 
+    // node_modules is untracked, so a fresh `git worktree add` checkout
+    // doesn't have it — symlinking it in is far cheaper than a second
+    // `npm install` per task, and dependencies don't change mid-run.
     private async createWorktree(sandbox: E2BSandbox, taskId: number): Promise<string> {
         const path = `${SANDBOX_HOME}/worktrees/task-${taskId}`
-        await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `git -C ${PROJECT_ROOT} worktree add -q ${path} -b task-${taskId}` })
+        await sandbox.Execute(sandbox.sandboxId, {
+            action: 'runCommand',
+            command: `git -C ${PROJECT_ROOT} worktree add -q ${path} -b task-${taskId} && ln -s ${PROJECT_ROOT}/node_modules ${path}/node_modules`,
+        })
         return path
     }
 
+    // On a real conflict (e.g. two tasks both edited src/App.tsx), `git
+    // merge` exits non-zero and leaves trunk mid-merge with conflict markers
+    // in the working tree — `merge --abort` puts trunk back exactly as it
+    // was before this attempt, so a failed task never corrupts other tasks'
+    // already-merged work. The worktree itself is left in place on failure
+    // (not removed) so its branch and diff are still inspectable afterward.
     private async mergeWorktree(sandbox: E2BSandbox, taskId: number): Promise<{ success: boolean, content: string }> {
-        const res = await sandbox.Execute(sandbox.sandboxId, {
+        const merge = await sandbox.Execute(sandbox.sandboxId, {
             action: 'runCommand',
-            command: `git -C ${PROJECT_ROOT} merge --no-edit task-${taskId} && git -C ${PROJECT_ROOT} worktree remove -f ${SANDBOX_HOME}/worktrees/task-${taskId}`,
+            command: `git -C ${PROJECT_ROOT} merge --no-edit task-${taskId} || (git -C ${PROJECT_ROOT} merge --abort; exit 1)`,
         })
-        return { success: res.success, content: res.content }
+        if (!merge.success) {
+            return { success: false, content: merge.content }
+        }
+        const cleanup = await sandbox.Execute(sandbox.sandboxId, {
+            action: 'runCommand',
+            command: `git -C ${PROJECT_ROOT} worktree remove -f ${SANDBOX_HOME}/worktrees/task-${taskId}`,
+        })
+        return { success: true, content: cleanup.content }
     }
 
     // TODO (context engine) — pure interface stub. The engine doesn't exist
@@ -206,46 +212,77 @@ export class Orchestrator {
         return planned
     }
 
-    async makingPromise(taskId: number){
-        // create worktree
-        // spawn subagent
-        // subagent.runloop()
-        // merge WT
-    }
-    // One level of the DAG: spawn every task in `taskIds`, wait for all of
-    // them, return updated context/state. TODO above explains why this only
-    // actually parallelizes once worktree isolation lands — until then,
-    // treat multi-task levels as a scheduling hazard, not a feature, and
-    // keep levels to size 1.
+    // One level of the DAG. A level of size 1 runs directly against
+    // PROJECT_ROOT — there's nothing to isolate it from, so a worktree would
+    // be pure overhead (create + merge + remove, on top of zero collision
+    // risk). A level with 2+ tasks runs them concurrently, each in its own
+    // git worktree so their file operations can't collide while in flight;
+    // merging back to trunk happens after, one at a time (git can't merge
+    // multiple branches in a single atomic step even though the work itself
+    // ran in parallel) — see mergeWorktree for what happens if two tasks
+    // conflict on the same file.
     private async runLevel(taskIds: number[]): Promise<{ context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[] }> {
         let context = this.context
-        let state = this.state
+        const state = this.state
         const results: { taskId: number, success: boolean, summary: string }[] = []
 
-        // Promise.allSettled( )
-        for (const taskId of taskIds) {
-            const todo = this.todos.find(t => t.id === taskId)
-            if (!todo || !todo.agent) continue
-
+        if (taskIds.length > 1) {
             const sandbox = await this.reconnectSandbox()
             await this.ensureGitRepo(sandbox)
-            // const worktreePath = await this.createWorktree(sandbox, taskId) — not used yet, see TODO above
 
-            const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
-            const subagent = new SubAgent(todo.agent, input, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign)
-            const result = await subagent.runLoop()
+            const spawned = await Promise.all(taskIds.map(async (taskId) => {
+                const todo = this.todos.find(t => t.id === taskId)
+                if (!todo || !todo.agent) return null
 
-            results.push({ taskId, success: result.success, summary: result.summary })
-            context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
+                const taskSandbox = await this.reconnectSandbox()
+                const worktreePath = await this.createWorktree(taskSandbox, taskId)
+
+                const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
+                const subagent = new SubAgent(todo.agent, input, this.userId, this.projectId, this.runId, taskSandbox, this.selectedDesign, worktreePath)
+                const result = await subagent.runLoop()
+
+                return { taskId, todo, result, taskSandbox }
+            }))
+
+            for (const spawn of spawned) {
+                if (!spawn) continue
+                const { taskId, todo, result, taskSandbox } = spawn
+                let success = result.success
+                let summary = result.summary
+
+                if (success) {
+                    const merge = await this.mergeWorktree(taskSandbox, taskId)
+                    if (!merge.success) {
+                        success = false
+                        summary = `Task completed but its worktree failed to merge cleanly — likely a conflicting edit with another task in the same level (e.g. both wired into src/App.tsx): ${merge.content}`
+                        logger.error(`Merge conflict for task ${taskId}: ${merge.content}`)
+                    }
+                }
+
+                results.push({ taskId, success, summary })
+                context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent!, success, summary }]
+            }
+        }
+        else {
+            for (const taskId of taskIds) {
+                const todo = this.todos.find(t => t.id === taskId)
+                if (!todo || !todo.agent) continue
+
+                const sandbox = await this.reconnectSandbox()
+                await this.ensureGitRepo(sandbox)
+
+                const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
+                const subagent = new SubAgent(todo.agent, input, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, PROJECT_ROOT)
+                const result = await subagent.runLoop()
+
+                results.push({ taskId, success: result.success, summary: result.summary })
+                context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
+            }
         }
 
         return { context, state, results }
     }
 
-    // Adapted from CallAgent.TesterDebuggerLoop in callAgent.ts. Runs after a
-    // level's worktrees are merged (once merging is real) and before the
-    // next level starts — the halt-on-repeated-error-signature logic is
-    // unchanged, that part was already correct.
     private async runMergeGate(): Promise<{ success: boolean, state: SerializableState, summaries: string[] }> {
         let state = this.state
         const summaries: string[] = []
@@ -290,7 +327,7 @@ export class Orchestrator {
 
             const debugTodo: PlannerTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], agent: 'debuggerr', status: 'pending', designNeeded: false }
             const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
-            const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign)
+            const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, PROJECT_ROOT)
             const debuggerResult = await debuggerAgent.runLoop()
             await sandbox.SyncR2()
 
@@ -414,13 +451,44 @@ Props of this orchestrator:
 
 Todo list for later (say which one when ready):
 
-- state.screenId / screenIdByTaskId never assigned in orchestrator.ts — kills per-task design continuity across a multi-task run (uiExpert always creates instead of updates, referenceScreenIds always empty).
-errorsByTaskId in orchestrator.ts — declared, converted, never populated or read. Dead state.
-- Worktree isolation (orchestrator.ts) — ensureGitRepo/createWorktree/mergeWorktree exist but unwired; needs cwd-aware resolvePath in E2BSandbox.Execute before parallel levels are safe.
-makingPromise stub in orchestrator.ts — empty, no TODO tag, dead code.
-- PLAN_TASK_SYSTEM_PROMPT has zero mention of the selected design — planner never scopes a dedicated todo around implementing it.
-RUN_MAX_LLM_CALLS = 120 — commented as "the money guard," never actually enforced anywhere.
-- Model choice (client OpenAI → gpt-4o-mini) pinned across every BAML function including the planner — likely root cause of shallow/few-todo decomposition vs. what you saw in ChatGPT/DeepSeek UI. Suggested test: swap just PlanComplexTask's client to CustomGPT5Mini/CustomSonnet4 and rerun unchanged prompt.
-Frontend: three generated designs not visible at selection time — not yet investigated.
-- Other TODOs outside orchestrator.ts (subAgent.ts, callAgent.ts, context.ts, debugger.ts) — not yet inventoried in detail.
+DONE:
+- state.screenId / screenIdByTaskId removed entirely (was never assigned, and
+  the fields that read it — coder's relatedDesignRef, uiExpert's
+  screenId/mode/referenceScreenIds — were never consumed downstream either).
+  Coder discovers prior screens by reading the sandbox instead.
+- Worktree isolation — real now. E2BSandbox.resolvePath/Execute/getRepoTree
+  take a required baseDir; size-1 levels use PROJECT_ROOT, size 2+ levels run
+  concurrently in per-task worktrees, merged back one at a time. node_modules
+  symlinked into new worktrees. A merge conflict aborts cleanly and marks
+  that task failed rather than corrupting trunk or silently ignoring it.
+- makingPromise stub removed (was empty, no TODO tag, dead code).
+- Complexity/clarification decoupled into independent BAML calls
+  (CheckComplexity / GenerateClarifyingQuestions) — a simple request can now
+  get clarifying questions, a complex one can sail through unambiguous.
+  Clarification prompt covers "what is this person actually building"
+  ambiguity (including UI mood/direction) as one eligible category — never
+  gated to UI requests, never mandatory, never asked per-screen inside an
+  already-planned complex build (UIExpert decides that itself at build time).
+- relatedDesignRef (coder) and referenceScreenIds (uiExpert) removed from
+  SubAgentTodoDataMap — were never consumed by either subagent, redundant
+  with reading the sandbox directly.
+- Frontend: three generated designs not visible at selection time — root
+  cause was the picker's iframe sandbox="" blocking the Tailwind CDN script
+  the Stitch HTML depends on; fixed to sandbox="allow-scripts".
+
+STILL PENDING:
+- errorsByTaskId in orchestrator.ts/callAgent.ts — declared, converted, never
+  populated or read. Dead state. (Noted in tester-fixing.md as related to
+  that spec's DebuggerContext extension — worth doing together.)
+- PLAN_TASK_SYSTEM_PROMPT has zero mention of the selected design — planner
+  never scopes a dedicated todo around implementing it.
+- RUN_MAX_LLM_CALLS = 120 — commented as "the money guard," never actually
+  enforced anywhere.
+- Model choice (client OpenAI → gpt-4o-mini) pinned across every BAML
+  function including the planner — likely root cause of shallow/few-todo
+  decomposition vs. what you saw in ChatGPT/DeepSeek UI. Suggested test: swap
+  just PlanComplexTask's client to CustomGPT5Mini/CustomSonnet4 and rerun
+  unchanged prompt.
+- Other TODOs outside orchestrator.ts (subAgent.ts, callAgent.ts, context.ts,
+  debugger.ts) — not yet inventoried in detail.
 */

@@ -30,12 +30,8 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
         userId: string,
         projectId: string,
         sandbox: E2BSandbox,
+        private baseDir: string,
     ){super(userId, projectId, sandbox)}
-
-    // ---- Simple-path (main agent, upfront 3-screen picker) ----
-    // Called directly by callAgent.ts, not through the tool-loop
-    // callLLM/executeFunction below — that pair is Phase A/B for the
-    // complex-path DAG dispatch further down this file.
 
     private async framePrompts(userPrompt: string, semanticMem: string, skills: Skill[]): Promise<DesignVariants> {
         try{
@@ -70,8 +66,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
         return designs
     }
-    // prompt is carried alongside html purely so it can be persisted for
-    // debugging bad Stitch output — not used for rendering.
+
     async fetchDesigns(designs: { screen: Screen, prompt: string }[]): Promise<{ html: string, prompt: string }[]>{
         const settled = await Promise.allSettled(
             designs.map(async (d) => ({ html: await this.fetchDesignHtml(d.screen), prompt: d.prompt }))
@@ -108,7 +103,6 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
         return await res.text();
     }
 
-    // ---- Complex-path (DAG todo): Phase A (design) + Phase B (base template) ----
 
     private async setBaseTemplate(input: UIExpertTaskInput, skills: Skill[]): Promise<string> {
         const userPrompt = `${input.task.task}\n\n${input.updatedPrompt}`
@@ -121,7 +115,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
         const html = await this.fetchDesignHtml(screen)
 
         const path = designFilePath(input.task.taskId, input.task.task)
-        const writeRes = await this.sandbox.Execute(this.sandbox.sandboxId, { action: 'writeFile', path, content: html })
+        const writeRes = await this.sandbox.Execute(this.sandbox.sandboxId, { action: 'writeFile', path, content: html }, this.baseDir)
         if (!writeRes.success) {
             logger.warn(`Failed to save design to sandbox at ${path}: ${writeRes.content}`)
         }
@@ -144,7 +138,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
             || response.action === 'runCommand'
             || response.action === 'editFile'
         ) {
-            const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
+            const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response, this.baseDir)
             return {
                 success: sandboxRes.success,
                 response: sandboxRes.content

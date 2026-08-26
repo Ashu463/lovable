@@ -34,7 +34,8 @@ export class SubAgent<T extends keyof ContextMap> {
         private projectId: string,
         private runId: string,
         private sandbox: E2BSandbox,
-        private selectedDesign: string
+        private selectedDesign: string,
+        private baseDir: string,
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
@@ -44,12 +45,12 @@ export class SubAgent<T extends keyof ContextMap> {
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign, this.baseDir) as any
         case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
-        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox) as any
+        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox, this.baseDir) as any
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any
-        case 'uiExpert': return new UIExpert(this.userId, this.projectId, this.sandbox) as any
-        default: throw new Error(`${agentType} doesn't exist`) 
+        case 'uiExpert': return new UIExpert(this.userId, this.projectId, this.sandbox, this.baseDir) as any
+        default: throw new Error(`${agentType} doesn't exist`)
         }
     }
     private createContextManager(){
@@ -187,15 +188,10 @@ export class SubAgent<T extends keyof ContextMap> {
             default: throw new Error(`No such context builder for ${this.agentType}`)
         }
     }
-    // Shared by coder and uiExpert — they're structurally identical (task +
-    // dependent summaries + repo tree + skills + recent turns), differing
-    // only in which role's skills get loaded. UIExpert reuses this rather
-    // than its own context shape because Phase B of UIExpert (base-template
-    // writing) is mechanically the same tool loop as Coder's.
     private async buildToolLoopContext(role: 'coder' | 'uiExpert'): Promise<CoderContext> {
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
-            this.repoTree = await this.sandbox.getRepoTree()
+            this.repoTree = await this.sandbox.getRepoTree(this.baseDir)
         }
         const res = await backendGql<{summaries: {summary: string, todo: {taskId: number}}[]}>(
             `query Summaries($projectId: ID!, $runId: ID!) {
@@ -220,7 +216,7 @@ export class SubAgent<T extends keyof ContextMap> {
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
-            this.repoTree = await this.sandbox.getRepoTree()
+            this.repoTree = await this.sandbox.getRepoTree(this.baseDir)
         }
         const skills = [
             ...(await this.skillStore.globalSkills('debuggerr')),

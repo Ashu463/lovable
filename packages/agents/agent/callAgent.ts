@@ -6,7 +6,7 @@ import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, CALL_AGENT_SUMMARY_PRO
 import { DAG } from "./services/dag"
 import { Screen } from "@google/stitch-sdk"
 import { Agent } from "./agent"
-import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT } from "./config/systemConfig"
+import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, TASK_SANDBOX_RETRY_LIMIT, PROJECT_ROOT } from "./config/systemConfig"
 import { SubAgent } from "./subAgent"
 import { UIExpert } from "./subagents/uiExpert"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
@@ -58,7 +58,7 @@ export class CallAgent{
         public semanticMem: string,
         public priorRunSummary: string | null = null,
     ){
-        this.uiExpert = new UIExpert(userId, projectId, sandbox)
+        this.uiExpert = new UIExpert(userId, projectId, sandbox, PROJECT_ROOT)
         this.emitter = createRunEmitter(runId)
         this.context = []
         this.state = {
@@ -449,7 +449,10 @@ export class CallAgent{
 
                 const agentType = todo.agent
                 const input = this.inputBuilders[agentType](todo, this.context, this.state, this.semanticMem, data.updatedPrompt)
-                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
+                // This loop always runs sequentially against PROJECT_ROOT — it
+                // doesn't get the worktree-isolation treatment orchestrator.ts's
+                // runLevel now has (that was scoped to orchestrator.ts only).
+                const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign, PROJECT_ROOT)
                 logger.info(`Starting runloop for ${agentType} (task ${todo.id})`)
                 const result = await subagent.runLoop()
 
@@ -623,7 +626,7 @@ export class CallAgent{
                     designNeeded: false
                 }
                 const debuggerInput = this.inputBuilders['debuggerr'](debugTodo, this.context, this.state, this.semanticMem, updatedPrompt)
-                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign)
+                const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, this.sandbox, this.selectedDesign, PROJECT_ROOT)
                 const debuggerResult = await debuggerAgent.runLoop()
                 await this.sandbox.SyncR2()
                 this.state.lastToolResult = {

@@ -113,9 +113,9 @@ export class E2BSandbox{
         }
 
     }
-    private resolvePath(path: string): string {
+    private resolvePath(path: string, baseDir: string): string {
         if (path.startsWith('/')) return path
-        return `${PROJECT_ROOT}/${path.replace(/^\.\//, '')}`
+        return `${baseDir}/${path.replace(/^\.\//, '')}`
     }
 
     // Called before every task: E2B kills a sandbox at the plan's runtime cap
@@ -155,12 +155,12 @@ export class E2BSandbox{
         }
     }
 
-    async getRepoTree(): Promise<string>{
+    async getRepoTree(baseDir: string = PROJECT_ROOT): Promise<string>{
         const prunes = [...REPO_TREE_PRUNE_DIRS.map(d => `-name '${d}'`), `-name '@*'`].join(' -o ')
         try{
             const result = await this.sandbox.commands.run(
                 `find . \\( ${prunes} \\) -prune -o -type f -not -name '.env' -print`,
-                { cwd: PROJECT_ROOT }
+                { cwd: baseDir }
             )
 
             const entries = result.stdout.split('\n').map(l => l.trim()).filter(Boolean)
@@ -178,7 +178,7 @@ export class E2BSandbox{
         }
     }
     
-    async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand, retried = false): Promise<ExecuteRes>{
+    async Execute(id: string, payload: ReadFile | WriteFile | EditFile | DeleteFile| RunCommand, baseDir: string = PROJECT_ROOT, retried = false): Promise<ExecuteRes>{
         try{
 
             // Refresh the sandbox TTL at most once per interval, not on every call.
@@ -188,7 +188,7 @@ export class E2BSandbox{
             }
 
             if(payload.action === 'read'){
-                const path = this.resolvePath(payload.path)
+                const path = this.resolvePath(payload.path, baseDir)
                 try{
                     const result: string = await this.sandbox.files.read(path)
                     return {
@@ -201,7 +201,7 @@ export class E2BSandbox{
                 }
             }
             else if(payload.action === 'writeFile'){
-                const path = this.resolvePath(payload.path)
+                const path = this.resolvePath(payload.path, baseDir)
                 try{
                     const writeRes = await this.sandbox.files.write(path, payload.content)
 
@@ -215,7 +215,7 @@ export class E2BSandbox{
                 }
             }
             else if(payload.action === 'editFile'){
-                const path = this.resolvePath(payload.path)
+                const path = this.resolvePath(payload.path, baseDir)
                 try{
                     const current: string = await this.sandbox.files.read(path)
                     const edited = applyEdits(current, payload.edits)
@@ -232,7 +232,7 @@ export class E2BSandbox{
                 }
             }
             else if(payload.action === 'delete'){
-                const path = this.resolvePath(payload.path)
+                const path = this.resolvePath(payload.path, baseDir)
                 try{
                     const deleteRes = await this.sandbox.files.remove(path)
 
@@ -246,7 +246,7 @@ export class E2BSandbox{
                 }
             }
             else if(payload.action === 'runCommand'){
-                const cwd = payload.cwd ? this.resolvePath(payload.cwd) : PROJECT_ROOT
+                const cwd = payload.cwd ? this.resolvePath(payload.cwd, baseDir) : baseDir
                 try{
                     const cmdRes = await this.sandbox.commands.run(payload.command, {
                         cwd,
@@ -282,7 +282,7 @@ export class E2BSandbox{
             if(retried || !sandboxIsGone(e)) throw e
 
             await this.replaceSandbox()
-            return this.Execute(id, payload, true)
+            return this.Execute(id, payload, baseDir, true)
         }
     }
 
