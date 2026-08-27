@@ -87,7 +87,7 @@ export class Orchestrator {
         return E2BSandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
     }
 
-    private buildSubAgentInput<T extends SubAgentType>(agentType: T, todo: PlannerTodo, state: CallAgentState): InputMap[T] {
+    private buildSubAgentInput<T extends SubAgentType>(agentType: T, todo: { id: number, task: string, dependency: number[], designNeeded: boolean }, state: CallAgentState): InputMap[T] {
         const base = { taskId: todo.id, task: todo.task, dependentTasks: todo.dependency, designNeeded: todo.designNeeded }
         switch (agentType) {
             case 'coder':
@@ -103,8 +103,6 @@ export class Orchestrator {
                     agentType: 'uiExpert',
                     updatedPrompt: this.updatedPrompt,
                 } as unknown as InputMap[T]
-            case 'tester':
-                return { task: { ...base, agentType: 'tester', agentSpecificData: {} }, agentType: 'tester' } as unknown as InputMap[T]
             case 'debuggerr':
                 if (!state.lastToolResult) throw new Error(`debuggerr input requested without a last tool result`)
                 return {
@@ -115,11 +113,6 @@ export class Orchestrator {
                     designNeeded: todo.designNeeded,
                     errors: state.lastTestErrors,
                     toolResult: state.lastToolResult,
-                } as unknown as InputMap[T]
-            case 'researcher':
-                return {
-                    task: { ...base, agentType: 'researcher', agentSpecificData: { query: todo.task, maxResults: 5 } },
-                    agentType: 'researcher',
                 } as unknown as InputMap[T]
             default:
                 throw new Error(`no input builder for ${agentType}`)
@@ -305,7 +298,7 @@ export class Orchestrator {
         const preDeployCheck = async (sandbox: E2BSandbox): Promise<boolean> => {
             const buildResult = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: 'npm run build' })
             if (!buildResult.success) {
-                state = { ...state, lastTestErrors: [...state.lastTestErrors, { fileName: "BUILD_CHECKER_ERROR", error: buildResult.stderr ?? "Unknown build error" }], lastToolResult: { success: false } }
+                state = { ...state, lastTestErrors: [...state.lastTestErrors, { fileName: "BUILD_CHECKER_ERROR", error: buildResult.stderr ?? "Unknown build error", source: 'build' }], lastToolResult: { success: false } }
                 return false
             }
             return true
@@ -327,8 +320,8 @@ export class Orchestrator {
             const testerRes: TesterResponse = await tester.testCodebase(testerContext)
 
             const error: AgentError = testerRes.errorRes
-                ? { fileName: testerRes.errorRes.file, error: testerRes.errorRes.error + testerRes.errorRes.line }
-                : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics" }
+                ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester' }
+                : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics", source: 'build' }
 
             const currentErrorSignature = `${error.fileName}:${error.error}`
             if (currentErrorSignature === previousErrorSignature) {
@@ -340,7 +333,7 @@ export class Orchestrator {
             previousErrorSignature = currentErrorSignature
             state = { ...state, lastTestErrors: [...state.lastTestErrors, error] }
 
-            const debugTodo: PlannerTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], agent: 'debuggerr', status: 'pending', designNeeded: false }
+            const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], designNeeded: false }
             const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
             const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, PROJECT_ROOT)
             const debuggerResult = await debuggerAgent.runLoop()

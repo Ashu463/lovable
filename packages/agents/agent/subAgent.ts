@@ -9,7 +9,7 @@ import { CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESE
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/systemPrompts";
-import type { BaseTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
+import type { BaseTaskInput, DebuggerTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 import { createRunEmitter, type EventEmitter } from "./events";
@@ -223,9 +223,13 @@ export class SubAgent<T extends keyof ContextMap> {
             ...(await this.skillStore.getRoleSkills('debuggerr')),
             ...(await this.skillStore.getTaskCatalog('debuggerr')),
         ]
+        const errors = (this.input as DebuggerTaskInput).errors
+        const originalError = errors.length > 0
+            ? errors.map(e => `${e.fileName}: ${e.error}`).join('\n')
+            : (this.input as BaseTaskInput).task.task
         return {
             repoTree: this.repoTree,
-            originalError: (this.input as BaseTaskInput).task.task,
+            originalError,
             fixHistory: [],
             skills: skills,
             recentTurns: []

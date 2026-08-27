@@ -198,7 +198,7 @@ export namespace partial_types {
     export interface PlannerTodo {
       id?: number | null
       task?: string | null
-      agent?: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert" | null
+      agent?: "coder" | "uiExpert" | null
       status?: "pending" | "completed" | null
       dependency: number[]
       designNeeded?: boolean | null
