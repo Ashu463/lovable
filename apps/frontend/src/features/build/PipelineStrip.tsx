@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { agentLabel } from "@/features/build/agentLabels";
 
 export type StageState = "done" | "active" | "failed" | "pending";
 
@@ -51,7 +52,7 @@ export function PipelineStrip({ stages, agents }: { stages: PipelineStage[]; age
                     a.active ? "border-accent text-foreground" : "border-border text-muted",
                   )}
                 >
-                  {a.name}
+                  {agentLabel(a.name)}
                 </span>
               ))}
             </div>

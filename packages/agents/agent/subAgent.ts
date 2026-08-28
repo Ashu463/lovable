@@ -94,12 +94,15 @@ export class SubAgent<T extends keyof ContextMap> {
         logger.error(`${this.agentType} task ${this.taskId} halted: ${reason}`)
         this.pushSession('assistant', 'halted', { reason })
         await this.SaveSessionState()
-        return { success: false, summary: await this.BuildSummary() }
+        const summary = await this.BuildSummary()
+        await this.emitter.emit({ type: 'subagent_completed', agent: this.agentType as string, taskId: this.taskId, summary, success: false })
+        return { success: false, summary }
     }
 
     async runLoop(): Promise<SubAgentResponse> {
         this.context = await this.BuildInitialContext()
         let success = true
+        await this.emitter.emit({ type: 'subagent_started', agent: this.agentType as string, taskId: this.taskId, task: (this.input as BaseTaskInput).task?.task })
 
         logger.info(`calling LLM for ${this.agentType}`)
         while (true) {
@@ -148,7 +151,7 @@ export class SubAgent<T extends keyof ContextMap> {
             this.pushSession('tool', 'done', toolRes)
 
             this.context = await this.ManageContext(res, toolRes)
-            await this.emitSSEUpdate(toolRes)
+            await this.emitSSEUpdate(res)
             this.SaveSessionState().catch(err => logger.error(`Failed to save session for task ${this.taskId}: ${err}`))
 
             this.iteration++
@@ -158,10 +161,9 @@ export class SubAgent<T extends keyof ContextMap> {
             }
         }
 
-        return {
-            success,
-            summary: await this.BuildSummary()
-        }
+        const summary = await this.BuildSummary()
+        await this.emitter.emit({ type: 'subagent_completed', agent: this.agentType as string, taskId: this.taskId, summary, success })
+        return { success, summary }
     }
     async Test(): Promise<TesterResponse>{
         const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
@@ -308,12 +310,12 @@ export class SubAgent<T extends keyof ContextMap> {
         return num
     }
 
-    async emitSSEUpdate(data: unknown) {
+    async emitSSEUpdate(res: any) {
         await this.emitter.emit({
             type: 'subagent_progress',
-            agent: this.agentType,
+            agent: this.agentType as string,
             taskId: this.taskId,
-            data,
+            subagentSummary: this.summarizeToolCall(res),
         })
     }
 

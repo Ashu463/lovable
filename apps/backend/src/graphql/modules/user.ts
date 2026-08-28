@@ -92,19 +92,25 @@ export const userResolvers = {
       args: { idToken: string },
       ctx: GraphQLContext,
     ) => {
+      // TEMP DEBUG — remove once sign-in is confirmed working.
+      logger.info(`googleSignIn resolver hit, idToken length=${args.idToken?.length ?? "none"}`);
       let profile;
       try {
         profile = await verifyGoogleIdToken(args.idToken);
       } catch (e) {
-        logger.error(`Google sign-in failed: ${e}`);
+        logger.error(`Google sign-in failed: ${e instanceof Error ? e.stack ?? e.message : e}`);
         throw new GraphQLError("Invalid Google token", {
           extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
         });
       }
 
+      // TEMP DEBUG — remove once sign-in is confirmed working.
+      logger.info(`Google token verified for ${profile.email}, querying Postgres now`);
       let user = await ctx.prisma.user.findUnique({
         where: { googleId: profile.googleId },
       });
+      // TEMP DEBUG — remove once sign-in is confirmed working.
+      logger.info(`Postgres lookup done, user found=${!!user}`);
 
       if (!user) {
         // An account may already exist from email/password signup — link the

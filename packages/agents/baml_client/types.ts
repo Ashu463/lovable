@@ -148,6 +148,11 @@ export interface Context7 {
   
 }
 
+export interface ConversationalReply {
+  reply: string
+  
+}
+
 export interface DebuggerContext {
   repoTree: string
   originalError: string
@@ -196,6 +201,11 @@ export interface Design {
 
 export interface DesignVariants {
   prompts: string[]
+  
+}
+
+export interface DevelopmentVerdict {
+  isDevelopment: boolean
   
 }
 

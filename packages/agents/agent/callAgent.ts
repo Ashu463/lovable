@@ -2,7 +2,7 @@ import type { CallAgentResponse, CallAgentSSE, Project, User, Answers, Bootstrap
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT } from "./config/systemPrompts"
+import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, DEVELOPMENT_GATE_PROMPT, CONVERSATIONAL_REPLY_PROMPT } from "./config/systemPrompts"
 import { Agent } from "./agent"
 import { PROJECT_ROOT } from "./config/systemConfig"
 import { Orchestrator, type StepRunner } from "./orchestrator"
@@ -193,6 +193,51 @@ export class CallAgent{
     
     async Execute(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<CallAgentResponse>{
         logger.info(`Running call agent`)
+
+        // A fresh message (no pending answers/design selection) might not be
+        // a build request at all — check before Bootstrap, complexity,
+        // clarification, or the sandbox ever get touched. answers/
+        // selectedDesignId are always a continuation of an already-decided
+        // dev flow, never conversational, so the gate never applies there.
+        if(!answers && !selectedDesignId){
+            let verdict: { isDevelopment: boolean }
+            try{
+                verdict = await b.CheckIsDevelopmentRequest(DEVELOPMENT_GATE_PROMPT, userPrompt)
+            }
+            catch(e){
+                logger.error(`Development gate check failed, defaulting to development: ${e}`)
+                verdict = { isDevelopment: true }
+            }
+            if(!verdict.isDevelopment){
+                logger.info(`Message judged conversational, skipping the build pipeline`)
+                const priorContext = this.priorRunSummary ?? JSON.stringify(this.context)
+                let reply: string
+                try{
+                    const conversational = await b.RespondConversationally(CONVERSATIONAL_REPLY_PROMPT, userPrompt, priorContext, this.semanticMem)
+                    reply = conversational.reply
+                }
+                catch(e){
+                    const reason = `Conversational reply failed: ${e instanceof Error ? e.message : String(e)}`
+                    await this.emitter.emit({ type: 'run_failed', error: reason })
+                    return { status: 'error', reason }
+                }
+                try{
+                    await backendGql(
+                        `mutation SaveRunSummary($runId: ID!, $summary: String!) {
+                            saveRunSummary(runId: $runId, summary: $summary)
+                        }`,
+                        { runId: this.runId, summary: reply }
+                    )
+                } catch(e){
+                    logger.error(`Failed to save conversational reply as run summary for run ${this.runId}: ${e}`)
+                }
+
+                const result: CallAgentResponse = { status: 'conversation', reply }
+                await this.emitter.emit({ type: 'run_completed', result })
+                return result
+            }
+        }
+
         if(selectedDesignId){
             await backendGql(
                 `mutation SelectDesign($projectId: ID!, $designId: ID!) {

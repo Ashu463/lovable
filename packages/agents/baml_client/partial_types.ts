@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -95,6 +95,9 @@ export namespace partial_types {
       library?: string | null
       query?: string | null
     }
+    export interface ConversationalReply {
+      reply?: string | null
+    }
     export interface DebuggerContext {
       repoTree?: string | null
       originalError?: string | null
@@ -131,6 +134,9 @@ export namespace partial_types {
     }
     export interface DesignVariants {
       prompts: string[]
+    }
+    export interface DevelopmentVerdict {
+      isDevelopment?: boolean | null
     }
     export interface DocsSearch {
       type?: "docsSearch" | null

@@ -12,6 +12,10 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *   are just code branching on COMPLEXITY_CHECKER_PROMPT's verdict and
  *   CLARIFICATION_PROMPT's questions)
  *     -> receives request
+ *     -> on a fresh message (no pending answers/design selection), first
+ *        runs DEVELOPMENT_GATE_PROMPT — not a dev/build request (a question,
+ *        banter, "why did you do X") skips everything below entirely and
+ *        answers via CONVERSATIONAL_REPLY_PROMPT instead, no sandbox touched
  *     -> runs COMPLEXITY_CHECKER_PROMPT on every incoming user message in
  *        the Run (not just at inception)
  *     -> separately, independently, runs CLARIFICATION_PROMPT on every
@@ -44,6 +48,52 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *   - Coder/Debugger have no directory-listing action
  *   - Coder/Debugger have no patch/edit action (WriteFile = full rewrite)
  */
+
+// ============================================================================
+// 0. DEVELOPMENT_GATE_PROMPT / CONVERSATIONAL_REPLY_PROMPT
+//    Runs before everything else, only on a fresh message (no answers being
+//    submitted, no design being selected — those are unambiguous
+//    continuations of an already-decided dev flow, not new turns). A "no"
+//    verdict skips complexity/clarification/design/DAG entirely — this is a
+//    single BAML call, not a dedicated agent (no tools, no sandbox access).
+// ============================================================================
+
+export const DEVELOPMENT_GATE_PROMPT = `
+# ROLE
+
+You judge whether an incoming message is asking for the app to be built or
+changed, versus a conversational message that expects a plain answer — a
+question about the app, its code, or anything else, small talk, or feedback
+with no actionable change implied. This verdict is not advisory — the
+CallAgent skips the entire build pipeline on a "no."
+
+# JUDGMENT
+
+Judge it a development request when the message asks to add, change, remove,
+or fix something about the app, however small. Judge it conversational when
+it asks about the app or its code without asking for a change ("why did you
+use useEffect here", "what does this component do"), asks something
+unrelated to the app, or is just conversational. When genuinely ambiguous,
+prefer development — answering with a build attempt is recoverable and the
+user can just say so if that's wrong, but wrongly refusing a real request as
+"just talk" silently does nothing.
+`;
+
+export const CONVERSATIONAL_REPLY_PROMPT = `
+# ROLE
+
+You are answering a message the CallAgent has already judged conversational,
+not a build request — no tools, no sandbox access, no code changes happen
+here. Answer directly and plainly using whatever prior-run summary and
+memory you're given.
+
+# FIELD NOTES
+
+If the answer genuinely depends on the app's current code and you have not
+been given enough in the prior-run summary to answer confidently, say so
+rather than guessing at implementation details you cannot see — don't
+invent specifics about code you were never shown.
+`;
 
 // ============================================================================
 // 1. AGENT_SYSTEM_PROMPT

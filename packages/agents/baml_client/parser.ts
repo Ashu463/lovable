@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, ConversationalReply, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DevelopmentVerdict, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -94,6 +94,29 @@ export class LlmResponseParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as types.ComplexityVerdict
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CheckIsDevelopmentRequest(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.DevelopmentVerdict {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CheckIsDevelopmentRequest",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.DevelopmentVerdict
     } catch (error) {
       throw toBamlError(error);
     }
@@ -421,6 +444,29 @@ export class LlmResponseParser {
     }
   }
   
+  RespondConversationally(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.ConversationalReply {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "RespondConversationally",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.ConversationalReply
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   SummarizeCoderContext(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -606,6 +652,29 @@ export class LlmStreamParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as partial_types.ComplexityVerdict
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  CheckIsDevelopmentRequest(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.DevelopmentVerdict {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "CheckIsDevelopmentRequest",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.DevelopmentVerdict
     } catch (error) {
       throw toBamlError(error);
     }
@@ -928,6 +997,29 @@ export class LlmStreamParser {
         __baml_options__?.clientRegistry,
         __env__,
       ) as partial_types.MergeConflictResolution
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
+  RespondConversationally(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.ConversationalReply {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "RespondConversationally",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.ConversationalReply
     } catch (error) {
       throw toBamlError(error);
     }

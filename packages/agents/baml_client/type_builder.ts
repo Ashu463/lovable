@@ -53,6 +53,8 @@ export default class TypeBuilder {
     
     Context7: ClassViewer<'Context7', "action" | "library" | "query">;
     
+    ConversationalReply: ClassViewer<'ConversationalReply', "reply">;
+    
     DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory" | "skills" | "recentTurns">;
     
     DebuggerSession: ClassViewer<'DebuggerSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content" | "rawTranscript">;
@@ -66,6 +68,8 @@ export default class TypeBuilder {
     Design: ClassViewer<'Design', "taskId" | "summary">;
     
     DesignVariants: ClassViewer<'DesignVariants', "prompts">;
+    
+    DevelopmentVerdict: ClassViewer<'DevelopmentVerdict', "isDevelopment">;
     
     DocsSearch: ClassViewer<'DocsSearch', "type" | "library" | "query">;
     
@@ -154,7 +158,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","ConflictTaskInfo","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MergeConflictContext","MergeConflictResolution","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","ConflictTaskInfo","Context7","ConversationalReply","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DevelopmentVerdict","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MergeConflictContext","MergeConflictResolution","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType",
@@ -214,6 +218,10 @@ export default class TypeBuilder {
           "action","library","query",
         ]);
         
+        this.ConversationalReply = this.tb.classViewer("ConversationalReply", [
+          "reply",
+        ]);
+        
         this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
           "repoTree","originalError","fixHistory","skills","recentTurns",
         ]);
@@ -240,6 +248,10 @@ export default class TypeBuilder {
         
         this.DesignVariants = this.tb.classViewer("DesignVariants", [
           "prompts",
+        ]);
+        
+        this.DevelopmentVerdict = this.tb.classViewer("DevelopmentVerdict", [
+          "isDevelopment",
         ]);
         
         this.DocsSearch = this.tb.classViewer("DocsSearch", [

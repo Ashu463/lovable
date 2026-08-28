@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowUp, ChevronDown, Home, Plus, Square } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,10 +15,13 @@ import { Markdown } from "@/features/build/Markdown";
 import { StatusLine, StatusItem, StatusSep } from "@/features/shell/StatusLine";
 import { BrandMark } from "@/features/shell/BrandMark";
 import { PipelineStrip } from "@/features/build/PipelineStrip";
+import { DagView } from "@/features/build/DagView";
 import { useWorkspacePipeline } from "@/features/build/useWorkspacePipeline";
 import { ClarifyingQuestions } from "@/features/build/ClarifyingQuestions";
 import { DesignVariantPicker } from "@/features/build/DesignVariantPicker";
-import { CodeViewer } from "@/features/build/CodeViewer";
+// CodeMirror + its language packages are the single biggest chunk in this
+// app — only worth loading once someone actually opens the code tab.
+const CodeViewer = lazy(() => import("@/features/build/CodeViewer").then((m) => ({ default: m.CodeViewer })));
 
 const MODES = ["Build", "Plan"];
 
@@ -30,7 +33,7 @@ function WorkspaceInput() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const busy = state.status === "running" || state.status === "submitting";
-  const canFollowUp = state.status === "completed" || state.status === "failed";
+  const canFollowUp = state.status === "completed" || state.status === "failed" || state.status === "conversation";
   const disabled = !canFollowUp;
 
   // Grow with the content up to a cap, then scroll — height has to be reset to
@@ -44,7 +47,10 @@ function WorkspaceInput() {
 
   const handleSend = () => {
     if (!text.trim() || !canFollowUp) return;
-    const projectId = state.status === "completed" || state.status === "failed" ? state.projectId : undefined;
+    const projectId =
+      state.status === "completed" || state.status === "failed" || state.status === "conversation"
+        ? state.projectId
+        : undefined;
     const prompt = text.trim();
     setText("");
     // submit() starts a new run under the same project; the route still points
@@ -263,7 +269,9 @@ function PreviewPane() {
         )}
       </TabsContent>
       <TabsContent value="code" className="flex-1 overflow-hidden">
-        <CodeViewer projectId={state.projectId} />
+        <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Loading editor…</div>}>
+          <CodeViewer projectId={state.projectId} />
+        </Suspense>
       </TabsContent>
     </Tabs>
   );
@@ -313,6 +321,9 @@ export function Workspace() {
   const notFound = !isLive && resumeStatus === "not_found";
 
   const isFailed = state.status === "failed";
+  // A conversational reply is terminal, same as "completed" — just without a
+  // build behind it, so it gets the same non-live/ok styling.
+  const isDone = state.status === "completed" || state.status === "conversation";
 
   return (
     <div className="flex h-full flex-col">
@@ -321,9 +332,9 @@ export function Workspace() {
         <StatusSep />
         <StatusItem
           label="status"
-          live={resuming || (!isFailed && state.status !== "completed")}
+          live={resuming || (!isFailed && !isDone)}
           value={
-            <span className={cn(isFailed && "text-danger", state.status === "completed" && "text-ok")}>
+            <span className={cn(isFailed && "text-danger", isDone && "text-ok")}>
               {resuming ? "loading" : notFound ? "not found" : state.status.replace(/_/g, " ")}
             </span>
           }
@@ -332,7 +343,7 @@ export function Workspace() {
 
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <span className={cn("h-2 w-2 rounded-sm", resuming ? "bg-muted" : isFailed ? "bg-danger" : state.status === "completed" ? "bg-ok" : "bg-accent")} />
+          <span className={cn("h-2 w-2 rounded-sm", resuming ? "bg-muted" : isFailed ? "bg-danger" : isDone ? "bg-ok" : "bg-accent")} />
           {resuming ? (
             <span className="h-4 w-48 animate-pulse rounded bg-surface-hover" />
           ) : (
@@ -363,6 +374,12 @@ export function Workspace() {
       </div>
 
       <PipelineStrip stages={stages} agents={agents} />
+
+      {state.status === "running" && (
+        <div className="px-4 py-3">
+          <DagView projectId={state.projectId} runId={state.runId} feed={state.feed} />
+        </div>
+      )}
 
       {resuming ? (
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-3.5 px-6 py-6">

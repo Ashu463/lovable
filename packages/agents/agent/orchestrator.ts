@@ -268,7 +268,9 @@ export class Orchestrator {
         while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
             sandbox = await this.reconnectSandbox()
             const tester = new TesterAgent(this.userId, this.projectId, sandbox)
+            await this.emitter.emit({ type: 'subagent_started', agent: 'tester', task: 'Verifying the build' })
             const testerRes: TesterResponse = await tester.testCodebase(testerContext)
+            await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'Build verified' : 'Build check failed', success: testerRes.success })
 
             // Whose file this is: only one task in the level means only one
             // possible owner, no need to match a name; otherwise find the
