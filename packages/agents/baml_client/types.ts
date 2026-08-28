@@ -231,6 +231,7 @@ export interface Error {
   fileName: string
   error: string
   source?: "tester" | "build" | "deploy" | null
+  taskId?: number | null
   
 }
 

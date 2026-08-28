@@ -21,12 +21,13 @@ import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_clien
 import type { TesterContext } from "../baml_client"
 import { DAG } from "./services/dag"
 import { E2BSandbox } from "./utils/sandbox"
+import { WorktreeGit } from "./utils/gitWorktree"
 import { SubAgent } from "./subAgent"
 import { TesterAgent, type TesterResponse } from "./subagents/tester"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { CallAgentContext, CallAgentState } from "./callAgent"
 import { PLAN_TASK_SYSTEM_PROMPT, CALL_AGENT_SUMMARY_PROMPT } from "./config/systemPrompts"
-import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SANDBOX_HOME, SUBAGENT_TASK_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
+import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SUBAGENT_TASK_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
 import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
@@ -47,7 +48,6 @@ export const inngest = new Inngest({ id: "lovable-agents" })
 type SerializableState = {
     lastTestErrors: AgentError[]
     lastToolResult: ToolResult | null
-    errorsByTaskId: Record<number, AgentError[]>
 }
 
 function toCallAgentState(s: SerializableState): CallAgentState {
@@ -55,7 +55,6 @@ function toCallAgentState(s: SerializableState): CallAgentState {
         lastTestErrors: s.lastTestErrors,
         lastToolResult: s.lastToolResult,
         lastError: s.lastTestErrors[s.lastTestErrors.length - 1] ?? null,
-        errorsByTaskId: new Map(Object.entries(s.errorsByTaskId).map(([k, v]) => [Number(k), v])),
     }
 }
 
@@ -64,11 +63,12 @@ export type StepRunner = { run: (id: string, fn: () => Promise<any>) => Promise<
 
 export class Orchestrator {
     private context: CallAgentContext[] = []
-    private state: SerializableState = { lastTestErrors: [], lastToolResult: null, errorsByTaskId: {} }
+    private state: SerializableState = { lastTestErrors: [], lastToolResult: null }
     private todos: PlannerTodo[] = []
     private allSummaries: string[] = []
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore()
+    private worktreeGit = new WorktreeGit()
 
     constructor(
         private userId: string,
@@ -117,60 +117,6 @@ export class Orchestrator {
             default:
                 throw new Error(`no input builder for ${agentType}`)
         }
-    }
-
-    // -------------------------------------------------------------------------
-    // Worktree isolation for parallel same-level tasks. A DAG level is a set
-    // of tasks with no dependency edges between them, but that does NOT mean
-    // their file operations are disjoint — every UI-touching task is required
-    // (ui-base-template skill) to wire into src/App.tsx, so two UI tasks in
-    // the same level are near-guaranteed to touch the same file. Isolation
-    // via worktrees prevents them from clobbering each other's writes while
-    // running; the merge step below is where an actual App.tsx-level
-    // conflict between them would surface — handled as a failed task, not
-    // silently ignored (see mergeWorktree).
-    // -------------------------------------------------------------------------
-    private async ensureGitRepo(sandbox: E2BSandbox): Promise<void> {
-        const check = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `test -d ${PROJECT_ROOT}/.git && echo yes || echo no` })
-        if (check.content.includes('no')) {
-            await sandbox.Execute(sandbox.sandboxId, {
-                action: 'runCommand',
-                command: `git init -q && git add -A && git -c user.email=agent@lovable.dev -c user.name=lovable-agent commit -q -m "bootstrap" --allow-empty`,
-            })
-        }
-    }
-
-    // node_modules is untracked, so a fresh `git worktree add` checkout
-    // doesn't have it — symlinking it in is far cheaper than a second
-    // `npm install` per task, and dependencies don't change mid-run.
-    private async createWorktree(sandbox: E2BSandbox, taskId: number): Promise<string> {
-        const path = `${SANDBOX_HOME}/worktrees/task-${taskId}`
-        await sandbox.Execute(sandbox.sandboxId, {
-            action: 'runCommand',
-            command: `git -C ${PROJECT_ROOT} worktree add -q ${path} -b task-${taskId} && ln -s ${PROJECT_ROOT}/node_modules ${path}/node_modules`,
-        })
-        return path
-    }
-
-    // On a real conflict (e.g. two tasks both edited src/App.tsx), `git
-    // merge` exits non-zero and leaves trunk mid-merge with conflict markers
-    // in the working tree — `merge --abort` puts trunk back exactly as it
-    // was before this attempt, so a failed task never corrupts other tasks'
-    // already-merged work. The worktree itself is left in place on failure
-    // (not removed) so its branch and diff are still inspectable afterward.
-    private async mergeWorktree(sandbox: E2BSandbox, taskId: number): Promise<{ success: boolean, content: string }> {
-        const merge = await sandbox.Execute(sandbox.sandboxId, {
-            action: 'runCommand',
-            command: `git -C ${PROJECT_ROOT} merge --no-edit task-${taskId} || (git -C ${PROJECT_ROOT} merge --abort; exit 1)`,
-        })
-        if (!merge.success) {
-            return { success: false, content: merge.content }
-        }
-        const cleanup = await sandbox.Execute(sandbox.sandboxId, {
-            action: 'runCommand',
-            command: `git -C ${PROJECT_ROOT} worktree remove -f ${SANDBOX_HOME}/worktrees/task-${taskId}`,
-        })
-        return { success: true, content: cleanup.content }
     }
 
     // TODO (context engine) — pure interface stub. The engine doesn't exist
@@ -222,30 +168,27 @@ export class Orchestrator {
         return result
     }
 
-    // One level of the DAG. A level of size 1 runs directly against
-    // PROJECT_ROOT — there's nothing to isolate it from, so a worktree would
-    // be pure overhead (create + merge + remove, on top of zero collision
-    // risk). A level with 2+ tasks runs them concurrently, each in its own
-    // git worktree so their file operations can't collide while in flight;
-    // merging back to trunk happens after, one at a time (git can't merge
-    // multiple branches in a single atomic step even though the work itself
-    // ran in parallel) — see mergeWorktree for what happens if two tasks
-    // conflict on the same file.
-    private async runLevel(taskIds: number[]): Promise<{ context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[] }> {
+    private async runLevel(taskIds: number[]): Promise<{ context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[], taskFiles: Record<number, string[]> }> {
         let context = this.context
         const state = this.state
         const results: { taskId: number, success: boolean, summary: string }[] = []
+        // Which files each task's merged diff touched, for attributing a
+        // post-merge build/tester error back to the task that caused it (see
+        // runMergeGate). A size-1 level has exactly one candidate, so its
+        // file list is left empty — attribution doesn't need to match a
+        // filename when there's only one task to blame.
+        const taskFiles: Record<number, string[]> = {}
 
         if (taskIds.length > 1) {
             const sandbox = await this.reconnectSandbox()
-            await this.ensureGitRepo(sandbox)
+            await this.worktreeGit.ensureRepo(sandbox)
 
             const spawned = await Promise.all(taskIds.map(async (taskId) => {
                 const todo = this.todos.find(t => t.id === taskId)
                 if (!todo || !todo.agent) return null
 
                 const taskSandbox = await this.reconnectSandbox()
-                const worktreePath = await this.createWorktree(taskSandbox, taskId)
+                const worktreePath = await this.worktreeGit.create(taskSandbox, taskId)
 
                 const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
                 const result = await this.runSubAgentWithRetry(todo.agent, input, taskSandbox, worktreePath)
@@ -260,11 +203,13 @@ export class Orchestrator {
                 let summary = result.summary
 
                 if (success) {
-                    const merge = await this.mergeWorktree(taskSandbox, taskId)
+                    const merge = await this.worktreeGit.merge(taskSandbox, taskId)
                     if (!merge.success) {
                         success = false
                         summary = `Task completed but its worktree failed to merge cleanly — likely a conflicting edit with another task in the same level (e.g. both wired into src/App.tsx): ${merge.content}`
                         logger.error(`Merge conflict for task ${taskId}: ${merge.content}`)
+                    } else {
+                        taskFiles[taskId] = merge.files
                     }
                 }
 
@@ -278,20 +223,21 @@ export class Orchestrator {
                 if (!todo || !todo.agent) continue
 
                 const sandbox = await this.reconnectSandbox()
-                await this.ensureGitRepo(sandbox)
+                await this.worktreeGit.ensureRepo(sandbox)
 
                 const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
                 const result = await this.runSubAgentWithRetry(todo.agent, input, sandbox, PROJECT_ROOT)
 
                 results.push({ taskId, success: result.success, summary: result.summary })
                 context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
+                if (result.success) taskFiles[taskId] = []
             }
         }
 
-        return { context, state, results }
+        return { context, state, results, taskFiles }
     }
 
-    private async runMergeGate(): Promise<{ success: boolean, state: SerializableState, summaries: string[] }> {
+    private async runMergeGate(taskFiles: Record<number, string[]>): Promise<{ success: boolean, state: SerializableState, summaries: string[] }> {
         let state = this.state
         const summaries: string[] = []
 
@@ -319,8 +265,18 @@ export class Orchestrator {
             const tester = new TesterAgent(this.userId, this.projectId, sandbox)
             const testerRes: TesterResponse = await tester.testCodebase(testerContext)
 
+            // Whose file this is: only one task in the level means only one
+            // possible owner, no need to match a name; otherwise find the
+            // task whose diff actually touched this file. Prior levels are
+            // out of scope — their errors were already resolved by their own
+            // merge gate before this level ran.
+            const taskFileEntries = Object.entries(taskFiles)
+            const owningTask = taskFileEntries.length === 1
+                ? Number(taskFileEntries[0]![0])
+                : taskFileEntries.find(([, files]) => files.includes(testerRes.errorRes?.file ?? ''))?.[0]
+
             const error: AgentError = testerRes.errorRes
-                ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester' }
+                ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester', taskId: owningTask !== undefined ? Number(owningTask) : undefined }
                 : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics", source: 'build' }
 
             const currentErrorSignature = `${error.fileName}:${error.error}`
@@ -369,7 +325,7 @@ export class Orchestrator {
             const taskIds = levels[levelIndex]!
             
             const levelOut = await step.run(`level-${levelIndex}-spawn`, () => this.runLevel(taskIds)) as unknown as {
-                context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[]
+                context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[], taskFiles: Record<number, string[]>
             }
             this.context = levelOut.context
             this.state = levelOut.state
@@ -390,7 +346,7 @@ export class Orchestrator {
                 return agent === 'coder' || agent === 'uiExpert'
             })
             if (hadFileWritingTask) {
-                const gateOut = await step.run(`level-${levelIndex}-merge-gate`, () => this.runMergeGate()) as unknown as {
+                const gateOut = await step.run(`level-${levelIndex}-merge-gate`, () => this.runMergeGate(levelOut.taskFiles)) as unknown as {
                     success: boolean, state: SerializableState, summaries: string[]
                 }
                 this.state = gateOut.state
@@ -489,11 +445,28 @@ DONE:
 - Frontend: three generated designs not visible at selection time — root
   cause was the picker's iframe sandbox="" blocking the Tailwind CDN script
   the Stitch HTML depends on; fixed to sandbox="allow-scripts".
+- Subagent task failure/retry: runSubAgentWithRetry retries a fully-failed
+  subagent run (max iterations / abort / haltTask) with a fresh instance;
+  Execute() now aborts the run on a still-failed task instead of silently
+  continuing to the next level.
+- PlannerTodo.agent narrowed to "coder" | "uiExpert" in agents.baml — tester
+  and researcher were never planner-assignable in practice (prompt already
+  said so), the type now enforces it; buildSubAgentInput's dead tester/
+  researcher cases removed.
+- Debugger error-parsing bugs: DebuggerContext.originalError was always ""
+  on the only live path (runMergeGate's synthetic todo has task: ""), fixed
+  to derive from the actual errors array; tester error + line number were
+  being string-concatenated with no separator ("message42"), fixed to a
+  readable "message (line 42)"; AgentError.source was declared but never set.
+- errorsByTaskId removed entirely (was declared, converted, never populated
+  or read) in favor of real per-task error attribution: mergeWorktree now
+  commits each worktree before merging (nothing did before — merges were
+  silently discarding uncommitted task output) and captures a
+  taskId->changedFiles diff; runMergeGate matches a failing error's fileName
+  against that map and stamps AgentError.taskId, which debuggerAgent.baml's
+  Error class and prompt now surface as a hint to the debugger.
 
 STILL PENDING:
-- errorsByTaskId in orchestrator.ts/callAgent.ts — declared, converted, never
-  populated or read. Dead state. (Noted in tester-fixing.md as related to
-  that spec's DebuggerContext extension — worth doing together.)
 - PLAN_TASK_SYSTEM_PROMPT has zero mention of the selected design — planner
   never scopes a dedicated todo around implementing it.
 - RUN_MAX_LLM_CALLS = 120 — commented as "the money guard," never actually

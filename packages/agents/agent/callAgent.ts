@@ -26,7 +26,6 @@ export type CallAgentState = {
     lastTestErrors: Error[]
     lastToolResult: ToolResult | null
     lastError: Error | null
-    errorsByTaskId: Map<number, Error[]> // taskId (tester) -> errors, if debugger needs a specific tester's output
 }
 
 

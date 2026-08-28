@@ -73,7 +73,7 @@ export default class TypeBuilder {
     
     EpisodicMemory: ClassViewer<'EpisodicMemory', "sessionGoal" | "userRequests" | "impFacts" | "decisions" | "toolResults" | "generatedArtifacts" | "openTasks" | "preferences" | "entities" | "summary">;
     
-    Error: ClassViewer<'Error', "fileName" | "error" | "source">;
+    Error: ClassViewer<'Error', "fileName" | "error" | "source" | "taskId">;
     
     ErrorResponse: ClassViewer<'ErrorResponse', "error" | "file" | "line">;
     
@@ -249,7 +249,7 @@ export default class TypeBuilder {
         ]);
         
         this.Error = this.tb.classViewer("Error", [
-          "fileName","error","source",
+          "fileName","error","source","taskId",
         ]);
         
         this.ErrorResponse = this.tb.classViewer("ErrorResponse", [
