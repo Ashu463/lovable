@@ -135,6 +135,12 @@ export interface ComplexityVerdict {
   
 }
 
+export interface ConflictTaskInfo {
+  task: string
+  summary: string
+  
+}
+
 export interface Context7 {
   action: "context7"
   library: string
@@ -277,6 +283,22 @@ export interface ItemRes {
   title: string
   description: string
   url: string
+  
+}
+
+export interface MergeConflictContext {
+  filePath: string
+  conflictKind: "content" | "deletedByTrunk" | "deletedByTask"
+  conflictText: string
+  currentTask: ConflictTaskInfo
+  trunkTask?: ConflictTaskInfo | null
+  
+}
+
+export interface MergeConflictResolution {
+  resolved: boolean
+  content?: string | null
+  reason: string
   
 }
 

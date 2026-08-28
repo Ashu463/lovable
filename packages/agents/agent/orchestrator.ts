@@ -203,7 +203,12 @@ export class Orchestrator {
                 let summary = result.summary
 
                 if (success) {
-                    const merge = await this.worktreeGit.merge(taskSandbox, taskId)
+                    const merge = await this.worktreeGit.merge(
+                        taskSandbox, taskId,
+                        { task: todo.task, summary: result.summary },
+                        [...this.context, ...context],
+                        taskFiles,
+                    )
                     if (!merge.success) {
                         success = false
                         summary = `Task completed but its worktree failed to merge cleanly — likely a conflicting edit with another task in the same level (e.g. both wired into src/App.tsx): ${merge.content}`
