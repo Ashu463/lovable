@@ -5,6 +5,7 @@ import { requireUser } from "../context";
 import { loadOwnedProject, loadOwnedRun, loadOwnedRunById } from "../authz";
 import { runQueue } from "../../lib/queue";
 import { logger } from "../../lib/utils";
+import { summarizeIncompleteSession } from "../../../../../packages/agents/agent/utils/priorRunSummary";
 
 
 export const chatResolvers = {
@@ -103,6 +104,17 @@ export const chatResolvers = {
         });
         if (!sandboxId) sandboxId = lastRun?.sandboxId ?? null;
         priorRunSummary = lastRun?.summary ?? null;
+
+        if (!priorRunSummary) {
+          const incompleteRun = await ctx.prisma.run.findFirst({
+            where: { projectId, status: { in: ["FAILED", "STOPPED", "IN_PROGRESS"] }, sessionSnapshot: { not: null } },
+            orderBy: { startedAt: "desc" },
+            select: { sessionSnapshot: true },
+          });
+          if (incompleteRun?.sessionSnapshot) {
+            priorRunSummary = await summarizeIncompleteSession(incompleteRun.sessionSnapshot);
+          }
+        }
       }
 
       const run = await ctx.prisma.run.create({

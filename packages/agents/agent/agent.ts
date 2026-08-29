@@ -21,7 +21,6 @@ type AgentLLMResponse = ReadFile | WriteFile | EditFile | DeleteFile | RunComman
 type AgentToolCall = Exclude<AgentLLMResponse, Done | Abort>
 export class Agent{
     private iterations: number
-    private K: number
     private session: Message[] = []
     private context: Message[] = []
     private static encoder = encoding_for_model("gpt-4o")
@@ -41,7 +40,6 @@ export class Agent{
         private callAgentContext: string,
     ){
         this.iterations = 0
-        this.K = COMPACTION_PARAMETER
         this.r2 = new R2()
         this.emitter = createRunEmitter(runId)
         logger.info(`[Agent:${this.runId}] Initialized for user=${this.userId} project=${this.projectId}`)
@@ -75,6 +73,7 @@ export class Agent{
         logger.info(`[Agent:${this.runId}] runLoop starting, maxIterations=${AGENT_MAX_ITERATIONS}`)
         try{
             const updatedSystemPrompt = AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
+
             while(this.iterations < AGENT_MAX_ITERATIONS){
                 logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} starting`)
                 let iterationLog: Message[] = [] // things which should collectively present in context as well as session
@@ -106,9 +105,6 @@ export class Agent{
                     shouldBreak = true
                 }
                 else {
-                    // Everything else in the union is a tool call, and `action` is
-                    // the payload's own discriminator, so there is no separate
-                    // label left that can disagree with the args.
                     const toolType = response.action
                     logger.info(`[Agent:${this.runId}] Tool call requested: ${toolType}`)
                     const toolRequestLog: Message = {
@@ -116,7 +112,6 @@ export class Agent{
                         content: `Requested tool call ${toolType} with args ${JSON.stringify(response)}`,
                         timestamp: new Date().toISOString()
                     }
-                    this.session.push(toolRequestLog)
                     iterationLog.push(toolRequestLog)
                     await this.emitter.emit({
                         type: 'agent_tool_call',
@@ -131,8 +126,6 @@ export class Agent{
                             content: `Result of ${toolType}: ${JSON.stringify(toolResult)}`,
                             timestamp: new Date().toISOString()
                         })
-                        // Only reached when executeTool didn't throw, so these run
-                        // for writes that actually landed in the sandbox.
                         if(response.action === 'writeFile'){
                             await this.syncToR2({action: "write", path: response.path, content: response.content})
                         }
@@ -186,9 +179,6 @@ export class Agent{
 
     async callLLM(systemPrompt: string, userPrompt: string, priorError?: string): Promise<AgentLLMResponse>{
         try{
-            // Feed the previous attempt's validation failure back in as a one-off
-            // correction — appended here, not to this.context, so a successful
-            // retry doesn't leave a permanent "I messed up" note in history.
             const context = priorError
                 ? [...this.context, {
                     role: 'system' as const,
@@ -274,9 +264,6 @@ export class Agent{
         }
     }
 
-    // Dispatches on the payload's own `action` literal, so there is no separate
-    // discriminator to fall out of sync with the args and no per-case null check
-    // — if it parsed as this variant, its fields are present by construction.
     async executeTool(toolCall: AgentToolCall): Promise<string | Screen> {
         switch (toolCall.action) {
             case 'apify':
@@ -351,9 +338,6 @@ export class Agent{
             logger.info(`[Agent:${this.runId}] Building summary from ${this.session.length} session entries`)
             const { title, summary } = await b.GenerateAgentSummary(AGENT_SUMMARY_PROMPT, this.session)
 
-            // The mutation only names a project that has no name yet, so every
-            // run generates a title but only the first one sticks — that's what
-            // keeps the chat title stable across follow-ups.
             try{
                 await backendGql(
                     `mutation NameProject($projectId: ID!, $name: String!) {

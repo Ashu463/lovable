@@ -194,11 +194,6 @@ export class CallAgent{
     async Execute(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<CallAgentResponse>{
         logger.info(`Running call agent`)
 
-        // A fresh message (no pending answers/design selection) might not be
-        // a build request at all — check before Bootstrap, complexity,
-        // clarification, or the sandbox ever get touched. answers/
-        // selectedDesignId are always a continuation of an already-decided
-        // dev flow, never conversational, so the gate never applies there.
         if(!answers && !selectedDesignId){
             let verdict: { isDevelopment: boolean }
             try{
