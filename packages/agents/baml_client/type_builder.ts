@@ -49,7 +49,11 @@ export default class TypeBuilder {
     
     ComplexityVerdict: ClassViewer<'ComplexityVerdict', "complex">;
     
+    ConflictTaskInfo: ClassViewer<'ConflictTaskInfo', "task" | "summary">;
+    
     Context7: ClassViewer<'Context7', "action" | "library" | "query">;
+    
+    ConversationalReply: ClassViewer<'ConversationalReply', "reply">;
     
     DebuggerContext: ClassViewer<'DebuggerContext', "repoTree" | "originalError" | "fixHistory" | "skills" | "recentTurns">;
     
@@ -65,6 +69,8 @@ export default class TypeBuilder {
     
     DesignVariants: ClassViewer<'DesignVariants', "prompts">;
     
+    DevelopmentVerdict: ClassViewer<'DevelopmentVerdict', "isDevelopment">;
+    
     DocsSearch: ClassViewer<'DocsSearch', "type" | "library" | "query">;
     
     Done: ClassViewer<'Done', "action" | "filesEdited">;
@@ -73,7 +79,7 @@ export default class TypeBuilder {
     
     EpisodicMemory: ClassViewer<'EpisodicMemory', "sessionGoal" | "userRequests" | "impFacts" | "decisions" | "toolResults" | "generatedArtifacts" | "openTasks" | "preferences" | "entities" | "summary">;
     
-    Error: ClassViewer<'Error', "fileName" | "error" | "source">;
+    Error: ClassViewer<'Error', "fileName" | "error" | "source" | "taskId">;
     
     ErrorResponse: ClassViewer<'ErrorResponse', "error" | "file" | "line">;
     
@@ -88,6 +94,10 @@ export default class TypeBuilder {
     GetSkill: ClassViewer<'GetSkill', "action" | "skillName">;
     
     ItemRes: ClassViewer<'ItemRes', "title" | "description" | "url">;
+    
+    MergeConflictContext: ClassViewer<'MergeConflictContext', "filePath" | "conflictKind" | "conflictText" | "currentTask" | "trunkTask">;
+    
+    MergeConflictResolution: ClassViewer<'MergeConflictResolution', "resolved" | "content" | "reason">;
     
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
@@ -148,7 +158,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","Context7","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","ConflictTaskInfo","Context7","ConversationalReply","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DevelopmentVerdict","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MergeConflictContext","MergeConflictResolution","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType",
@@ -200,8 +210,16 @@ export default class TypeBuilder {
           "complex",
         ]);
         
+        this.ConflictTaskInfo = this.tb.classViewer("ConflictTaskInfo", [
+          "task","summary",
+        ]);
+        
         this.Context7 = this.tb.classViewer("Context7", [
           "action","library","query",
+        ]);
+        
+        this.ConversationalReply = this.tb.classViewer("ConversationalReply", [
+          "reply",
         ]);
         
         this.DebuggerContext = this.tb.classViewer("DebuggerContext", [
@@ -232,6 +250,10 @@ export default class TypeBuilder {
           "prompts",
         ]);
         
+        this.DevelopmentVerdict = this.tb.classViewer("DevelopmentVerdict", [
+          "isDevelopment",
+        ]);
+        
         this.DocsSearch = this.tb.classViewer("DocsSearch", [
           "type","library","query",
         ]);
@@ -249,7 +271,7 @@ export default class TypeBuilder {
         ]);
         
         this.Error = this.tb.classViewer("Error", [
-          "fileName","error","source",
+          "fileName","error","source","taskId",
         ]);
         
         this.ErrorResponse = this.tb.classViewer("ErrorResponse", [
@@ -278,6 +300,14 @@ export default class TypeBuilder {
         
         this.ItemRes = this.tb.classViewer("ItemRes", [
           "title","description","url",
+        ]);
+        
+        this.MergeConflictContext = this.tb.classViewer("MergeConflictContext", [
+          "filePath","conflictKind","conflictText","currentTask","trunkTask",
+        ]);
+        
+        this.MergeConflictResolution = this.tb.classViewer("MergeConflictResolution", [
+          "resolved","content","reason",
         ]);
         
         this.Message = this.tb.classViewer("Message", [

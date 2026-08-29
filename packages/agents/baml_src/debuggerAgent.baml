@@ -2,6 +2,7 @@ class Error{
     fileName string
     error string
     source "tester" | "build" | "deploy"?
+    taskId int?
 }
 class DebuggingDone{
     action "done"
@@ -32,6 +33,10 @@ function DebuggerAgent(
         {{systemPrompt}}
         {{errors}} - what failed: the command that failed and its output,
   possibly already structured into error type, location, message, and candidate causes.
+  When an error carries a taskId, it's attributed to a specific planned task
+  whose merged changes touched that file — a strong hint at where the bug
+  was introduced, not a guarantee (a shared file can be touched by more than
+  one task).
 
         {% if toolResult %}ToolResult: {{toolResult}}{%endif%}
 

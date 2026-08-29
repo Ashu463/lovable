@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  Context7,  ContextType,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -86,10 +86,17 @@ export namespace partial_types {
     export interface ComplexityVerdict {
       complex?: boolean | null
     }
+    export interface ConflictTaskInfo {
+      task?: string | null
+      summary?: string | null
+    }
     export interface Context7 {
       action?: "context7" | null
       library?: string | null
       query?: string | null
+    }
+    export interface ConversationalReply {
+      reply?: string | null
     }
     export interface DebuggerContext {
       repoTree?: string | null
@@ -128,6 +135,9 @@ export namespace partial_types {
     export interface DesignVariants {
       prompts: string[]
     }
+    export interface DevelopmentVerdict {
+      isDevelopment?: boolean | null
+    }
     export interface DocsSearch {
       type?: "docsSearch" | null
       library?: string | null
@@ -158,6 +168,7 @@ export namespace partial_types {
       fileName?: string | null
       error?: string | null
       source?: "tester" | "build" | "deploy" | null
+      taskId?: number | null
     }
     export interface ErrorResponse {
       error?: string | null
@@ -190,6 +201,18 @@ export namespace partial_types {
       description?: string | null
       url?: string | null
     }
+    export interface MergeConflictContext {
+      filePath?: string | null
+      conflictKind?: "content" | "deletedByTrunk" | "deletedByTask" | null
+      conflictText?: string | null
+      currentTask?: ConflictTaskInfo | null
+      trunkTask?: ConflictTaskInfo | null
+    }
+    export interface MergeConflictResolution {
+      resolved?: boolean | null
+      content?: string | null
+      reason?: string | null
+    }
     export interface Message {
       role?: "user" | "assistant" | "toolCall" | "system" | null
       content?: string | null
@@ -198,7 +221,7 @@ export namespace partial_types {
     export interface PlannerTodo {
       id?: number | null
       task?: string | null
-      agent?: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert" | null
+      agent?: "coder" | "uiExpert" | null
       status?: "pending" | "completed" | null
       dependency: number[]
       designNeeded?: boolean | null

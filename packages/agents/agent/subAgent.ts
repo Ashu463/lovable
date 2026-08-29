@@ -9,7 +9,7 @@ import { CODER_MAX_ITERATIONS, COMPACT_THRESHOLD, DEBUGGERR_MAX_ITERATIONS, RESE
 import { encoding_for_model } from "tiktoken";
 import { CoderContextManager, ContextManager, DebuggerContextManager } from "./utils/context";
 import { SUBAGENT_SUMMARY_PROMPT } from "./config/systemPrompts";
-import type { BaseTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
+import type { BaseTaskInput, DebuggerTaskInput, SessionMap, InputMap, ContextMap, Role, Status, SubAgentResponse } from "../types/subAgentsTypes";
 import { UIExpert } from "./subagents/uiExpert";
 import { E2BSandbox } from "./utils/sandbox";
 import { createRunEmitter, type EventEmitter } from "./events";
@@ -34,7 +34,8 @@ export class SubAgent<T extends keyof ContextMap> {
         private projectId: string,
         private runId: string,
         private sandbox: E2BSandbox,
-        private selectedDesign: string
+        private selectedDesign: string,
+        private baseDir: string,
     ) {
         this.agentInstance = this.createAgent(agentType)
         this.contextManager = this.createContextManager()
@@ -44,12 +45,12 @@ export class SubAgent<T extends keyof ContextMap> {
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign, this.baseDir) as any
         case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
-        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox) as any
+        case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox, this.baseDir) as any
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any
-        case 'uiExpert': return new UIExpert(this.userId, this.projectId, this.sandbox) as any
-        default: throw new Error(`${agentType} doesn't exist`) 
+        case 'uiExpert': return new UIExpert(this.userId, this.projectId, this.sandbox, this.baseDir) as any
+        default: throw new Error(`${agentType} doesn't exist`)
         }
     }
     private createContextManager(){
@@ -93,12 +94,15 @@ export class SubAgent<T extends keyof ContextMap> {
         logger.error(`${this.agentType} task ${this.taskId} halted: ${reason}`)
         this.pushSession('assistant', 'halted', { reason })
         await this.SaveSessionState()
-        return { success: false, summary: await this.BuildSummary() }
+        const summary = await this.BuildSummary()
+        await this.emitter.emit({ type: 'subagent_completed', agent: this.agentType as string, taskId: this.taskId, summary, success: false })
+        return { success: false, summary }
     }
 
     async runLoop(): Promise<SubAgentResponse> {
         this.context = await this.BuildInitialContext()
         let success = true
+        await this.emitter.emit({ type: 'subagent_started', agent: this.agentType as string, taskId: this.taskId, task: (this.input as BaseTaskInput).task?.task })
 
         logger.info(`calling LLM for ${this.agentType}`)
         while (true) {
@@ -147,7 +151,7 @@ export class SubAgent<T extends keyof ContextMap> {
             this.pushSession('tool', 'done', toolRes)
 
             this.context = await this.ManageContext(res, toolRes)
-            await this.emitSSEUpdate(toolRes)
+            await this.emitSSEUpdate(res)
             this.SaveSessionState().catch(err => logger.error(`Failed to save session for task ${this.taskId}: ${err}`))
 
             this.iteration++
@@ -157,10 +161,9 @@ export class SubAgent<T extends keyof ContextMap> {
             }
         }
 
-        return {
-            success,
-            summary: await this.BuildSummary()
-        }
+        const summary = await this.BuildSummary()
+        await this.emitter.emit({ type: 'subagent_completed', agent: this.agentType as string, taskId: this.taskId, summary, success })
+        return { success, summary }
     }
     async Test(): Promise<TesterResponse>{
         const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
@@ -187,15 +190,10 @@ export class SubAgent<T extends keyof ContextMap> {
             default: throw new Error(`No such context builder for ${this.agentType}`)
         }
     }
-    // Shared by coder and uiExpert — they're structurally identical (task +
-    // dependent summaries + repo tree + skills + recent turns), differing
-    // only in which role's skills get loaded. UIExpert reuses this rather
-    // than its own context shape because Phase B of UIExpert (base-template
-    // writing) is mechanically the same tool loop as Coder's.
     private async buildToolLoopContext(role: 'coder' | 'uiExpert'): Promise<CoderContext> {
         const dependentTaskIds = (this.input as BaseTaskInput).task.dependentTasks
         if(this.repoTree === ""){
-            this.repoTree = await this.sandbox.getRepoTree()
+            this.repoTree = await this.sandbox.getRepoTree(this.baseDir)
         }
         const res = await backendGql<{summaries: {summary: string, todo: {taskId: number}}[]}>(
             `query Summaries($projectId: ID!, $runId: ID!) {
@@ -220,16 +218,20 @@ export class SubAgent<T extends keyof ContextMap> {
     }
     async BuildDebuggerContext(): Promise<DebuggerContext>{
         if(this.repoTree === ""){
-            this.repoTree = await this.sandbox.getRepoTree()
+            this.repoTree = await this.sandbox.getRepoTree(this.baseDir)
         }
         const skills = [
             ...(await this.skillStore.globalSkills('debuggerr')),
             ...(await this.skillStore.getRoleSkills('debuggerr')),
             ...(await this.skillStore.getTaskCatalog('debuggerr')),
         ]
+        const errors = (this.input as DebuggerTaskInput).errors
+        const originalError = errors.length > 0
+            ? errors.map(e => `${e.fileName}: ${e.error}`).join('\n')
+            : (this.input as BaseTaskInput).task.task
         return {
             repoTree: this.repoTree,
-            originalError: (this.input as BaseTaskInput).task.task,
+            originalError,
             fixHistory: [],
             skills: skills,
             recentTurns: []
@@ -308,12 +310,12 @@ export class SubAgent<T extends keyof ContextMap> {
         return num
     }
 
-    async emitSSEUpdate(data: unknown) {
+    async emitSSEUpdate(res: any) {
         await this.emitter.emit({
             type: 'subagent_progress',
-            agent: this.agentType,
+            agent: this.agentType as string,
             taskId: this.taskId,
-            data,
+            subagentSummary: this.summarizeToolCall(res),
         })
     }
 

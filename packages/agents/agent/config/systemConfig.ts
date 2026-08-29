@@ -49,6 +49,11 @@ export const TASK_SANDBOX_RETRY_LIMIT = 5
 export const SUBAGENT_LLM_RETRY_ATTEMPTS = 3
 export const SUBAGENT_TOOL_RETRY_ATTEMPTS = 2
 export const SUBAGENT_RETRY_BACKOFF_MS = 1000
+// A whole subagent run failing (max iterations, explicit abort, or haltTask
+// after its own LLM/tool retries are exhausted) is a different failure mode
+// than a transient LLM/tool blip — retried at the orchestrator level, with a
+// fresh SubAgent instance per attempt, not inside SubAgent.withRetry.
+export const SUBAGENT_TASK_RETRY_ATTEMPTS = 2
 export const AGENT_LLM_RETRY_ATTEMPTS = 3
 // A 429 needs to wait out a window, not the ~1s a transient failure needs.
 export const RATE_LIMIT_BACKOFF_MS = 20_000

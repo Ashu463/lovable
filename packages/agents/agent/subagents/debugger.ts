@@ -29,8 +29,8 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
     constructor(
         userId: string,
         projectId: string,
-        sandbox: E2BSandbox
-
+        sandbox: E2BSandbox,
+        private baseDir: string,
     ){super(userId, projectId, sandbox)
         this.researcher = new Researcher(this.userId, this.projectId, this.sandbox)
     }
@@ -55,7 +55,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             response.action === 'runCommand' ||
             response.action === 'editFile'
         ){
-            const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response)
+            const sandboxRes = await this.sandbox.Execute(this.sandbox.sandboxId, response, this.baseDir)
             return {
                 success: sandboxRes.success,
                 editedFiles: sandboxRes.content

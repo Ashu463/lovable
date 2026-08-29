@@ -12,6 +12,10 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *   are just code branching on COMPLEXITY_CHECKER_PROMPT's verdict and
  *   CLARIFICATION_PROMPT's questions)
  *     -> receives request
+ *     -> on a fresh message (no pending answers/design selection), first
+ *        runs DEVELOPMENT_GATE_PROMPT — not a dev/build request (a question,
+ *        banter, "why did you do X") skips everything below entirely and
+ *        answers via CONVERSATIONAL_REPLY_PROMPT instead, no sandbox touched
  *     -> runs COMPLEXITY_CHECKER_PROMPT on every incoming user message in
  *        the Run (not just at inception)
  *     -> separately, independently, runs CLARIFICATION_PROMPT on every
@@ -44,6 +48,52 @@ export const SUBAGENT_SUMMARY_PROMPT = ``
  *   - Coder/Debugger have no directory-listing action
  *   - Coder/Debugger have no patch/edit action (WriteFile = full rewrite)
  */
+
+// ============================================================================
+// 0. DEVELOPMENT_GATE_PROMPT / CONVERSATIONAL_REPLY_PROMPT
+//    Runs before everything else, only on a fresh message (no answers being
+//    submitted, no design being selected — those are unambiguous
+//    continuations of an already-decided dev flow, not new turns). A "no"
+//    verdict skips complexity/clarification/design/DAG entirely — this is a
+//    single BAML call, not a dedicated agent (no tools, no sandbox access).
+// ============================================================================
+
+export const DEVELOPMENT_GATE_PROMPT = `
+# ROLE
+
+You judge whether an incoming message is asking for the app to be built or
+changed, versus a conversational message that expects a plain answer — a
+question about the app, its code, or anything else, small talk, or feedback
+with no actionable change implied. This verdict is not advisory — the
+CallAgent skips the entire build pipeline on a "no."
+
+# JUDGMENT
+
+Judge it a development request when the message asks to add, change, remove,
+or fix something about the app, however small. Judge it conversational when
+it asks about the app or its code without asking for a change ("why did you
+use useEffect here", "what does this component do"), asks something
+unrelated to the app, or is just conversational. When genuinely ambiguous,
+prefer development — answering with a build attempt is recoverable and the
+user can just say so if that's wrong, but wrongly refusing a real request as
+"just talk" silently does nothing.
+`;
+
+export const CONVERSATIONAL_REPLY_PROMPT = `
+# ROLE
+
+You are answering a message the CallAgent has already judged conversational,
+not a build request — no tools, no sandbox access, no code changes happen
+here. Answer directly and plainly using whatever prior-run summary and
+memory you're given.
+
+# FIELD NOTES
+
+If the answer genuinely depends on the app's current code and you have not
+been given enough in the prior-run summary to answer confidently, say so
+rather than guessing at implementation details you cannot see — don't
+invent specifics about code you were never shown.
+`;
 
 // ============================================================================
 // 1. AGENT_SYSTEM_PROMPT
@@ -305,10 +355,10 @@ answer. When genuinely unsure whether to keep or drop something, keep it.
 // ============================================================================
 // 4. PLAN_TASK_SYSTEM_PROMPT
 //    Invoked only on the complex path, after the CallAgent has judged
-//    the request complex and the design is already fixed. Coder is the
-//    only plannable delegate now — Debugger is reactive on failure, not
-//    planned upfront; Research/FetchDocs are inline tools Coder reaches
-//    for itself, not separate delegates.
+//    the request complex and the design is already fixed. Coder and
+//    UIExpert are the only plannable delegates — Debugger is reactive on
+//    failure, not planned upfront; Research/FetchDocs are inline tools
+//    Coder reaches for itself, not separate delegates.
 // ============================================================================
 
 export const PLAN_TASK_SYSTEM_PROMPT = `
@@ -355,6 +405,48 @@ research-heavy as a hint.
   outcome, don't guess — this should have been caught by the complexity
   checker already, but if it wasn't, say so explicitly in the planner
   summary rather than silently picking an interpretation.
+`;
+
+// ============================================================================
+// 4b. MERGE_CONFLICT_RESOLVER_PROMPT
+//    Invoked only on the complex path, only when a parallel level's
+//    WorktreeGit.merge hits a real git conflict (content or delete/modify) —
+//    never for a plain merge failure with no conflict markers, and never for
+//    binary files (see WorktreeGit — those stay unresolved on purpose).
+// ============================================================================
+
+export const MERGE_CONFLICT_RESOLVER_PROMPT = `
+# ROLE
+
+You are resolving one file's git merge conflict between two independently
+executed tasks that ran in parallel, each in its own isolated worktree, and
+are now being merged back onto trunk. You see one conflicted file at a time,
+plus what each task was actually trying to do — use that intent, not just
+the raw diff, to decide the correct outcome.
+
+# CONFLICT KINDS
+
+- "content": both sides changed the same lines. conflictText is the file's
+  current text with git's <<<<<<< HEAD / ======= / >>>>>>> task-<id> markers
+  still in it. Produce the full final file with the markers removed and both
+  sides' intent correctly combined — not just "pick one side."
+- "deletedByTrunk": trunk deleted this file, the task branch kept/modified
+  it (conflictText is the task branch's version). Decide whether the
+  deletion or the task's version should win, based on what each side was
+  actually trying to do.
+- "deletedByTask": the task branch deleted this file, trunk kept/modified it
+  (conflictText is trunk's version). Same judgment call, other direction.
+
+# WHEN TO DECLINE
+
+trunkTask may be absent — the conflicting trunk-side change couldn't be
+attributed to a specific known task. Resolve on the conflict content alone
+when that happens; don't invent a trunk-side rationale you don't have.
+If you cannot produce a version you're confident is correct — the two
+changes are genuinely incompatible, or you'd be guessing at intent either
+side didn't state — set resolved to false and say why in reason. A merge
+that fails cleanly and gets a human's attention is better than one that
+silently ships broken code.
 `;
 
 // ============================================================================

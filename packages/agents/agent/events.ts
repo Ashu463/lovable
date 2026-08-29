@@ -9,8 +9,9 @@ export type CallAgentEvent = AgentEvents |
     | { type: "designs_generating"; count: number }
     | { type: "select_design"; designs: DesignOption[] }
     | { type: "agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
+    | { type: "subagent_started"; agent: string; taskId?: number; task?: string }
     | { type: "subagent_progress"; agent: string; taskId?: number; data?: unknown, subagentSummary?: string }
-    | { type: "subagent_completed"; agent: string; taskId?: number; summary: string }
+    | { type: "subagent_completed"; agent: string; taskId?: number; summary: string; success: boolean }
     | { type: "run_completed"; result: CallAgentResponse }
     | { type: "run_failed"; taskId?: string, error: string }
     | { type: "call_agent_completed"; summary: string};

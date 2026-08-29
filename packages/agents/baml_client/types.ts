@@ -135,10 +135,21 @@ export interface ComplexityVerdict {
   
 }
 
+export interface ConflictTaskInfo {
+  task: string
+  summary: string
+  
+}
+
 export interface Context7 {
   action: "context7"
   library: string
   query: string
+  
+}
+
+export interface ConversationalReply {
+  reply: string
   
 }
 
@@ -193,6 +204,11 @@ export interface DesignVariants {
   
 }
 
+export interface DevelopmentVerdict {
+  isDevelopment: boolean
+  
+}
+
 export interface DocsSearch {
   type: "docsSearch"
   library: string
@@ -231,6 +247,7 @@ export interface Error {
   fileName: string
   error: string
   source?: "tester" | "build" | "deploy" | null
+  taskId?: number | null
   
 }
 
@@ -279,6 +296,22 @@ export interface ItemRes {
   
 }
 
+export interface MergeConflictContext {
+  filePath: string
+  conflictKind: "content" | "deletedByTrunk" | "deletedByTask"
+  conflictText: string
+  currentTask: ConflictTaskInfo
+  trunkTask?: ConflictTaskInfo | null
+  
+}
+
+export interface MergeConflictResolution {
+  resolved: boolean
+  content?: string | null
+  reason: string
+  
+}
+
 export interface Message {
   role: "user" | "assistant" | "toolCall" | "system"
   content: string
@@ -289,7 +322,7 @@ export interface Message {
 export interface PlannerTodo {
   id: number
   task: string
-  agent: "coder" | "debuggerr" | "tester" | "researcher" | "uiExpert"
+  agent: "coder" | "uiExpert"
   status: "pending" | "completed"
   dependency: number[]
   designNeeded: boolean

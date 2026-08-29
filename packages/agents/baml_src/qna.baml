@@ -9,6 +9,34 @@ class Question{
 class ComplexityVerdict{
     complex bool
 }
+class DevelopmentVerdict{
+    isDevelopment bool
+}
+class ConversationalReply{
+    reply string
+}
+
+function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> DevelopmentVerdict {
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}} - the message to assess.
+
+        {{ctx.output_format}}
+    "#
+}
+
+function RespondConversationally(systemPrompt: string, userPrompt: string, priorContext: string, semanticMem: string) -> ConversationalReply {
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}} - the message to answer.
+        {{priorContext}} - summary of this project's prior run(s), if any.
+        {{semanticMem}} - what's known about this user across projects, if any.
+
+        {{ctx.output_format}}
+    "#
+}
 
 function CheckComplexity(systemPrompt: string, userPrompt: string) -> ComplexityVerdict {
     client OpenAIGeneric
@@ -80,5 +108,20 @@ different scopes of work.
       Built a very complex todo app with black background.
     "#
     isComplex true
+  }
+}
+
+test CheckIsDevelopmentRequestTest {
+  functions [CheckIsDevelopmentRequest]
+  args {
+    systemPrompt #"
+      # ROLE
+
+You judge whether an incoming message is asking for the app to be built or
+changed, versus a conversational message that expects a plain answer.
+    "#
+    userPrompt #"
+      Why did you use useEffect here instead of just fetching in the handler?
+    "#
   }
 }

@@ -29,6 +29,10 @@ export type RunState =
   | { status: "clarification_needed"; runId: string; projectId: string; userPrompt: string; questions: Question[] }
   | { status: "select_design"; runId: string; projectId: string; userPrompt: string; designs: DesignOption[] }
   | { status: "completed"; runId: string; projectId: string; userPrompt: string; result: CompletedResult }
+  // A conversational message never touches the sandbox — no preview/code
+  // pane makes sense for it, so it's kept distinct from "completed" rather
+  // than reusing that shape with fields that don't apply.
+  | { status: "conversation"; runId: string; projectId: string; userPrompt: string; reply: string }
   | { status: "failed"; runId: string; projectId: string; userPrompt: string; error: string };
 
 export interface ChatMessage {
@@ -69,7 +73,7 @@ interface RunStateResponse {
     status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED" | "STOPPED";
     stalled: boolean;
     pauseEvent: { type: "clarification_needed"; questions: Question[] } | { type: "select_design"; designs: DesignOption[] } | null;
-    completedEvent: { type: "run_completed"; result: CompletedResult } | null;
+    completedEvent: { type: "run_completed"; result: CallAgentResponse } | null;
     failedEvent: { type: "run_failed"; error: string } | null;
   };
 }
@@ -127,6 +131,11 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 setState({ status: "select_design", runId, projectId, userPrompt, designs: event.designs });
                 return;
               case "run_completed": {
+                if (event.result.status === "conversation") {
+                  pushMessage("system", event.result.reply);
+                  setState({ status: "conversation", runId, projectId, userPrompt, reply: event.result.reply });
+                  return;
+                }
                 const result = event.result as CompletedResult;
                 pushMessage("system", result.summary);
                 setState({ status: "completed", runId, projectId, userPrompt, result });
@@ -275,7 +284,13 @@ export function RunProvider({ children }: { children: ReactNode }) {
           setState({ status: "select_design", runId, projectId, userPrompt, designs: pauseEvent.designs });
           return true;
         }
-        if (status === "COMPLETED" && completedEvent?.type === "run_completed") {
+        if (status === "COMPLETED" && completedEvent?.type === "run_completed" && completedEvent.result.status === "conversation") {
+          setState({ status: "conversation", runId, projectId, userPrompt, reply: completedEvent.result.reply });
+          pushMessage("system", completedEvent.result.reply);
+          return true;
+        }
+        if (status === "COMPLETED" && completedEvent?.type === "run_completed" && completedEvent.result.status === "completed") {
+          const result = completedEvent.result;
           // Render straight away, but blank the stored preview URL first: it
           // points at a sandbox that has almost certainly expired, and showing a
           // dead iframe is worse than showing "starting sandbox". projectSession
@@ -285,9 +300,9 @@ export function RunProvider({ children }: { children: ReactNode }) {
             runId,
             projectId,
             userPrompt,
-            result: { ...completedEvent.result, previewUrl: "" },
+            result: { ...result, previewUrl: "" },
           });
-          if (completedEvent.result.summary) pushMessage("system", completedEvent.result.summary);
+          if (result.summary) pushMessage("system", result.summary);
 
           void gql<{ projectSession: { previewUrl: string | null } }>(PROJECT_SESSION, { id: projectId })
             .then((session) =>

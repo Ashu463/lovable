@@ -29,11 +29,12 @@ export type CallAgentSSE = {
 //     summary: string
 // }
 // clarification_needed, select_design, 
-export type CallAgentResponse = 
-      clarification_needed 
-    | design_needed 
+export type CallAgentResponse =
+      clarification_needed
+    | design_needed
     | {status: 'error', reason: string, data?: any}
     | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
+    | {status: 'conversation', reply: string}
 export type clarification_needed = {
     status: 'clarification_needed',
     questions: Question[],
