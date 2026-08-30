@@ -322,7 +322,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async CoderAgent(
-        systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+        systemPrompt: string,context: types.CoderContext,
         __baml_options__?: BamlCallOptions<never>
         ): Promise<types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort> {
           try {
@@ -336,7 +336,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.CoderAgent(
-          systemPrompt,figmaBoilerPlate,context,
+          systemPrompt,context,
           __baml_options__
           );
 
@@ -360,7 +360,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "CoderAgent",
             {
-            "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+            "systemPrompt": systemPrompt,"context": context
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -1752,7 +1752,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             CoderAgent(
-            systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+            systemPrompt: string,context: types.CoderContext,
             __baml_options__?: BamlCallOptions<never>
             ): BamlStream<partial_types.WriteFile | partial_types.ReadFile | partial_types.EditFile | partial_types.RunCommand | partial_types.DeleteFile | partial_types.Research | partial_types.GetSkill | partial_types.Done | partial_types.Abort, types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort>
               {
@@ -1801,7 +1801,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "CoderAgent",
                 {
-                "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate ?? null,"context": context
+                "systemPrompt": systemPrompt,"context": context
                 },
                 undefined,
                 this.ctxManager.cloneContext(),

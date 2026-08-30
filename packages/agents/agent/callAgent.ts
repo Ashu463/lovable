@@ -413,7 +413,7 @@ export const runComplexTaskFn = inngest.createFunction(
         try {
             const orchestrator = new Orchestrator(
                 data.userId, data.projectId, data.runId, data.sandboxId,
-                data.semanticMem, data.selectedDesign, data.updatedPrompt, data.priorContext,
+                data.semanticMem, data.updatedPrompt, data.priorContext,
             )
             const orchestratorResult = await orchestrator.Execute(step)
             if (orchestratorResult.status === 'error') return orchestratorResult

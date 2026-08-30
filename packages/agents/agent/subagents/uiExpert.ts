@@ -20,10 +20,6 @@ type UIExpertAgentResponse = {
 
 export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExpertLLMResponse, UIExpertAgentResponse>{
 
-    // Phase A runs once, on the first callLLM, and caches its result for the
-    // rest of the tool loop — Phase A produces the design, Phase B (every
-    // call after) translates it, so there's no reason to re-run Phase A per
-    // iteration.
     private htmlDesign: string | null = null
 
     constructor(

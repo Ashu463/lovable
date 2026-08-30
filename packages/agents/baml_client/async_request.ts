@@ -175,7 +175,7 @@ env?: Record<string, string | undefined>
       }
       
   async CoderAgent(
-  systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+  systemPrompt: string,context: types.CoderContext,
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -194,7 +194,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "CoderAgent",
       {
-      "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+      "systemPrompt": systemPrompt,"context": context
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -973,7 +973,7 @@ env?: Record<string, string | undefined>
           }
           
       async CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+      systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -992,7 +992,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "CoderAgent",
           {
-          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"context": context
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),

@@ -171,7 +171,7 @@ export class HttpRequest {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+      systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -190,7 +190,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "CoderAgent",
         {
-          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -969,7 +969,7 @@ export class HttpStreamRequest {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+      systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -988,7 +988,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "CoderAgent",
         {
-          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

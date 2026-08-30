@@ -450,7 +450,7 @@ silently ships broken code.
 
 // ============================================================================
 // 5. CODER_PROMPT
-//    function CoderAgent(systemPrompt, figmaBoilerPlate?, context: CoderContext)
+//    function CoderAgent(systemPrompt, context: CoderContext)
 //      -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done | Abort
 // ============================================================================
 

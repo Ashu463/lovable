@@ -298,7 +298,7 @@ export class BamlSyncClient {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+      systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort {
     try {
@@ -330,7 +330,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "CoderAgent",
         {
-          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
