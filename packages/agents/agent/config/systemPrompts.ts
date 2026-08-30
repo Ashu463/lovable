@@ -1,6 +1,5 @@
 export const EPISODIC_MEMORY_GENERATOR_PROMPT = ``
 export const COMPRESS_EPISODIC_MEM_PROMPT = ``
-export const SUBAGENT_SUMMARY_PROMPT = ``
 
 /**
  * LOVABLE — AGENT SYSTEM PROMPTS (v2)
@@ -339,7 +338,7 @@ happened so far.
 # WHAT TO DISCARD
 
 - Full transcripts of completed delegate tasks — those already have their
-  own digest (SUBAGENT_SUMMARY_PROPMT for coder/debugger runs) that's
+  own digest (SUBAGENT_SUMMARY_PROMPT for coder/debugger runs) that's
   sufficient here; don't duplicate the full detail at this level.
 - Superseded complexity verdicts for requests that are already fully
   resolved and not referenced again.
@@ -954,13 +953,13 @@ this pass, its detail should survive with it, not just its existence.
 `;
 
 // ============================================================================
-// 12. SUBAGENT_SUMMARY_PROPMT
+// 12. SUBAGENT_SUMMARY_PROMPT
 //     Digests a finished Coder or Debugger run for the CallAgent's
 //     persistent state (complex path only — UIExpert already ran once at
 //     inception and isn't a re-invoked delegate; Research is inline).
 // ============================================================================
 
-export const SUBAGENT_SUMMARY_PROPMT = `
+export const SUBAGENT_SUMMARY_PROMPT = `
 ----------Update: Keep this really short-------------
 # ROLE
 

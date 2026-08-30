@@ -19,10 +19,9 @@ export async function runCallAgent(
   semanticMem: string,
   answers?: Answers[],
   selectedDesignId?: string,
-  priorRunSummary?: string | null,
 ): Promise<any> {
 
-  const orchestrator: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem, priorRunSummary ?? null)
+  const orchestrator: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem)
 
   try {
     const result = await orchestrator.Execute(userPrompt, answers, selectedDesignId)

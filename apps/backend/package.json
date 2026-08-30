@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot src/index.ts",
-    "worker": "bun --hot src/lib/worker.ts"
+    "worker": "bun --hot src/lib/worker.ts",
+    "inngest:dev": "bunx inngest-cli@latest dev -u http://localhost:3001/api/inngest"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -35,6 +36,7 @@
     "google-auth-library": "^10.9.0",
     "graphql": "^16.11.0",
     "graphql-sse": "^2.6.0",
+    "inngest": "^4.18.1",
     "ioredis": "^5.11.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0",

@@ -5,7 +5,6 @@ import { requireUser } from "../context";
 import { loadOwnedProject, loadOwnedRun, loadOwnedRunById } from "../authz";
 import { runQueue } from "../../lib/queue";
 import { logger } from "../../lib/utils";
-import { summarizeIncompleteSession } from "../../../../../packages/agents/agent/utils/priorRunSummary";
 
 
 export const chatResolvers = {
@@ -95,26 +94,18 @@ export const chatResolvers = {
           ).id;
 
       let sandboxId = args.sandboxId ?? null;
-      let priorRunSummary: string | null = null;
-      if (args.projectId) {
+      if (args.projectId && !sandboxId) {
+        // Reuse the last completed run's sandbox if the caller didn't hand
+        // one in — narrative continuity (priorRunSummary) used to be fetched
+        // here too, but that value never survived a continueRun re-enqueue
+        // (see packages/agents/agent/callAgent.ts::loadProjectContext, which
+        // fetches it live instead, correctly, on every Execute() call).
         const lastRun = await ctx.prisma.run.findFirst({
           where: { projectId, status: "COMPLETED" },
           orderBy: { startedAt: "desc" },
-          select: { sandboxId: true, summary: true },
+          select: { sandboxId: true },
         });
-        if (!sandboxId) sandboxId = lastRun?.sandboxId ?? null;
-        priorRunSummary = lastRun?.summary ?? null;
-
-        if (!priorRunSummary) {
-          const incompleteRun = await ctx.prisma.run.findFirst({
-            where: { projectId, status: { in: ["FAILED", "STOPPED", "IN_PROGRESS"] }, sessionSnapshot: { not: null } },
-            orderBy: { startedAt: "desc" },
-            select: { sessionSnapshot: true },
-          });
-          if (incompleteRun?.sessionSnapshot) {
-            priorRunSummary = await summarizeIncompleteSession(incompleteRun.sessionSnapshot);
-          }
-        }
+        sandboxId = lastRun?.sandboxId ?? null;
       }
 
       const run = await ctx.prisma.run.create({
@@ -141,7 +132,6 @@ export const chatResolvers = {
           runId: run.id,
           semanticMem: owner.semanticMem,
           sandboxId,
-          priorRunSummary,
         });
         logger.info(`Enqueued run ${run.id}`);
       } catch (e) {

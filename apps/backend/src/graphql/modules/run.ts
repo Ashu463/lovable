@@ -47,6 +47,39 @@ export const runResolvers = {
         orderBy: { createdAt: "asc" },
       });
     },
+
+    projectTaskSummaries: async (
+      _parent: unknown,
+      args: { projectId: string },
+      ctx: GraphQLContext,
+    ) => {
+      await loadOwnedProject(ctx, args.projectId);
+      return ctx.prisma.taskSummary.findMany({
+        where: { todo: { run: { projectId: args.projectId } } },
+        orderBy: { createdAt: "asc" },
+      });
+    },
+
+    lastRunNarrativeSource: async (
+      _parent: unknown,
+      args: { projectId: string },
+      ctx: GraphQLContext,
+    ) => {
+      await loadOwnedProject(ctx, args.projectId);
+      const lastCompleted = await ctx.prisma.run.findFirst({
+        where: { projectId: args.projectId, status: "COMPLETED" },
+        orderBy: { startedAt: "desc" },
+        select: { summary: true },
+      });
+      if (lastCompleted?.summary) return { summary: lastCompleted.summary, incompleteSessionSnapshot: null };
+
+      const incomplete = await ctx.prisma.run.findFirst({
+        where: { projectId: args.projectId, status: { in: ["FAILED", "STOPPED", "IN_PROGRESS"] }, sessionSnapshot: { not: null } },
+        orderBy: { startedAt: "desc" },
+        select: { sessionSnapshot: true },
+      });
+      return { summary: null, incompleteSessionSnapshot: incomplete?.sessionSnapshot ?? null };
+    },
   },
 
   // Nested fields are only hit when a query actually selects them, so the extra

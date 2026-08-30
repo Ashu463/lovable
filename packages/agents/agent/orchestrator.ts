@@ -15,7 +15,6 @@
 //   - context engine push/pull
 //   - the LLM continue/replan/abort decision at each level boundary
 
-import { Inngest } from "inngest"
 import { b } from "../baml_client"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
 import type { TesterContext } from "../baml_client"
@@ -32,8 +31,6 @@ import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
-
-export const inngest = new Inngest({ id: "lovable-agents" })
 
 // ---------------------------------------------------------------------------
 // State that has to survive a step boundary must be JSON-serializable —
@@ -344,7 +341,7 @@ export class Orchestrator {
             const failedTasks = levelOut.results.filter(r => !r.success)
             if (failedTasks.length > 0) {
                 const reason = `Task(s) ${failedTasks.map(t => t.taskId).join(', ')} failed after ${SUBAGENT_TASK_RETRY_ATTEMPTS} attempt(s) in level ${levelIndex}: ${failedTasks.map(t => t.summary).join(' | ')}`
-                await this.emitter.emit({ type: 'run_failed', error: reason })
+                await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: reason }))
                 return { status: 'error', reason }
             }
 
@@ -359,8 +356,9 @@ export class Orchestrator {
                 this.state = gateOut.state
                 this.allSummaries.push(...gateOut.summaries)
                 if (!gateOut.success) {
-                    await this.emitter.emit({ type: 'run_failed', error: `Merge gate failed after level ${levelIndex}` })
-                    return { status: 'error', reason: `Merge gate failed after level ${levelIndex}` }
+                    const reason = `Merge gate failed after level ${levelIndex}`
+                    await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: reason }))
+                    return { status: 'error', reason }
                 }
             }
 
@@ -370,7 +368,7 @@ export class Orchestrator {
             const remaining = this.todos.filter(t => !this.context.some(c => c.taskId === t.id))
             const decision = await step.run(`level-${levelIndex}-decide`, () => this.decideNextStep(levelOut.results, remaining))
             if (decision.action === 'abort') {
-                await this.emitter.emit({ type: 'run_failed', error: decision.reason })
+                await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: decision.reason }))
                 return { status: 'error', reason: decision.reason }
             }
             // decision.action === 'replan' has no handler yet — decideNextStep
@@ -383,31 +381,6 @@ export class Orchestrator {
         return { status: 'completed', summary, todos: this.todos }
     }
 }
-
-type RunEventData = {
-    userId: string
-    projectId: string
-    runId: string
-    sandboxId: string
-    semanticMem: string
-    selectedDesign: string
-    updatedPrompt: string
-    priorContext: string
-}
-
-export const runComplexTaskFn = inngest.createFunction(
-    { id: "run-complex-task", triggers: [{ event: "callAgent/run.complex" }] },
-    async ({ event, step }) => {
-        const data = event.data as RunEventData
-        const orchestrator = new Orchestrator(
-            data.userId, data.projectId, data.runId, data.sandboxId,
-            data.semanticMem, data.selectedDesign, data.updatedPrompt, data.priorContext,
-        )
-        return await orchestrator.Execute(step)
-    },
-)
-
-export const functions = [runComplexTaskFn]
 
 /*Ideas
 

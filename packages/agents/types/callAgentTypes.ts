@@ -35,6 +35,11 @@ export type CallAgentResponse =
     | {status: 'error', reason: string, data?: any}
     | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
     | {status: 'conversation', reply: string}
+    // Build work now runs as an Inngest function, dispatched and forgotten —
+    // this is what Execute() itself resolves with. The real outcome (this
+    // same 'completed' shape, or 'error') arrives later via the run_completed/
+    // run_failed SSE events the Inngest function emits when it finishes.
+    | {status: 'in_progress', runId: string}
 export type clarification_needed = {
     status: 'clarification_needed',
     questions: Question[],
