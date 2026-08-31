@@ -16,6 +16,7 @@
 //   - the LLM continue/replan/abort decision at each level boundary
 
 import { b } from "../baml_client"
+import type { UIPreferenceQA } from "../types/callAgentTypes"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
 import type { TesterContext } from "../baml_client"
 import { DAG } from "./services/dag"
@@ -75,6 +76,7 @@ export class Orchestrator {
         private semanticMem: string,
         private updatedPrompt: string,
         private priorContext: string,
+        private uiPreferences: UIPreferenceQA[],
     ) {
         this.emitter = createRunEmitter(runId)
     }
@@ -98,6 +100,7 @@ export class Orchestrator {
                     task: { ...base, agentType: 'uiExpert', agentSpecificData: {} },
                     agentType: 'uiExpert',
                     updatedPrompt: this.updatedPrompt,
+                    uiPreferences: this.uiPreferences,
                 } as unknown as InputMap[T]
             case 'debuggerr':
                 if (!state.lastToolResult) throw new Error(`debuggerr input requested without a last tool result`)

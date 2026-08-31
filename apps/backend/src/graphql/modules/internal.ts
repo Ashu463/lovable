@@ -6,9 +6,10 @@ import { logger } from "../../lib/utils";
 // Statuses the run moves to when the orchestrator emits a terminal event. This
 // is the authoritative write — the redis pub/sub path only fires when a browser
 // happens to be connected.
-const STATUS_FOR_EVENT: Record<string, "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED"> = {
+const STATUS_FOR_EVENT: Record<string, "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "AWAITING_UI_PREFERENCE" | "COMPLETED" | "FAILED"> = {
   clarification_needed: "CLARIFICATION_NEEDED",
   select_design: "AWAITING_DESIGN_SELECTION",
+  ui_preference_needed: "AWAITING_UI_PREFERENCE",
   run_completed: "COMPLETED",
   run_failed: "FAILED",
 };
@@ -53,6 +54,33 @@ export const internalResolvers = {
       return ctx.prisma.$transaction(
         args.questions.map((q) =>
           ctx.prisma.question.create({
+            data: {
+              id: randomUUIDv7(),
+              runId: args.runId,
+              projectId: args.projectId,
+              question: q.question,
+              options: q.option,
+              createdAt: new Date(),
+            },
+          }),
+        ),
+      );
+    },
+
+    saveUIPreferenceQuestions: async (
+      _parent: unknown,
+      args: {
+        projectId: string;
+        runId: string;
+        questions: { question: string; option: string[] }[];
+      },
+      ctx: GraphQLContext,
+    ) => {
+      requireInternal(ctx);
+
+      return ctx.prisma.$transaction(
+        args.questions.map((q) =>
+          ctx.prisma.uIPreferenceQuestion.create({
             data: {
               id: randomUUIDv7(),
               runId: args.runId,

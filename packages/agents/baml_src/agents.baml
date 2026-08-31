@@ -16,6 +16,38 @@ client Gemini {
     model "gemini-3.5-flash"
   }
 }
+client Groq {
+  provider "openai-generic"
+
+  options {
+    base_url env.GROQ_BASE_URL
+    api_key env.GROQ_API_KEY
+
+    model "openai/gpt-oss-20b"
+
+    temperature 0.3
+
+    response_format {
+      type "json_object"
+    }
+  }
+}
+
+// Groq's json_object mode requires an object at the JSON root, so it
+// rejects top-level array responses (e.g. "[]") even when correct.
+// Used for functions whose return type is an array.
+client GroqArray {
+  provider "openai-generic"
+
+  options {
+    base_url env.GROQ_BASE_URL
+    api_key env.GROQ_API_KEY
+
+    model "openai/gpt-oss-20b"
+
+    temperature 0.3
+  }
+}
 client<llm> OpenRouter {
   provider "openai-generic"
 
@@ -87,7 +119,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAIGeneric
+    client Groq
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -231,7 +263,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenAIGeneric
+    client Groq
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the

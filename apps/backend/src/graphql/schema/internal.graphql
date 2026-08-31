@@ -30,6 +30,8 @@ extend type Mutation {
   "Bulk-saves generated designs and echoes back the rows with ids."
   saveDesigns(projectId: ID!, designs: [DesignInput!]!): [Design!]!
   saveQuestions(projectId: ID!, runId: ID!, questions: [PlannedQuestionInput!]!): [Question!]!
+  "Same shape as saveQuestions, but for the project-level UI preference question."
+  saveUIPreferenceQuestions(projectId: ID!, runId: ID!, questions: [PlannedQuestionInput!]!): [UIPreferenceQuestion!]!
   saveTodos(projectId: ID!, runId: ID!, todos: [PlannedTodoInput!]!): [Todo!]!
   "Marks the todo completed and upserts its summary."
   saveTaskSummary(projectId: ID!, runId: ID!, taskId: Int!, summary: String!): TaskSummary!

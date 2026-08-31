@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{ _.role("system") }}
         {{systemPrompt}}
@@ -66,7 +66,7 @@ function UIExpertAgent(
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Done | Abort
 {
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{systemPrompt}}
         Whatever else {{context}} carries about the current codebase state.

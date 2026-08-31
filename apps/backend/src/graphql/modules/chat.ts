@@ -21,6 +21,7 @@ export const chatResolvers = {
       const eventTypeForStatus: Record<string, string> = {
         CLARIFICATION_NEEDED: "clarification_needed",
         AWAITING_DESIGN_SELECTION: "select_design",
+        AWAITING_UI_PREFERENCE: "ui_preference_needed",
         COMPLETED: "run_completed",
         FAILED: "run_failed",
       };
@@ -37,7 +38,8 @@ export const chatResolvers = {
 
       const paused =
         run.status === "CLARIFICATION_NEEDED" ||
-        run.status === "AWAITING_DESIGN_SELECTION";
+        run.status === "AWAITING_DESIGN_SELECTION" ||
+        run.status === "AWAITING_UI_PREFERENCE";
 
       // A run only leaves IN_PROGRESS when the agent emits a terminal event, so
       // a worker restart or a job that died mid-flight leaves the row building
@@ -151,6 +153,7 @@ export const chatResolvers = {
         runId: string;
         answers: { question: string; answer: string }[];
         selectedDesignId?: string | null;
+        uiPreferenceAnswers: { questionId: string; answer: string }[];
       },
       ctx: GraphQLContext,
     ) => {
@@ -159,7 +162,8 @@ export const chatResolvers = {
 
       if (
         run.status !== "CLARIFICATION_NEEDED" &&
-        run.status !== "AWAITING_DESIGN_SELECTION"
+        run.status !== "AWAITING_DESIGN_SELECTION" &&
+        run.status !== "AWAITING_UI_PREFERENCE"
       ) {
         throw new GraphQLError(`Run ${run.id} isn't awaiting input`, {
           extensions: { code: "CONFLICT", http: { status: 409 } },
@@ -170,6 +174,55 @@ export const chatResolvers = {
       if (!owner) {
         throw new GraphQLError("User not found", {
           extensions: { code: "NOT_FOUND", http: { status: 404 } },
+        });
+      }
+
+      // Answers arrive keyed by question text (AgentAnswerInput), so they're
+      // matched back to the saved rows here. Without this the answers only
+      // ever lived in this one job payload and were lost the moment the run
+      // paused again for a UI preference.
+      for (const given of args.answers) {
+        const question = await ctx.prisma.question.findFirst({
+          where: { projectId: args.projectId, question: given.question },
+          orderBy: { createdAt: "desc" },
+        });
+        if (!question) continue;
+        await ctx.prisma.answers.upsert({
+          where: { questionId: question.id },
+          create: {
+            id: randomUUIDv7(),
+            runId: run.id,
+            questionId: question.id,
+            questionText: question.question,
+            answer: given.answer,
+            answeredAt: new Date(),
+          },
+          update: { answer: given.answer, answeredAt: new Date() },
+        });
+      }
+
+      // Persisted here (not just passed through job data) so they're fetchable
+      // by every future run on this project, not just this one.
+      for (const pref of args.uiPreferenceAnswers) {
+        const question = await ctx.prisma.uIPreferenceQuestion.findFirst({
+          where: { id: pref.questionId, projectId: args.projectId },
+        });
+        if (!question) {
+          throw new GraphQLError(`UI preference question ${pref.questionId} not found`, {
+            extensions: { code: "NOT_FOUND", http: { status: 404 } },
+          });
+        }
+        await ctx.prisma.uIPreferenceAnswer.upsert({
+          where: { questionId: pref.questionId },
+          create: {
+            id: randomUUIDv7(),
+            projectId: args.projectId,
+            questionId: pref.questionId,
+            questionText: question.question,
+            answer: pref.answer,
+            answeredAt: new Date(),
+          },
+          update: { answer: pref.answer, answeredAt: new Date() },
         });
       }
 

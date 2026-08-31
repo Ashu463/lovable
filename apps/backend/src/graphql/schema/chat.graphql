@@ -6,6 +6,12 @@ input AgentAnswerInput {
   answer: String!
 }
 
+"One UI preference answer, keyed by question id since the answers are persisted project-wide."
+input UIPreferenceAnswerInput {
+  questionId: ID!
+  answer: String!
+}
+
 "A run's reconstructable UI state, for reopening /w/:runId after a refresh."
 type RunState {
   runId: ID!
@@ -21,7 +27,7 @@ type RunState {
   terminal event.
   """
   stalled: Boolean!
-  "Populated only while CLARIFICATION_NEEDED or AWAITING_DESIGN_SELECTION."
+  "Populated only while CLARIFICATION_NEEDED, AWAITING_DESIGN_SELECTION, or AWAITING_UI_PREFERENCE."
   pauseEvent: JSON
   completedEvent: JSON
   failedEvent: JSON
@@ -34,11 +40,12 @@ extend type Query {
 extend type Mutation {
   "Starts a run, creating the project too when projectId is omitted."
   createRun(projectId: ID, userPrompt: String!, sandboxId: String): Run!
-  "Resumes a run paused for clarification or design selection. Does not create a new run."
+  "Resumes a run paused for clarification, design selection, or a UI preference question. Does not create a new run."
   continueRun(
     projectId: ID!
     runId: ID!
     answers: [AgentAnswerInput!]! = []
     selectedDesignId: ID
+    uiPreferenceAnswers: [UIPreferenceAnswerInput!]! = []
   ): Run!
 }

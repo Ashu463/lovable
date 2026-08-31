@@ -1,9 +1,9 @@
 import { Inngest } from "inngest"
-import type { CallAgentResponse, CallAgentSSE, Project, User, Answers, BootstrapResponse, DesignOption } from "../types/callAgentTypes"
+import type { CallAgentResponse, CallAgentSSE, Project, User, Answers, BootstrapResponse, DesignOption, UIPreferenceQA, UIPreferenceQuestion } from "../types/callAgentTypes"
 import { E2BSandbox } from "./utils/sandbox"
 import { b } from "../baml_client"
 import {type Error, type Question, type PlannerTodo, type ToolResult} from '../baml_client/types'
-import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, DEVELOPMENT_GATE_PROMPT, CONVERSATIONAL_REPLY_PROMPT } from "./config/systemPrompts"
+import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, UI_PREFERENCE_PROMPT, DEVELOPMENT_GATE_PROMPT, CONVERSATIONAL_REPLY_PROMPT } from "./config/systemPrompts"
 import { Agent } from "./agent"
 import { PROJECT_ROOT } from "./config/systemConfig"
 import { Orchestrator, type StepRunner } from "./orchestrator"
@@ -36,8 +36,10 @@ export class CallAgent{
     private context: CallAgentContext[]
     private lastRunSummary: string = ""
     private selectedDesign: string = ""
+    private uiPreferences: UIPreferenceQA[] = []
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore()
+    private isComplex: boolean
     constructor(
         public userId: string,
         public projectId: string,
@@ -50,43 +52,52 @@ export class CallAgent{
         this.context = []
     }
 
-    async Bootstrap(userPrompt: string, answers?: Answers[]): Promise<BootstrapResponse>{
+    async Bootstrap(userPrompt: string): Promise<BootstrapResponse>{
         let complexity: boolean = false
         logger.info(`Starting to fetch qeustions and designs`)
-        // graphql power. 3 in 1
         const bootstrap = await backendGql<{
             questions: {question: string, options: string[]}[],
             designs: {id: string, htmlContent: string, isSelected: boolean}[],
             project: {isComplex: boolean | null},
+            currentUIPreferences: {questionText: string, answer: string}[],
+            uiPreferenceQuestions: UIPreferenceQuestion[],
+            answers: Answers[]
         }>(
             `query Bootstrap($projectId: ID!) {
                 questions(projectId: $projectId) { question options }
                 designs(projectId: $projectId) { id htmlContent isSelected }
                 project(id: $projectId) { isComplex }
+                currentUIPreferences(projectId: $projectId) { questionText answer }
+                uiPreferenceQuestions(projectId: $projectId) { id question options }
+                answers: answeredQuestions(projectId: $projectId) { question: questionText answer }
             }`,
             { projectId: this.projectId }
         )
         const questions: Question[] = bootstrap.questions.map((q) => ({question: q.question, option: q.options}))
         const designs = bootstrap.designs
         const cachedIsComplex = bootstrap.project.isComplex
+        const answers = bootstrap.answers
         logger.info(`Fetched ${questions.length} saved question(s) and ${designs.length} saved design(s)`)
-        const hasRealAnswers = !!answers && answers.length > 0
-        const pastClarificationStage = answers !== undefined
-        if(hasRealAnswers){
-            logger.info(`Answer added to user prompt`)
-            const qa = answers!
-                .map((ans) => `- ${ans.question}\n  Answer: ${ans.answer}`)
-                .join('\n')
-            userPrompt += `\n\nThe user was asked clarifying questions and answered:\n${qa}`
-            complexity = cachedIsComplex ?? false
-        }
-        else if(!pastClarificationStage && questions.length > 0){
+        // Unanswered ones first, same as the UI preference gate below: a round
+        // is still outstanding, so re-ask it rather than spending another
+        // clarification call on a prompt we already know is ambiguous.
+        if(questions.length > 0){
             logger.info(`Reusing previously generated questions, skipping complexity/clarification checks`)
             return {
                 status: 'clarification_needed',
                 questions: questions,
                 alreadySaved: true
             }
+        }
+        // Answers now come from the DB, not the job payload, so they survive
+        // every later round — a UI preference pause no longer loses them.
+        else if(answers.length > 0){
+            logger.info(`Folding ${answers.length} previously answered question(s) into the prompt`)
+            const qa = answers
+                .map((ans) => `- ${ans.question}\n  Answer: ${ans.answer}`)
+                .join('\n')
+            userPrompt += `\n\nThe user was asked clarifying questions and answered:\n${qa}`
+            complexity = cachedIsComplex ?? false
         }
         else{
             if(cachedIsComplex !== null && cachedIsComplex !== undefined){
@@ -142,8 +153,51 @@ export class CallAgent{
             }
         }
 
+        if(complexity){
+            logger.info(`Complex task — skipping single-design selection`)
+
+            // Unanswered ones come first: a partially answered set still needs
+            // the rest before any UIExpert task can run.
+            if(bootstrap.uiPreferenceQuestions.length > 0){
+                logger.info(`Reusing ${bootstrap.uiPreferenceQuestions.length} previously asked UI preference question(s), still awaiting answers`)
+                return { status: 'ui_preference_needed', questions: bootstrap.uiPreferenceQuestions, alreadySaved: true }
+            }
+            else if(bootstrap.currentUIPreferences.length > 0){
+                this.uiPreferences = bootstrap.currentUIPreferences.map((p) => ({question: p.questionText, answer: p.answer}))
+                logger.info(`Loaded ${this.uiPreferences.length} answered UI preference(s) for project ${this.projectId}`)
+            }
+            else{
+                let uiQuestions: Question[]
+                try{
+                    logger.info(`Running UI preference checker`)
+                    uiQuestions = await b.GenerateUIPreferenceQuestions(UI_PREFERENCE_PROMPT, userPrompt)
+                }
+                catch(e){
+                    logger.error(`Failed UI preference checker ${e}`)
+                    uiQuestions = []
+                }
+                if(uiQuestions.length > 0){
+                    const saved = await backendGql<{saveUIPreferenceQuestions: UIPreferenceQuestion[]}>(
+                        `mutation SaveUIPreferenceQuestions($projectId: ID!, $runId: ID!, $questions: [PlannedQuestionInput!]!) {
+                            saveUIPreferenceQuestions(projectId: $projectId, runId: $runId, questions: $questions) { id question options }
+                        }`,
+                        { projectId: this.projectId, runId: this.runId, questions: uiQuestions.map(q => ({question: q.question, option: q.option})) }
+                    )
+                    return { status: 'ui_preference_needed', questions: saved.saveUIPreferenceQuestions, alreadySaved: true }
+                }
+            }
+
+            return {
+                status: 'pass',
+                isComplex: complexity,
+                updatedPrompt: userPrompt,
+                questions: questions,
+                selectedDesign: ""
+            }
+        }
+
         let designsHtml: { html: string, prompt: string }[] = []
-        if(designs.length === 0 && !complexity){
+        if(designs.length === 0){
             logger.info(`Generating designs`)
             try{
                 const uiExpertSkills = [
@@ -220,14 +274,14 @@ export class CallAgent{
         }
     }
 
-    async Execute(userPrompt: string, answers?: Answers[], selectedDesignId?: string): Promise<CallAgentResponse>{
+    async Execute(userPrompt: string, answers?: Answers[], selectedDesignId?: string, uiPreferences?: Answers[]): Promise<CallAgentResponse>{
         logger.info(`Running call agent`)
         await this.loadProjectContext()
 
         const taskHistory = this.context.length > 0 ? `\n\nPrior tasks completed on this project:\n${JSON.stringify(this.context)}` : ""
         const priorContext = this.lastRunSummary + taskHistory
 
-        if(!answers && !selectedDesignId){
+        if(!answers && !selectedDesignId && !uiPreferences){
             let verdict: { isDevelopment: boolean }
             try{
                 verdict = await b.CheckIsDevelopmentRequest(DEVELOPMENT_GATE_PROMPT, userPrompt)
@@ -265,6 +319,7 @@ export class CallAgent{
             }
         }
 
+        // this is waste, selected design id is saved to db first then called here. 
         if(selectedDesignId){
             await backendGql(
                 `mutation SelectDesign($projectId: ID!, $designId: ID!) {
@@ -275,7 +330,7 @@ export class CallAgent{
         }
         var data;
         try{
-            data = await this.Bootstrap(userPrompt, answers);
+            data = await this.Bootstrap(userPrompt);
         }
         catch(e){
             const reason = `Bootstrap failed with error ${e}`
@@ -310,12 +365,23 @@ export class CallAgent{
                 designs: data.designs
             }
         }
+        else if(data.status === 'ui_preference_needed'){
+            logger.info(`Waiting on UI preference for project ${this.projectId}`)
+            await this.emitter.emit({ type: 'ui_preference_needed', questions: data.questions })
+            return {
+                status: 'ui_preference_needed',
+                questions: data.questions
+            }
+        }
         else if(data.status === 'error'){
             await this.emitter.emit({ type: 'run_failed', error: data.error })
             return {
                 status: 'error',
                 reason: data.error
             }
+        }
+        if( data.isComplex === false){
+
         }
         this.selectedDesign = data.selectedDesign ?? ""
         if (this.selectedDesign) {
@@ -327,13 +393,31 @@ export class CallAgent{
             await this.sandbox.SyncR2()
         }
 
-        const eventData: RunEventData = {
-            userId: this.userId, projectId: this.projectId, runId: this.runId, sandboxId: this.sandbox.sandboxId,
-            semanticMem: this.semanticMem, selectedDesign: this.selectedDesign, updatedPrompt: data.updatedPrompt ?? userPrompt, priorContext,
+        const SimpleEventData: RunEventData = {
+            userId: this.userId, 
+            projectId: this.projectId, 
+            runId: this.runId, 
+            sandboxId: this.sandbox.sandboxId,
+            semanticMem: this.semanticMem, 
+            selectedDesign: this.selectedDesign, 
+            updatedPrompt: data.updatedPrompt ?? userPrompt, 
+            priorContext
+        }
+        const complexEventData: RunEventData = {
+            userId: this.userId,
+            projectId: this.projectId,
+            runId: this.runId,
+            sandboxId: this.sandbox.sandboxId,
+            semanticMem: this.semanticMem,
+            updatedPrompt: data.updatedPrompt ?? userPrompt,
+            priorContext,
+            uiPreferences: this.uiPreferences,
         }
         try{
             logger.info(`Dispatching ${data.isComplex ? 'complex' : 'simple'} run ${this.runId} to Inngest`)
-            await inngest.send({ name: data.isComplex ? "callAgent/run.complex" : "callAgent/run.simple", data: eventData })
+            data.isComplex ? 
+            await inngest.send({ name: "callAgent/run.complex", data: complexEventData}) :
+            await inngest.send({ name: "callAgent/run.simple", data: SimpleEventData })
         }
         catch(e){
             const reason = `Failed to dispatch run to Inngest: ${e instanceof Error ? e.message : String(e)}`
@@ -378,17 +462,27 @@ export class CallAgent{
 
 // Wiring Inngest to the subagent and agent. 
 export const inngest = new Inngest({ id: "lovable-agents" })
-
-export type RunEventData = {
-    userId: string
-    projectId: string
-    runId: string
-    sandboxId: string
-    semanticMem: string
-    selectedDesign: string
-    updatedPrompt: string
+type SimpleTask = {
+    userId: string, 
+    projectId: string, 
+    runId: string, 
+    sandboxId: string, 
+    semanticMem: string,
+    selectedDesign: string,
+    updatedPrompt: string,
     priorContext: string
 }
+type ComplexTask = {
+    userId: string, 
+    projectId: string, 
+    runId: string, 
+    sandboxId: string, 
+    semanticMem: string,
+    uiPreferences: UIPreferenceQA[],
+    updatedPrompt: string,
+    priorContext: string
+}
+export type RunEventData = SimpleTask | ComplexTask
 
 async function finalizeRun(step: StepRunner, data: RunEventData, summary: string, todos: PlannerTodo[]): Promise<void> {
     const previewUrl: string = await step.run("preview-url", async () => {
@@ -402,18 +496,18 @@ async function finalizeRun(step: StepRunner, data: RunEventData, summary: string
         { runId: data.runId, summary },
     ).catch((e) => logger.error(`Failed to save run summary for run ${data.runId}: ${e}`)))
 
-    const result: CallAgentResponse = { status: 'completed', design: data.selectedDesign, todos, previewUrl, summary }
+    const result: CallAgentResponse = { status: 'completed', previewUrl, summary }
     await step.run("emit-run-completed", () => createRunEmitter(data.runId).emit({ type: 'run_completed', result }))
 }
 
 export const runComplexTaskFn = inngest.createFunction(
     { id: "run-complex-task", triggers: [{ event: "callAgent/run.complex" }] },
     async ({ event, step }) => {
-        const data = event.data as RunEventData
+        const data = event.data as RunEventData as ComplexTask
         try {
             const orchestrator = new Orchestrator(
                 data.userId, data.projectId, data.runId, data.sandboxId,
-                data.semanticMem, data.updatedPrompt, data.priorContext,
+                data.semanticMem, data.updatedPrompt, data.priorContext, data.uiPreferences,
             )
             const orchestratorResult = await orchestrator.Execute(step)
             if (orchestratorResult.status === 'error') return orchestratorResult
@@ -431,7 +525,7 @@ export const runComplexTaskFn = inngest.createFunction(
 export const runSimpleTaskFn = inngest.createFunction(
     { id: "run-simple-task", triggers: [{ event: "callAgent/run.simple" }] },
     async ({ event, step }) => {
-        const data = event.data as RunEventData
+        const data = event.data as RunEventData as SimpleTask
         try {
             const mainResult = await step.run("agent-run", async () => {
                 const sandbox = await E2BSandbox.StartSandbox(data.userId, data.projectId, data.sandboxId)

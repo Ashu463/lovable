@@ -17,7 +17,7 @@ import RUN_STATE from "@/graphql/runState.graphql?raw";
 import PROJECT_SESSION from "@/graphql/projectSession.graphql?raw";
 import RUN_EVENTS from "@/graphql/runEvents.graphql?raw";
 import type { CallAgentEvent } from "../../../../packages/agents/agent/events";
-import type { Answers, DesignOption, CallAgentResponse } from "../../../../packages/agents/types/callAgentTypes";
+import type { Answers, DesignOption, CallAgentResponse, UIPreferenceQuestion } from "../../../../packages/agents/types/callAgentTypes";
 import type { Question } from "../../../../packages/agents/baml_client/types";
 
 type CompletedResult = Extract<CallAgentResponse, { status: "completed" }>;
@@ -28,6 +28,7 @@ export type RunState =
   | { status: "running"; runId: string; projectId: string; userPrompt: string; feed: CallAgentEvent[] }
   | { status: "clarification_needed"; runId: string; projectId: string; userPrompt: string; questions: Question[] }
   | { status: "select_design"; runId: string; projectId: string; userPrompt: string; designs: DesignOption[] }
+  | { status: "ui_preference_needed"; runId: string; projectId: string; userPrompt: string; questions: UIPreferenceQuestion[] }
   | { status: "completed"; runId: string; projectId: string; userPrompt: string; result: CompletedResult }
   // A conversational message never touches the sandbox — no preview/code
   // pane makes sense for it, so it's kept distinct from "completed" rather
@@ -60,6 +61,7 @@ interface RunContextValue {
   submit: (userPrompt: string, projectId?: string) => Promise<string | null>;
   submitAnswers: (answers: Answers[]) => Promise<string | null>;
   selectDesign: (designId: string) => Promise<string | null>;
+  submitUIPreferences: (answers: { questionId: string; answer: string }[]) => Promise<string | null>;
   resume: (runId: string) => Promise<boolean>;
   reset: () => void;
 }
@@ -70,9 +72,13 @@ interface RunStateResponse {
     projectId: string;
     userPrompt: string;
     projectName: string | null;
-    status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "COMPLETED" | "FAILED" | "STOPPED";
+    status: "IN_PROGRESS" | "CLARIFICATION_NEEDED" | "AWAITING_DESIGN_SELECTION" | "AWAITING_UI_PREFERENCE" | "COMPLETED" | "FAILED" | "STOPPED";
     stalled: boolean;
-    pauseEvent: { type: "clarification_needed"; questions: Question[] } | { type: "select_design"; designs: DesignOption[] } | null;
+    pauseEvent:
+      | { type: "clarification_needed"; questions: Question[] }
+      | { type: "select_design"; designs: DesignOption[] }
+      | { type: "ui_preference_needed"; questions: UIPreferenceQuestion[] }
+      | null;
     completedEvent: { type: "run_completed"; result: CallAgentResponse } | null;
     failedEvent: { type: "run_failed"; error: string } | null;
   };
@@ -129,6 +135,11 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 setAwaitingDesigns(false);
                 pushMessage("system", "Here are a few design directions to start from.");
                 setState({ status: "select_design", runId, projectId, userPrompt, designs: event.designs });
+                return;
+              case "ui_preference_needed":
+                closeStreamRef.current?.();
+                pushMessage("system", "One more thing before I start building.");
+                setState({ status: "ui_preference_needed", runId, projectId, userPrompt, questions: event.questions });
                 return;
               case "run_completed": {
                 if (event.result.status === "conversation") {
@@ -247,6 +258,37 @@ export function RunProvider({ children }: { children: ReactNode }) {
     [state, attachStream, pushMessage],
   );
 
+  const submitUIPreferences = useCallback(
+    async (answers: { questionId: string; answer: string }[]) => {
+      if (state.status !== "ui_preference_needed") return null;
+      const { runId, projectId, userPrompt, questions } = state;
+      pushMessage(
+        "user",
+        answers
+          .map((a) => `${questions.find((q) => q.id === a.questionId)?.question ?? ""} → ${a.answer}`)
+          .join("\n"),
+      );
+      setState({ status: "submitting" });
+      try {
+        const res = await gql<{ continueRun: RunRef }>(CONTINUE_RUN, {
+          projectId,
+          runId,
+          answers: [],
+          selectedDesignId: null,
+          uiPreferenceAnswers: answers,
+        });
+        attachStream(res.continueRun.id, res.continueRun.projectId, userPrompt);
+        return res.continueRun.id;
+      } catch (err) {
+        const error = messageFor(err, "Failed to continue the build.");
+        pushMessage("system", `Failed: ${error}`);
+        setState({ status: "failed", runId, projectId, userPrompt, error });
+        return null;
+      }
+    },
+    [state, attachStream, pushMessage],
+  );
+
   // Reconstructs state for /w/:runId after a refresh — RunProvider state
   // otherwise only lives in memory for the tab that started the build.
   const resume = useCallback(
@@ -282,6 +324,10 @@ export function RunProvider({ children }: { children: ReactNode }) {
         }
         if (status === "AWAITING_DESIGN_SELECTION" && pauseEvent?.type === "select_design") {
           setState({ status: "select_design", runId, projectId, userPrompt, designs: pauseEvent.designs });
+          return true;
+        }
+        if (status === "AWAITING_UI_PREFERENCE" && pauseEvent?.type === "ui_preference_needed") {
+          setState({ status: "ui_preference_needed", runId, projectId, userPrompt, questions: pauseEvent.questions });
           return true;
         }
         if (status === "COMPLETED" && completedEvent?.type === "run_completed" && completedEvent.result.status === "conversation") {
@@ -340,8 +386,8 @@ export function RunProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, resume, reset }),
-    [state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, resume, reset],
+    () => ({ state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, submitUIPreferences, resume, reset }),
+    [state, projectName, awaitingDesigns, messages, submit, submitAnswers, selectDesign, submitUIPreferences, resume, reset],
   );
 
   return <RunContext.Provider value={value}>{children}</RunContext.Provider>;

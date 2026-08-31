@@ -100,13 +100,13 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
     }
 
 
-    private async setBaseTemplate(input: UIExpertTaskInput, skills: Skill[]): Promise<string> {
-        const userPrompt = `${input.task.task}\n\n${input.updatedPrompt}`
-        const framed = await this.framePrompts(userPrompt, "", skills)
-        const prompt = framed.prompts[0]
-        if (!prompt) {
-            throw new Error(`FramePrompts returned no prompts for task ${input.task.taskId}`)
-        }
+    private async setBaseTemplate(input: UIExpertTaskInput): Promise<string> {
+        const preferences = input.uiPreferences
+            .map((p) => `- ${p.question}\n  ${p.answer}`)
+            .join('\n')
+        const prompt = preferences
+            ? `${input.task.task}\n\nUI preferences for this project:\n${preferences}`
+            : input.task.task
         const screen = await makeOneScreen(prompt, this.userId)
         const html = await this.fetchDesignHtml(screen)
 
@@ -121,7 +121,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
     override async callLLM(input: UIExpertTaskInput, context: CoderContext): Promise<UIExpertLLMResponse> {
         if (this.htmlDesign === null) {
-            this.htmlDesign = await this.setBaseTemplate(input, context.skills)
+            this.htmlDesign = await this.setBaseTemplate(input)
         }
         return await b.UIExpertAgent(UI_EXPERT_BASE_TEMPLATE_PROMPT, this.htmlDesign, context)
     }

@@ -1,4 +1,4 @@
-import type { DesignOption, CallAgentResponse } from '../types/callAgentTypes';
+import type { DesignOption, CallAgentResponse, UIPreferenceQuestion } from '../types/callAgentTypes';
 import type { Question } from '../baml_client/types';
 import { REDIS_HOST, REDIS_PORT } from './config/systemConfig';
 import IORedis from "ioredis";
@@ -8,6 +8,7 @@ export type CallAgentEvent = AgentEvents |
     | { type: "clarification_needed"; questions: Question[] }
     | { type: "designs_generating"; count: number }
     | { type: "select_design"; designs: DesignOption[] }
+    | { type: "ui_preference_needed"; questions: UIPreferenceQuestion[] }
     | { type: "agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }
     | { type: "subagent_started"; agent: string; taskId?: number; task?: string }
     | { type: "subagent_progress"; agent: string; taskId?: number; data?: unknown, subagentSummary?: string }
