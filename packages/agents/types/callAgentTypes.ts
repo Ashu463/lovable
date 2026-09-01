@@ -32,9 +32,15 @@ export type CallAgentSSE = {
 export type CallAgentResponse =
       clarification_needed
     | design_needed
+    | ui_preference_needed
     | {status: 'error', reason: string, data?: any}
-    | {status: 'completed', design: string, todos: PlannerTodo[], previewUrl: string, summary: string}
+    | {status: 'completed', previewUrl: string, summary: string}
     | {status: 'conversation', reply: string}
+    // Build work now runs as an Inngest function, dispatched and forgotten —
+    // this is what Execute() itself resolves with. The real outcome (this
+    // same 'completed' shape, or 'error') arrives later via the run_completed/
+    // run_failed SSE events the Inngest function emits when it finishes.
+    | {status: 'in_progress', runId: string}
 export type clarification_needed = {
     status: 'clarification_needed',
     questions: Question[],
@@ -49,16 +55,25 @@ export type design_needed = {
     designs: DesignOption[],
     alreadySaved?: boolean
 }
-// export interface BootstrapResponse{
-//     status: 'ready_to_act' | 'select_design' | 'clarification_needed' | 'error'
-//     isComplex: boolean,
-//     designs?: Screen[],
-//     selectedDesign?: Screen,
-//     questions?: Question[]
-//     error?: string
-// }
-export type BootstrapResponse = clarification_needed | design_needed 
-    | {status: 'error', error: string} 
+export type UIPreferenceQuestion = {
+    id: string,
+    question: string,
+    options: string[]
+}
+// Answered pairs, not a bare string — the whole set is carried into every
+// UIExpert task, and a question is meaningless without its answer.
+export type UIPreferenceQA = {
+    question: string,
+    answer: string
+}
+export type ui_preference_needed = {
+    status: 'ui_preference_needed',
+    questions: UIPreferenceQuestion[],
+    alreadySaved?: boolean
+}
+
+export type BootstrapResponse = clarification_needed | design_needed | ui_preference_needed
+    | {status: 'error', error: string}
     | {status: 'pass', isComplex: boolean, updatedPrompt: string, questions?: Question[], selectedDesign?: string}
 
 export interface Answers{

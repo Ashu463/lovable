@@ -5,6 +5,7 @@ import { runResolvers } from "./modules/run";
 import { chatResolvers } from "./modules/chat";
 import { designResolvers } from "./modules/design";
 import { questionResolvers } from "./modules/question";
+import { uiPreferenceResolvers } from "./modules/uiPreference";
 import { streamResolvers } from "./modules/stream";
 import { internalResolvers } from "./modules/internal";
 
@@ -22,6 +23,7 @@ export const resolvers = {
     ...chatResolvers.Query,
     ...designResolvers.Query,
     ...questionResolvers.Query,
+    ...uiPreferenceResolvers.Query,
   },
 
   Mutation: {
@@ -30,6 +32,7 @@ export const resolvers = {
     ...chatResolvers.Mutation,
     ...designResolvers.Mutation,
     ...questionResolvers.Mutation,
+    ...uiPreferenceResolvers.Mutation,
     ...internalResolvers.Mutation,
   },
 
@@ -48,4 +51,5 @@ export const resolvers = {
   Todo: runResolvers.Todo,
   TaskSummary: runResolvers.TaskSummary,
   Question: questionResolvers.Question,
+  UIPreferenceQuestion: uiPreferenceResolvers.UIPreferenceQuestion,
 };

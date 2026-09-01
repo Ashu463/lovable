@@ -33,6 +33,8 @@ extend type Project {
 extend type Query {
   "Unanswered clarification questions for a project."
   questions(projectId: ID!): [Question!]!
+  "Every answered clarification question for a project, oldest first — how a later run recovers answers given in an earlier round."
+  answeredQuestions(projectId: ID!): [Answer!]!
 }
 
 extend type Mutation {

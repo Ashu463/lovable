@@ -298,7 +298,7 @@ export class BamlSyncClient {
   }
   
   CoderAgent(
-      systemPrompt: string,figmaBoilerPlate?: string | null,context: types.CoderContext,
+      systemPrompt: string,context: types.CoderContext,
       __baml_options__?: BamlCallOptions<never>
   ): types.WriteFile | types.ReadFile | types.EditFile | types.RunCommand | types.DeleteFile | types.Research | types.GetSkill | types.Done | types.Abort {
     try {
@@ -330,7 +330,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "CoderAgent",
         {
-          "systemPrompt": systemPrompt,"figmaBoilerPlate": figmaBoilerPlate?? null,"context": context
+          "systemPrompt": systemPrompt,"context": context
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -792,6 +792,56 @@ export class BamlSyncClient {
         __options__.watchers,
       )
       return __raw__.parsed(false) as string
+    } catch (error: any) {
+      throw toBamlError(error);
+    }
+  }
+  
+  GenerateUIPreferenceQuestions(
+      systemPrompt: string,userPrompt: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): types.Question[] {
+    try {
+      const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
+      const __signal__ = __options__.signal;
+
+      if (__signal__?.aborted) {
+        throw new BamlAbortError('Operation was aborted', __signal__.reason);
+      }
+
+      // Check if onTick is provided and reject for sync operations
+      if (__options__.onTick) {
+        throw new Error("onTick is not supported for synchronous functions. Please use the async client instead.");
+      }
+
+      const __collector__ = __options__.collector ? (Array.isArray(__options__.collector) ? __options__.collector : [__options__.collector]) : [];
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __options__.clientRegistry;
+      if (__options__.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__options__.client);
+      }
+
+      const __raw__ = this.runtime.callFunctionSync(
+        "GenerateUIPreferenceQuestions",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt
+        },
+        this.ctxManager.cloneContext(),
+        __options__.tb?.__tb(),
+        __clientRegistry__,
+        __collector__,
+        __options__.tags || {},
+        __env__,
+        __signal__,
+        __options__.watchers,
+      )
+      return __raw__.parsed(false) as types.Question[]
     } catch (error: any) {
       throw toBamlError(error);
     }

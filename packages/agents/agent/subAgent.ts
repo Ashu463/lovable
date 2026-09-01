@@ -34,7 +34,6 @@ export class SubAgent<T extends keyof ContextMap> {
         private projectId: string,
         private runId: string,
         private sandbox: E2BSandbox,
-        private selectedDesign: string,
         private baseDir: string,
     ) {
         this.agentInstance = this.createAgent(agentType)
@@ -45,7 +44,7 @@ export class SubAgent<T extends keyof ContextMap> {
 
     private createAgent(agentType: T): BaseAgent<any, any, any, any> {
         switch (agentType) {
-        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.selectedDesign, this.baseDir) as any
+        case 'coder': return new CoderAgent(this.userId, this.projectId, this.sandbox, this.baseDir) as any
         case 'researcher': return new Researcher(this.userId, this.projectId, this.sandbox) as any
         case 'debuggerr': return new DebuggerAgent(this.userId, this.projectId, this.sandbox, this.baseDir) as any
         case 'tester': return new TesterAgent(this.userId, this.projectId, this.sandbox) as any

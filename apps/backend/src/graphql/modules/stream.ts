@@ -10,11 +10,12 @@ const TERMINAL = new Set([
   "run_failed",
   "clarification_needed",
   "select_design",
+  "ui_preference_needed",
 ]);
 
 // The pause events are replayed by the runState query instead, so a reconnecting
 // client doesn't re-trigger a modal it has already answered.
-const NOT_REPLAYED = ["clarification_needed", "select_design"];
+const NOT_REPLAYED = ["clarification_needed", "select_design", "ui_preference_needed"];
 
 
 async function* streamRunEvents(run: { id: string; status: string }, ctx: GraphQLContext) {

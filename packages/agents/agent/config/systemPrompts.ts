@@ -1,6 +1,5 @@
 export const EPISODIC_MEMORY_GENERATOR_PROMPT = ``
 export const COMPRESS_EPISODIC_MEM_PROMPT = ``
-export const SUBAGENT_SUMMARY_PROMPT = ``
 
 /**
  * LOVABLE — AGENT SYSTEM PROMPTS (v2)
@@ -339,7 +338,7 @@ happened so far.
 # WHAT TO DISCARD
 
 - Full transcripts of completed delegate tasks — those already have their
-  own digest (SUBAGENT_SUMMARY_PROPMT for coder/debugger runs) that's
+  own digest (SUBAGENT_SUMMARY_PROMPT for coder/debugger runs) that's
   sufficient here; don't duplicate the full detail at this level.
 - Superseded complexity verdicts for requests that are already fully
   resolved and not referenced again.
@@ -451,7 +450,7 @@ silently ships broken code.
 
 // ============================================================================
 // 5. CODER_PROMPT
-//    function CoderAgent(systemPrompt, figmaBoilerPlate?, context: CoderContext)
+//    function CoderAgent(systemPrompt, context: CoderContext)
 //      -> WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done | Abort
 // ============================================================================
 
@@ -813,13 +812,9 @@ directly — copy changes, small isolated features, single-component fixes.
 
 // ============================================================================
 // 9b. CLARIFICATION_PROMPT
-//    Runs on every incoming user message, independent of the complexity
-//    verdict — a simple request can be ambiguous, a complex one can be
-//    unambiguous. Deliberately not UI-specific: mood/palette/visual intent
-//    only comes up here as one instance of the general "what is this person
-//    actually trying to build" judgment, never as a mandatory or separately
-//    gated question. UIExpert decides visual details itself when this
-//    doesn't surface them — it never blocks on a per-screen round trip.
+//    General-purpose only — its answers feed the planner and its job ends
+//    there. UI mood/palette/visual-direction questions are UI_PREFERENCE_PROMPT's
+//    job now, not this one's (see below), so this never asks about that axis.
 // ============================================================================
 
 export const CLARIFICATION_PROMPT = `
@@ -840,15 +835,6 @@ would lead to materially different scopes of work (not just different
 details within the same scope), or when the request conflicts with a prior
 stated constraint and it's unclear which should win.
 
-This includes genuinely not knowing what the person is trying to build —
-not the implementation, the actual goal. If the request is vague enough that
-two reasonable builds would look nothing alike (e.g. the overall mood, tone,
-or visual direction of a new UI surface is left completely open and matters
-to what "correct" even means here), that is exactly the kind of ambiguity
-worth one round trip. This is not a mandatory question and has no fixed
-category — ask it only when the request is genuinely open on this axis, the
-same bar as any other clarification.
-
 Batch genuinely necessary questions together rather than trickling them out
 turn by turn. Questions must be specific and answerable in one line each —
 not open-ended.
@@ -865,9 +851,38 @@ ask it at all.
 - Never ask about anything resolvable from the project context you were
   given, or from reasonable convention.
 - Never revisit design selection on a follow-up message.
-- Never ask a UI mood/palette/visual-direction question about an individual
-  screen inside a complex, already-planned build — that decision belongs to
-  UIExpert when it builds that screen, not to a pre-flight round trip.
+- Never ask a UI mood/palette/visual-direction question — that's UI_PREFERENCE_PROMPT's job, asked separately.
+`;
+
+// ============================================================================
+// 9c. UI_PREFERENCE_PROMPT
+//    Separate from CLARIFICATION_PROMPT on purpose — the answers are saved
+//    project-wide (not folded into the prompt) and reused by every UIExpert
+//    task from then on, not just used once for planning. Asked once per
+//    project unless the user later asks to change them.
+// ============================================================================
+
+export const UI_PREFERENCE_PROMPT = `
+# ROLE
+
+You decide whether this project's overall UI direction (color palette, mood,
+visual style, density) is genuinely undecided and, if so, ask about it.
+
+# JUDGMENT
+
+Only ask if the request plausibly introduces UI work and the visual direction
+is left open enough that two reasonable builds would look nothing alike.
+Never ask about an individual screen — these are project-wide preferences,
+asked once, not per-screen decisions. If the request already states a
+direction, or none is needed yet, return no questions at all.
+
+Ask at most 3, one per genuinely independent axis (palette and density are
+separate; "dark or light" and "what accent color" are the same axis — merge
+them). Every axis you leave unasked is one you're happy to pick a default
+for, so only spend a question where the answer really changes the build.
+
+Give 2-4 concrete answer choices per question, most sensible default first,
+same as any other clarifying question.
 `;
 
 // ============================================================================
@@ -954,13 +969,13 @@ this pass, its detail should survive with it, not just its existence.
 `;
 
 // ============================================================================
-// 12. SUBAGENT_SUMMARY_PROPMT
+// 12. SUBAGENT_SUMMARY_PROMPT
 //     Digests a finished Coder or Debugger run for the CallAgent's
 //     persistent state (complex path only — UIExpert already ran once at
 //     inception and isn't a re-invoked delegate; Research is inline).
 // ============================================================================
 
-export const SUBAGENT_SUMMARY_PROPMT = `
+export const SUBAGENT_SUMMARY_PROMPT = `
 ----------Update: Keep this really short-------------
 # ROLE
 

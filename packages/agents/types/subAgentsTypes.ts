@@ -4,6 +4,7 @@
 //     toolCall?: ReadFile | RunCommand | WriteFile | DebuggingDone | Research
 
 import type { CoderContext, DebuggerContext, PlannerTodo, ToolResult, Error, ResearcherContext, TesterContext } from "../baml_client"
+import type { UIPreferenceQA } from "./callAgentTypes"
 
 // }
 export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  'uiExpert'
@@ -41,6 +42,7 @@ export type ResearchTaskInput = BaseTaskInput
 
 export type UIExpertTaskInput = BaseTaskInput & {
     updatedPrompt: string
+    uiPreferences: UIPreferenceQA[]
 }
 export type InputMap = {
     coder: CoderTaskInput;

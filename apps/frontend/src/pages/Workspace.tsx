@@ -19,6 +19,7 @@ import { DagView } from "@/features/build/DagView";
 import { useWorkspacePipeline } from "@/features/build/useWorkspacePipeline";
 import { ClarifyingQuestions } from "@/features/build/ClarifyingQuestions";
 import { DesignVariantPicker } from "@/features/build/DesignVariantPicker";
+import { UIPreferenceQuestions } from "@/features/build/UIPreferenceQuestions";
 // CodeMirror + its language packages are the single biggest chunk in this
 // app — only worth loading once someone actually opens the code tab.
 const CodeViewer = lazy(() => import("@/features/build/CodeViewer").then((m) => ({ default: m.CodeViewer })));
@@ -181,7 +182,7 @@ function ActivityFeed({ messages, live }: { messages: ChatMessage[]; live: boole
 }
 
 function ChatLog({ wide, extraWide }: { wide: boolean; extraWide?: boolean }) {
-  const { state, messages, awaitingDesigns, submitAnswers, selectDesign } = useRun();
+  const { state, messages, awaitingDesigns, submitAnswers, selectDesign, submitUIPreferences } = useRun();
   const busy = state.status === "running" || state.status === "submitting";
   const groups = groupMessages(messages);
 
@@ -240,6 +241,9 @@ function ChatLog({ wide, extraWide }: { wide: boolean; extraWide?: boolean }) {
       )}
       {state.status === "select_design" && (
         <DesignVariantPicker designs={state.designs} submitting={false} onSelect={selectDesign} />
+      )}
+      {state.status === "ui_preference_needed" && (
+        <UIPreferenceQuestions questions={state.questions} submitting={false} onSubmit={submitUIPreferences} />
       )}
     </div>
   );

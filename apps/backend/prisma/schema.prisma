@@ -37,6 +37,8 @@ model Project {
   runs       Run[]
   designs    Design[]
   questions  Question[]
+  uiPreferenceQuestions UIPreferenceQuestion[]
+  uiPreferenceAnswers   UIPreferenceAnswer[]
   isArchived  Boolean  @default(false)
   isStarred   Boolean  @default(false)
 
@@ -79,6 +81,7 @@ enum RunStatus {
   IN_PROGRESS
   CLARIFICATION_NEEDED
   AWAITING_DESIGN_SELECTION
+  AWAITING_UI_PREFERENCE
   COMPLETED
   FAILED
   STOPPED
@@ -174,6 +177,36 @@ model Answers {
   answeredAt  DateTime?
 
   @@index([runId])
+}
+
+model UIPreferenceQuestion {
+  id         String   @id @default(uuid())
+  projectId  String
+  runId      String
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  question   String
+  options    String[]
+
+  answer     UIPreferenceAnswer?
+
+  createdAt  DateTime @default(now())
+}
+
+model UIPreferenceAnswer {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  questionId   String   @unique
+  question     UIPreferenceQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  questionText String  @db.Text
+  answer       String  @db.Text
+
+  createdAt    DateTime @default(now())
+  answeredAt   DateTime?
+
+  @@index([projectId])
 }
 
 model RunEvent {

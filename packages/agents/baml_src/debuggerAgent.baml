@@ -28,7 +28,7 @@ function DebuggerAgent(
     toolResult: ToolResult?
 ) -> ReadFile | RunCommand | WriteFile | EditFile | Research | GetSkill | DebuggingDone | Abort{
     
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{systemPrompt}}
         {{errors}} - what failed: the command that failed and its output,

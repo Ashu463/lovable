@@ -1,16 +1,18 @@
-# Resumes the SAME paused run after clarification answers or a design pick —
-# this does not create a new run.
+# Resumes the SAME paused run after clarification answers, a design pick, or
+# UI preference answers — this does not create a new run.
 mutation ContinueRun(
   $projectId: ID!
   $runId: ID!
   $answers: [AgentAnswerInput!]!
   $selectedDesignId: ID
+  $uiPreferenceAnswers: [UIPreferenceAnswerInput!]! = []
 ) {
   continueRun(
     projectId: $projectId
     runId: $runId
     answers: $answers
     selectedDesignId: $selectedDesignId
+    uiPreferenceAnswers: $uiPreferenceAnswers
   ) {
     id
     projectId

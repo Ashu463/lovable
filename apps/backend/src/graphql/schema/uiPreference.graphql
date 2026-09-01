@@ -1,0 +1,35 @@
+# Project-level UI preferences (color palette/mood/visual direction), asked
+# once via their own questions separate from general clarification, and reused
+# by every UIExpert task from then on. Resolvers: ../modules/uiPreference.ts
+
+type UIPreferenceQuestion {
+  id: ID!
+  projectId: ID!
+  runId: ID!
+  question: String!
+  options: [String!]!
+  createdAt: DateTime!
+  answer: UIPreferenceAnswer
+}
+
+type UIPreferenceAnswer {
+  id: ID!
+  projectId: ID!
+  questionId: ID!
+  questionText: String!
+  answer: String!
+  createdAt: DateTime!
+  answeredAt: DateTime
+}
+
+extend type Query {
+  "Unanswered UI-preference questions for a project."
+  uiPreferenceQuestions(projectId: ID!): [UIPreferenceQuestion!]!
+  "Every answered UI preference for a project — the full set stays in effect, oldest first."
+  currentUIPreferences(projectId: ID!): [UIPreferenceAnswer!]!
+}
+
+extend type Mutation {
+  "Answers (or re-answers) a UI preference question. Upserts, so this is also how the user changes their mind later."
+  answerUIPreference(projectId: ID!, runId: ID!, questionId: ID!, answer: String!): UIPreferenceAnswer!
+}

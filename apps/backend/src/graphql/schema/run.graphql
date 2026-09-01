@@ -4,6 +4,7 @@ enum RunStatus {
   IN_PROGRESS
   CLARIFICATION_NEEDED
   AWAITING_DESIGN_SELECTION
+  AWAITING_UI_PREFERENCE
   COMPLETED
   FAILED
   STOPPED
@@ -64,10 +65,19 @@ extend type Project {
   runs: [Run!]!
 }
 
+"Whatever's available to summarize the most recent run of a project: a finished run's own summary, or — if none finished yet — the last incomplete run's raw session snapshot for the caller to synthesize one from."
+type LastRunNarrativeSource {
+  summary: String
+  incompleteSessionSnapshot: String
+}
+
 extend type Query {
   runs(projectId: ID!): [Run!]!
   run(projectId: ID!, runId: ID!): Run!
   todos(projectId: ID!, runId: ID!): [Todo!]!
   "The TaskSummary ledger for a run, in the order the agents produced it."
   summaries(projectId: ID!, runId: ID!): [TaskSummary!]!
+  "Every TaskSummary across every run of this project, oldest first — cross-run project memory, not scoped to one run like `summaries` above."
+  projectTaskSummaries(projectId: ID!): [TaskSummary!]!
+  lastRunNarrativeSource(projectId: ID!): LastRunNarrativeSource!
 }

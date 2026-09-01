@@ -27,7 +27,7 @@ class MergeConflictResolution {
 }
 
 function ResolveMergeConflict(systemPrompt: string, conflict: MergeConflictContext) -> MergeConflictResolution {
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{systemPrompt}}
         {{conflict}}

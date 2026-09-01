@@ -11,7 +11,7 @@ class ErrorResponse{
 // }
 function ReframeError(systemPrompt: string, error: string, context: TesterContext) -> ErrorResponse{
 
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{systemPrompt}}
         {{error}} - unstructured stdout/stderr from a failed

@@ -21,7 +21,6 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
         userId: string,
         projectId: string,
         sandbox: E2BSandbox,
-        private selectedDesign: string,
         private baseDir: string,
         // public prompt: string, // why do you need this? SystemPrompt and boilerPlate is there. isn't it?
     ){super(userId, projectId, sandbox)
@@ -30,12 +29,10 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
 
 
     override async callLLM(input: CoderTaskInput, context: CoderContext): Promise<CoderLLMResponse> {
-        // this.selectedDesign is the run's selected design HTML (simple path)
-        // or undefined on the complex path, where each screen's design lives
-        // in the sandbox (design/<taskId>-slug.html) for Coder to read itself
-        // via repoTree/ReadFile — no side-channel reference needed here.
-        const figmaBoilerPlate = this.selectedDesign || undefined
-        return await b.CoderAgent(CODER_PROMPT, figmaBoilerPlate, context)
+        // Each screen's design lives in the sandbox (design/<taskId>-slug.html) —
+        // UIExpert sets the boilerplate there itself; Coder reads it directly
+        // via repoTree/ReadFile when it needs it, no side-channel reference here.
+        return await b.CoderAgent(CODER_PROMPT, context)
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{

@@ -15,8 +15,8 @@
 //   - context engine push/pull
 //   - the LLM continue/replan/abort decision at each level boundary
 
-import { Inngest } from "inngest"
 import { b } from "../baml_client"
+import type { UIPreferenceQA } from "../types/callAgentTypes"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
 import type { TesterContext } from "../baml_client"
 import { DAG } from "./services/dag"
@@ -32,8 +32,6 @@ import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
-
-export const inngest = new Inngest({ id: "lovable-agents" })
 
 // ---------------------------------------------------------------------------
 // State that has to survive a step boundary must be JSON-serializable —
@@ -76,9 +74,9 @@ export class Orchestrator {
         private runId: string,
         private sandboxId: string,
         private semanticMem: string,
-        private selectedDesign: string,
         private updatedPrompt: string,
         private priorContext: string,
+        private uiPreferences: UIPreferenceQA[],
     ) {
         this.emitter = createRunEmitter(runId)
     }
@@ -102,6 +100,7 @@ export class Orchestrator {
                     task: { ...base, agentType: 'uiExpert', agentSpecificData: {} },
                     agentType: 'uiExpert',
                     updatedPrompt: this.updatedPrompt,
+                    uiPreferences: this.uiPreferences,
                 } as unknown as InputMap[T]
             case 'debuggerr':
                 if (!state.lastToolResult) throw new Error(`debuggerr input requested without a last tool result`)
@@ -157,7 +156,7 @@ export class Orchestrator {
     ): Promise<{ success: boolean, summary: string }> {
         let result: { success: boolean, summary: string } = { success: false, summary: "" }
         for (let attempt = 1; attempt <= SUBAGENT_TASK_RETRY_ATTEMPTS; attempt++) {
-            const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, baseDir)
+            const subagent = new SubAgent(agentType, input, this.userId, this.projectId, this.runId, sandbox, baseDir)
             result = await subagent.runLoop()
             if (result.success) return result
             logger.warn(`${agentType} task failed (attempt ${attempt}/${SUBAGENT_TASK_RETRY_ATTEMPTS}): ${result.summary}`)
@@ -172,11 +171,6 @@ export class Orchestrator {
         let context = this.context
         const state = this.state
         const results: { taskId: number, success: boolean, summary: string }[] = []
-        // Which files each task's merged diff touched, for attributing a
-        // post-merge build/tester error back to the task that caused it (see
-        // runMergeGate). A size-1 level has exactly one candidate, so its
-        // file list is left empty — attribution doesn't need to match a
-        // filename when there's only one task to blame.
         const taskFiles: Record<number, string[]> = {}
 
         if (taskIds.length > 1) {
@@ -272,11 +266,6 @@ export class Orchestrator {
             const testerRes: TesterResponse = await tester.testCodebase(testerContext)
             await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'Build verified' : 'Build check failed', success: testerRes.success })
 
-            // Whose file this is: only one task in the level means only one
-            // possible owner, no need to match a name; otherwise find the
-            // task whose diff actually touched this file. Prior levels are
-            // out of scope — their errors were already resolved by their own
-            // merge gate before this level ran.
             const taskFileEntries = Object.entries(taskFiles)
             const owningTask = taskFileEntries.length === 1
                 ? Number(taskFileEntries[0]![0])
@@ -298,8 +287,7 @@ export class Orchestrator {
 
             const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], designNeeded: false }
             const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
-            const debuggerAgent = new SubAgent('debuggerr', debuggerInput, this.userId, this.projectId, this.runId, sandbox, this.selectedDesign, PROJECT_ROOT)
-            const debuggerResult = await debuggerAgent.runLoop()
+            const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
             await sandbox.SyncR2()
 
             state = { ...state, lastToolResult: { success: debuggerResult.success } }
@@ -337,31 +325,21 @@ export class Orchestrator {
             this.context = levelOut.context
             this.state = levelOut.state
 
-            // A task that's still failed after runSubAgentWithRetry's attempts
-            // is a run-level failure, not something to paper over — previously
-            // this was recorded into context and silently ignored, and the
-            // loop moved on to the next DAG level as if everything succeeded.
             const failedTasks = levelOut.results.filter(r => !r.success)
             if (failedTasks.length > 0) {
                 const reason = `Task(s) ${failedTasks.map(t => t.taskId).join(', ')} failed after ${SUBAGENT_TASK_RETRY_ATTEMPTS} attempt(s) in level ${levelIndex}: ${failedTasks.map(t => t.summary).join(' | ')}`
-                await this.emitter.emit({ type: 'run_failed', error: reason })
+                await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: reason }))
                 return { status: 'error', reason }
             }
-
-            const hadFileWritingTask = taskIds.some(id => {
-                const agent = this.todos.find(t => t.id === id)?.agent
-                return agent === 'coder' || agent === 'uiExpert'
-            })
-            if (hadFileWritingTask) {
-                const gateOut = await step.run(`level-${levelIndex}-merge-gate`, () => this.runMergeGate(levelOut.taskFiles)) as unknown as {
-                    success: boolean, state: SerializableState, summaries: string[]
-                }
-                this.state = gateOut.state
-                this.allSummaries.push(...gateOut.summaries)
-                if (!gateOut.success) {
-                    await this.emitter.emit({ type: 'run_failed', error: `Merge gate failed after level ${levelIndex}` })
-                    return { status: 'error', reason: `Merge gate failed after level ${levelIndex}` }
-                }
+            const gateOut = await step.run(`level-${levelIndex}-merge-gate`, () => this.runMergeGate(levelOut.taskFiles)) as unknown as {
+                success: boolean, state: SerializableState, summaries: string[]
+            }
+            this.state = gateOut.state
+            this.allSummaries.push(...gateOut.summaries)
+            if (!gateOut.success) {
+                const reason = `Merge gate failed after level ${levelIndex}`
+                await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: reason }))
+                return { status: 'error', reason }
             }
 
             await step.run(`level-${levelIndex}-commit-state`, () => this.commitState(levelOut.results))
@@ -370,12 +348,10 @@ export class Orchestrator {
             const remaining = this.todos.filter(t => !this.context.some(c => c.taskId === t.id))
             const decision = await step.run(`level-${levelIndex}-decide`, () => this.decideNextStep(levelOut.results, remaining))
             if (decision.action === 'abort') {
-                await this.emitter.emit({ type: 'run_failed', error: decision.reason })
+                await step.run(`level-${levelIndex}-emit-run-failed`, () => this.emitter.emit({ type: 'run_failed', error: decision.reason }))
                 return { status: 'error', reason: decision.reason }
             }
-            // decision.action === 'replan' has no handler yet — decideNextStep
-            // never returns it today (see TODO above), so this is unreachable
-            // until that stub is replaced with a real LLM call.
+            // #TODO: decision.action === 'replan' to be completed midway. 
         }
 
         const summary = await step.run("summarize", () => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.allSummaries))
@@ -383,31 +359,6 @@ export class Orchestrator {
         return { status: 'completed', summary, todos: this.todos }
     }
 }
-
-type RunEventData = {
-    userId: string
-    projectId: string
-    runId: string
-    sandboxId: string
-    semanticMem: string
-    selectedDesign: string
-    updatedPrompt: string
-    priorContext: string
-}
-
-export const runComplexTaskFn = inngest.createFunction(
-    { id: "run-complex-task", triggers: [{ event: "callAgent/run.complex" }] },
-    async ({ event, step }) => {
-        const data = event.data as RunEventData
-        const orchestrator = new Orchestrator(
-            data.userId, data.projectId, data.runId, data.sandboxId,
-            data.semanticMem, data.selectedDesign, data.updatedPrompt, data.priorContext,
-        )
-        return await orchestrator.Execute(step)
-    },
-)
-
-export const functions = [runComplexTaskFn]
 
 /*Ideas
 

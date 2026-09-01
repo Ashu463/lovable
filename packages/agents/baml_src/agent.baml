@@ -43,7 +43,7 @@ function AgentLLMCall(
   callAgentContext: string
   ) -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort{
 
-    client OpenAIGeneric
+    client GroqArray
     // Ordering is deliberate: everything above {{context}} is fixed for the whole
     // run, so it forms a stable prefix the provider's prompt cache can reuse on
     // every iteration. {{context}} is the only part that grows per turn, so it
@@ -80,7 +80,7 @@ class AgentSummary {
 
 function GenerateAgentSummary(systemPrompt: string, context: Message[]) -> AgentSummary{
 
-    client OpenAIGeneric
+    client GroqArray
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.

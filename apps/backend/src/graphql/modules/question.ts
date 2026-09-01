@@ -17,6 +17,23 @@ export const questionResolvers = {
         orderBy: { createdAt: "asc" },
       });
     },
+
+    answeredQuestions: async (
+      _parent: unknown,
+      args: { projectId: string },
+      ctx: GraphQLContext,
+    ) => {
+      await loadOwnedProject(ctx, args.projectId);
+      // Scoped through the question, not the run — an answer given in an
+      // earlier round still applies to every later round of the project.
+      return ctx.prisma.answers.findMany({
+        where: {
+          question: { projectId: args.projectId },
+          answer: { not: null },
+        },
+        orderBy: { answeredAt: "asc" },
+      });
+    },
   },
 
   Mutation: {

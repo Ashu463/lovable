@@ -5,18 +5,9 @@ import { MERGE_CONFLICT_RESOLVER_PROMPT } from "../config/systemPrompts"
 
 type TaskInfo = { taskId: number, task: string, summary: string }
 
-// git status --porcelain codes that mean "still unmerged" — the full set
-// git itself can produce for a two-way merge conflict.
 const UNMERGED_CODES = ['DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU']
-// The subset this resolver actually knows how to frame for the LLM: plain
-// content conflicts (markers in the file) and one-side-deleted conflicts.
 const HANDLED_CODES = ['UU', 'AA', 'DU', 'UD']
 
-// Git mechanics for per-task worktree isolation, split out of Orchestrator —
-// none of this touches run/DAG state, it only ever needs a sandbox and a
-// taskId. Orchestrator.runLevel calls this per task in a parallel (2+ task)
-// level; a size-1 level runs directly against PROJECT_ROOT and never touches
-// this at all, there's nothing to isolate it from.
 export class WorktreeGit {
 
     async ensureRepo(sandbox: E2BSandbox): Promise<void> {
