@@ -8,7 +8,7 @@ enum Agent {
 }
 function PlanComplexTask(systemPrompt: string, userPrompt: string, context: string) -> PlannerTodo[]{
 // context here is the CallAgent context sended with Agent, subagent, and planner task
-    client GroqArray
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the request to plan for, already past complexity and

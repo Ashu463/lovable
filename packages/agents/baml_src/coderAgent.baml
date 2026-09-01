@@ -22,7 +22,7 @@ function CoderAgent(
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Research | GetSkill | Done | Abort
     {
-    client GroqArray
+    client OpenAIGeneric
 
     prompt #"
         {{systemPrompt}}

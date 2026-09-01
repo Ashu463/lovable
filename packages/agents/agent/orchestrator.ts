@@ -31,6 +31,7 @@ import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SUBAGENT_TASK_RETRY_
 import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
+import { startRunSpan, observeBaml } from "./utils/tracing"
 import { SkillStore } from "./skills"
 
 // ---------------------------------------------------------------------------
@@ -141,7 +142,18 @@ export class Orchestrator {
     }
 
     private async plan(): Promise<PlannerTodo[]> {
-        const planned = await b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, this.updatedPrompt, this.priorContext)
+        // Opened here, inside the step callback that Execute() wraps this in.
+        const span = await startRunSpan(this.runId, "plan", { input: this.updatedPrompt })
+        try {
+        // observeBaml hands BAML a Collector, then reads the model name and
+        // token counts back off it so this shows up as a proper generation.
+        const planned = await observeBaml(
+            "PlanComplexTask",
+            { prompt: this.updatedPrompt, priorContext: this.priorContext },
+            (opts) => b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, this.updatedPrompt, this.priorContext, opts),
+            span,
+        )
+        span.update({ output: planned })
         await backendGql(
             `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
                 saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
@@ -149,6 +161,9 @@ export class Orchestrator {
             { projectId: this.projectId, runId: this.runId, todos: planned },
         ).catch(e => logger.error(`Failed to save todos for run ${this.runId}: ${e}`))
         return planned
+        } finally {
+            span.end()
+        }
     }
 
     private async runSubAgentWithRetry<T extends SubAgentType>(

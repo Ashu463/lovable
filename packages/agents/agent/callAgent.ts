@@ -7,6 +7,7 @@ import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, UI_PREFERENCE_PROMPT, 
 import { Agent } from "./agent"
 import { PROJECT_ROOT } from "./config/systemConfig"
 import { Orchestrator, type StepRunner } from "./orchestrator"
+import { startRunSpan } from "./utils/tracing"
 import { UIExpert } from "./subagents/uiExpert"
 import type { SubAgentType } from "../types/subAgentsTypes"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
@@ -15,7 +16,6 @@ import { backendGql } from "./utils/backendClient"
 import { summarizeIncompleteSession } from "./utils/priorRunSummary"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
-import {observe} from '@langfuse/tracing'
 
 export type CallAgentContext = {
     taskId: number,
@@ -531,12 +531,19 @@ export const runSimpleTaskFn = inngest.createFunction(
                 const sandbox = await E2BSandbox.StartSandbox(data.userId, data.projectId, data.sandboxId)
                 await sandbox.EnsureAlive()
                 const agent = new Agent(data.updatedPrompt, data.userId, data.projectId, data.runId, data.semanticMem, data.selectedDesign, sandbox, data.priorContext)
-                // agent.runLoop()
-                const tracedResult = observe(agent.runLoop.bind(agent), {
-                    name: `agent-run-for-${data.runId}`,
-                    asType: "agent",
-                })
-                return tracedResult
+
+                // Span goes INSIDE the step callback. If a retry replays this
+                // function, a finished step returns its cached value without
+                // executing, so a span wrapped around step.run would invent
+                // timings for work that never ran.
+                const span = await startRunSpan(data.runId, "agent-run", { input: data.updatedPrompt })
+                try {
+                    const loopResult = await agent.runLoop()
+                    span.update({ output: loopResult })
+                    return loopResult
+                } finally {
+                    span.end()
+                }
             }) as { success: boolean, summary: string }
 
             if (!result.success) {
