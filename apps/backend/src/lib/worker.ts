@@ -5,11 +5,9 @@ import { logger } from "./utils";
 import { prisma } from "./prisma";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
 import { runCallAgent, inngest, functions } from "../../../../packages/agents";
+import { sdk } from "../telemetry/langfuse";
+import {startActiveObservation, startObservation} from '@langfuse/tracing'
 
-// This process already pulls in the whole @repo/agents graph to run jobs
-// (see queue.ts for why the API process deliberately doesn't) — so it's the
-// natural place to also serve the Inngest functions that graph defines,
-// rather than loading them into the lighter API process too.
 const inngestHandler = serve({ client: inngest, functions });
 const INNGEST_SERVE_PORT = Number(process.env.INNGEST_SERVE_PORT ?? 3001);
 Bun.serve({
@@ -39,15 +37,15 @@ const worker = new Worker("run-agent", async (job) => {
 
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
-      await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
+      await startActiveObservation(`agent-run-for-${runId}`, async (span) => {
+        span.update({input: prompt})
+        const output = await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
+        span.update({output: output})
+      })
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;
     }
-    // lockDuration has to outlast the longest gap between job progress, and a
-    // cold sandbox (R2 restore + npm install) alone has taken ~60s, so the old
-    // 60s lock could stall a job that was working fine. maxStalledCount 1 also
-    // meant a single worker restart killed whatever run was in flight.
     },{connection: redis, lockDuration: 300_000, stalledInterval: 30_000, maxStalledCount: 3, concurrency: 5}
 );
 

@@ -15,7 +15,7 @@ import { backendGql } from "./utils/backendClient"
 import { summarizeIncompleteSession } from "./utils/priorRunSummary"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
-
+import {observe} from '@langfuse/tracing'
 
 export type CallAgentContext = {
     taskId: number,
@@ -527,20 +527,25 @@ export const runSimpleTaskFn = inngest.createFunction(
     async ({ event, step }) => {
         const data = event.data as RunEventData as SimpleTask
         try {
-            const mainResult = await step.run("agent-run", async () => {
+            const result = await step.run("agent-run", async () => {
                 const sandbox = await E2BSandbox.StartSandbox(data.userId, data.projectId, data.sandboxId)
                 await sandbox.EnsureAlive()
                 const agent = new Agent(data.updatedPrompt, data.userId, data.projectId, data.runId, data.semanticMem, data.selectedDesign, sandbox, data.priorContext)
-                return agent.runLoop()
+                // agent.runLoop()
+                const tracedResult = observe(agent.runLoop.bind(agent), {
+                    name: `agent-run-for-${data.runId}`,
+                    asType: "agent",
+                })
+                return tracedResult
             }) as { success: boolean, summary: string }
 
-            if (!mainResult.success) {
-                const reason = mainResult.summary
+            if (!result.success) {
+                const reason = result.summary
                 await step.run("emit-run-failed", () => createRunEmitter(data.runId).emit({ type: 'run_failed', error: reason }))
                 return { status: 'error' as const, reason }
             }
 
-            await finalizeRun(step, data, mainResult.summary, [])
+            await finalizeRun(step, data, result.summary, [])
             return { status: 'completed' as const }
         } catch (e) {
             const reason = `Simple run crashed: ${e instanceof Error ? e.message : String(e)}`
