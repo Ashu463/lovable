@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun --hot src/index.ts",
+    "dev:all": "bash scripts/dev-all.sh",
     "worker": "bun --hot src/lib/worker.ts",
     "inngest:dev": "bunx inngest-cli dev -u http://localhost:3001/api/inngest"
   },

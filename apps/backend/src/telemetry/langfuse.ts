@@ -25,4 +25,12 @@ sdk.start();
  */
 export const flushTraces = () => langfuseProcessor.forceFlush();
 
-process.on("SIGTERM", async () => { await sdk.shutdown(); });
+// Registering a signal handler REPLACES the default "terminate" behaviour, so
+// without the explicit exit() the process flushes its spans and then hangs
+// forever — holding :3001 and making the next start fail to bind.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.on(signal, async () => {
+    await sdk.shutdown().catch(() => {});
+    process.exit(0);
+  });
+}
