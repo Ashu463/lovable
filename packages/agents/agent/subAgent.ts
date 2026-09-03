@@ -16,6 +16,8 @@ import { createRunEmitter, type EventEmitter } from "./events";
 import { backendGql, SAVE_RUN_STATE } from "./utils/backendClient";
 import { logger } from "./utils/logger";
 import { SkillStore } from "./skills";
+import { observeBaml } from "./utils/tracing";
+import { startActiveObservation, startObservation, updateActiveObservation } from "@langfuse/tracing";
 
 export class SubAgent<T extends keyof ContextMap> {
     private agentInstance: BaseAgent<InputMap[T], ContextMap[T], any, any>
@@ -73,24 +75,39 @@ export class SubAgent<T extends keyof ContextMap> {
     }
 
     private async withRetry<T>(label: string, maxAttempts: number, fn: () => Promise<T>): Promise<T> {
-        let lastError: unknown
-        for(let attempt = 1; attempt <= maxAttempts; attempt++){
-            try{
-                return await fn()
-            }
-            catch(e){
-                lastError = e
-                logger.warn(`${label} failed (attempt ${attempt}/${maxAttempts}) for ${this.agentType} task ${this.taskId}: ${e instanceof Error ? e.message : String(e)}`)
-                if(attempt < maxAttempts){
-                    await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
+        return startActiveObservation(label, async (span): Promise<T> => {
+            let lastError: unknown
+            for(let attempt = 1; attempt <= maxAttempts; attempt++){
+                try{
+                    const out = await fn()
+                    if (attempt > 1) span.update({metadata: {attemptsUsed: attempt}})
+                    return out
+                }
+                catch(e){
+                    lastError = e
+                    startObservation(
+                        "retry",
+                        {input: {label, attempt, maxAttempts, error: e instanceof Error ? e.message : String(e)}},
+                        {asType: "event"}
+                    ).end()
+                    logger.warn(`${label} failed (attempt ${attempt}/${maxAttempts}) for ${this.agentType} task ${this.taskId}: ${e instanceof Error ? e.message : String(e)}`)
+                    if(attempt < maxAttempts){
+                        await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
+                    }
                 }
             }
-        }
-        throw lastError
+            span.update({
+                level: "ERROR",
+                statusMessage: `${label} exhausted ${maxAttempts} attempt(s)`,
+            })
+            throw lastError
+        })
     }
 
     private async haltTask(reason: string): Promise<SubAgentResponse> {
         logger.error(`${this.agentType} task ${this.taskId} halted: ${reason}`)
+        startObservation("halted", {input: {agentType: this.agentType, taskId: this.taskId, reason}}, {asType: "event"}).end()
+        updateActiveObservation({level: "ERROR", statusMessage: reason})
         this.pushSession('assistant', 'halted', { reason })
         await this.SaveSessionState()
         const summary = await this.BuildSummary()
@@ -99,6 +116,10 @@ export class SubAgent<T extends keyof ContextMap> {
     }
 
     async runLoop(): Promise<SubAgentResponse> {
+        return startActiveObservation(
+            `subagent-${this.agentType}-task-${this.taskId}`,
+            async (span): Promise<SubAgentResponse> => {
+        span.update({input: {agentType: this.agentType, taskId: this.taskId, task: (this.input as BaseTaskInput).task?.task}})
         this.context = await this.BuildInitialContext()
         let success = true
         await this.emitter.emit({ type: 'subagent_started', agent: this.agentType as string, taskId: this.taskId, task: (this.input as BaseTaskInput).task?.task })
@@ -112,6 +133,11 @@ export class SubAgent<T extends keyof ContextMap> {
             catch(e){
                 return await this.haltTask(`LLM call failed after ${SUBAGENT_LLM_RETRY_ATTEMPTS} attempts: ${e instanceof Error ? e.message : String(e)}`)
             }
+            startObservation(
+                "iteration",
+                {input: {iteration: this.iteration, action: this.summarizeToolCall(res)}},
+                {asType: "event"}
+            ).end()
             logger.info(`${this.agentType} task ${this.taskId} iter ${this.iteration} -> ${this.summarizeToolCall(res)}`)
             if (this.isSingleShotAgent() || res.action === 'done') {
                 logger.info(`${this.agentType} done`)
@@ -129,6 +155,8 @@ export class SubAgent<T extends keyof ContextMap> {
 
             if(res.action === 'abort'){
                 logger.warn(`${this.agentType} aborted at iteration ${this.iteration}: ${res.reason}`)
+                startObservation("aborted", {input: {iteration: this.iteration, reason: res.reason}}, {asType: "event"}).end()
+                span.update({level: "WARNING", statusMessage: res.reason})
                 this.pushSession('assistant', 'halted', res)
                 await this.SaveSessionState()
                 success = false
@@ -162,7 +190,11 @@ export class SubAgent<T extends keyof ContextMap> {
 
         const summary = await this.BuildSummary()
         await this.emitter.emit({ type: 'subagent_completed', agent: this.agentType as string, taskId: this.taskId, summary, success })
-        return { success, summary }
+        const result: SubAgentResponse = { success, summary }
+        span.update({output: result, metadata: {iterations: this.iteration, success}})
+        return result
+            },
+        )
     }
     async Test(): Promise<TesterResponse>{
         const tester = new TesterAgent(this.userId, this.projectId, this.sandbox)
@@ -271,7 +303,11 @@ export class SubAgent<T extends keyof ContextMap> {
             // #CRITICAL: See session map of baml side and here agent side are not imported from same direction
             // so might cause some issue here.
             // Fix for it is store stringified version of whatever thing you want to save
-            return await b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.agentType, JSON.stringify(this.session))
+            return await observeBaml(
+                "GenerateSubagentSummary",
+                { agentType: this.agentType, sessionLength: this.session.length },
+                (opts) => b.GenerateSubagentSummary(SUBAGENT_SUMMARY_PROMPT, this.agentType, JSON.stringify(this.session), opts),
+            )
         } catch (e) {
             logger.error(`Error occurred while generating summary for ${this.agentType}: ${e}`)
             throw e

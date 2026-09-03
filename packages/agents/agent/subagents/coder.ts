@@ -1,6 +1,7 @@
 import { CODER_PROMPT } from "../config/systemPrompts";
 import {b, type Abort, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
+import { observeBaml } from "../utils/tracing"
 import { E2BSandbox } from "../utils/sandbox";
 import { fetchDocs } from "../MCPs/context7";
 import { BaseAgent } from "./baseAgent";
@@ -29,10 +30,11 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
 
 
     override async callLLM(input: CoderTaskInput, context: CoderContext): Promise<CoderLLMResponse> {
-        // Each screen's design lives in the sandbox (design/<taskId>-slug.html) —
-        // UIExpert sets the boilerplate there itself; Coder reads it directly
-        // via repoTree/ReadFile when it needs it, no side-channel reference here.
-        return await b.CoderAgent(CODER_PROMPT, context)
+        return await observeBaml(
+            "CoderAgent",
+            { task: context.task, dependencies: context.dependentSummary?.length ?? 0 },
+            (opts) => b.CoderAgent(CODER_PROMPT, context, opts),
+        )
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {
         try{

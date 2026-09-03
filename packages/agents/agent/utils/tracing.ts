@@ -48,13 +48,9 @@ export async function startRunSpan(
 }
 
 function bamlGenerationAttributes(collector: Collector) {
-    // `last` is the most recent BAML function call this collector saw.
     const log = collector.last
     if (!log) return {}
 
-    // BAML retries and falls back between clients on its own. `calls` has one
-    // entry per attempt; the final one is what actually produced the output.
-    // (Note: JS has no negative indexing — .at(-1), not [-1].)
     const call = log.calls.at(-1)
     const usage = log.usage
 
@@ -68,7 +64,6 @@ function bamlGenerationAttributes(collector: Collector) {
         metadata: {
             provider: call?.provider,
             bamlFunction: log.functionName,
-            // >1 means BAML retried internally — useful when a step looks slow.
             bamlAttempts: log.calls.length,
             durationMs: log.timing.durationMs,
         },

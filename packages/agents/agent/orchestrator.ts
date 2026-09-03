@@ -1,20 +1,3 @@
-// New orchestrator loop — replaces the `else` (complex/DAG) branch of
-// CallAgent.Execute in callAgent.ts. Read this file next to that block; most
-// of what's below is that logic reshaped around Inngest steps, not reinvented.
-//
-// What's REAL here (works, typechecks, mostly lifted from callAgent.ts):
-//   - planning, DAG leveling, subagent spawn, tester/debugger merge gate,
-//     state/context bookkeeping, run summary.
-//   - git worktree isolation for parallel same-level tasks (runLevel):
-//     size-1 levels run directly against PROJECT_ROOT (no isolation needed,
-//     nothing to collide with); size 2+ levels run concurrently, each task
-//     in its own worktree, merged back to trunk one at a time afterward. A
-//     real merge conflict (e.g. two UI tasks both wiring into src/App.tsx)
-//     surfaces as that task's result being marked failed, not silently lost.
-// What's a STUB (interface only, marked TODO, does not silently pretend to work):
-//   - context engine push/pull
-//   - the LLM continue/replan/abort decision at each level boundary
-
 import { b } from "../baml_client"
 import type { UIPreferenceQA } from "../types/callAgentTypes"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
@@ -33,17 +16,8 @@ import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
 import { startRunSpan, observeBaml } from "./utils/tracing"
 import { SkillStore } from "./skills"
+import { startActiveObservation, startObservation } from "@langfuse/tracing"
 
-// ---------------------------------------------------------------------------
-// State that has to survive a step boundary must be JSON-serializable —
-// Inngest memoizes every step.run() return value as JSON, and a Map comes
-// back as `{}`. CallAgentState (imported above) uses Maps because the old
-// in-process loop never crossed a serialization boundary; this loop does, on
-// every step. So level-to-level state on the class is a plain, serializable
-// shape, and only gets converted into the Map-shaped CallAgentState right
-// before a subagent's input is built inside a single step callback — never
-// stored on `this` in Map form.
-// ---------------------------------------------------------------------------
 type SerializableState = {
     lastTestErrors: AgentError[]
     lastToolResult: ToolResult | null
@@ -142,28 +116,21 @@ export class Orchestrator {
     }
 
     private async plan(): Promise<PlannerTodo[]> {
-        // Opened here, inside the step callback that Execute() wraps this in.
-        const span = await startRunSpan(this.runId, "plan", { input: this.updatedPrompt })
-        try {
-        // observeBaml hands BAML a Collector, then reads the model name and
-        // token counts back off it so this shows up as a proper generation.
-        const planned = await observeBaml(
-            "PlanComplexTask",
-            { prompt: this.updatedPrompt, priorContext: this.priorContext },
-            (opts) => b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, this.updatedPrompt, this.priorContext, opts),
-            span,
-        )
-        span.update({ output: planned })
-        await backendGql(
-            `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
-                saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
-            }`,
-            { projectId: this.projectId, runId: this.runId, todos: planned },
-        ).catch(e => logger.error(`Failed to save todos for run ${this.runId}: ${e}`))
-        return planned
-        } finally {
-            span.end()
-        }
+        return startActiveObservation("multi-agent-planner", async (span): Promise<PlannerTodo[]> => {
+            const planned = await observeBaml(
+                "PlanComplexTask",
+                { prompt: this.updatedPrompt, priorContext: this.priorContext },
+                (opts) => b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, this.updatedPrompt, this.priorContext, opts),
+            )
+            span.update({ output: planned })
+            await backendGql(
+                `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
+                    saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
+                }`,
+                { projectId: this.projectId, runId: this.runId, todos: planned },
+            ).catch(e => logger.error(`Failed to save todos for run ${this.runId}: ${e}`))
+            return planned
+        })
     }
 
     private async runSubAgentWithRetry<T extends SubAgentType>(
@@ -175,6 +142,11 @@ export class Orchestrator {
             result = await subagent.runLoop()
             if (result.success) return result
             logger.warn(`${agentType} task failed (attempt ${attempt}/${SUBAGENT_TASK_RETRY_ATTEMPTS}): ${result.summary}`)
+            startObservation(
+                "subagent-task-retry",
+                {input: {agentType, attempt, maxAttempts: SUBAGENT_TASK_RETRY_ATTEMPTS, summary: result.summary}},
+                {asType: "event"}
+            ).end()
             if (attempt < SUBAGENT_TASK_RETRY_ATTEMPTS) {
                 await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
             }
@@ -183,72 +155,84 @@ export class Orchestrator {
     }
 
     private async runLevel(taskIds: number[]): Promise<{ context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[], taskFiles: Record<number, string[]> }> {
-        let context = this.context
-        const state = this.state
-        const results: { taskId: number, success: boolean, summary: string }[] = []
-        const taskFiles: Record<number, string[]> = {}
-
-        if (taskIds.length > 1) {
-            const sandbox = await this.reconnectSandbox()
-            await this.worktreeGit.ensureRepo(sandbox)
-
-            const spawned = await Promise.all(taskIds.map(async (taskId) => {
-                const todo = this.todos.find(t => t.id === taskId)
-                if (!todo || !todo.agent) return null
-
-                const taskSandbox = await this.reconnectSandbox()
-                const worktreePath = await this.worktreeGit.create(taskSandbox, taskId)
-
-                const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
-                const result = await this.runSubAgentWithRetry(todo.agent, input, taskSandbox, worktreePath)
-
-                return { taskId, todo, result, taskSandbox }
-            }))
-
-            for (const spawn of spawned) {
-                if (!spawn) continue
-                const { taskId, todo, result, taskSandbox } = spawn
-                let success = result.success
-                let summary = result.summary
-
-                if (success) {
-                    const merge = await this.worktreeGit.merge(
-                        taskSandbox, taskId,
-                        { task: todo.task, summary: result.summary },
-                        [...this.context, ...context],
-                        taskFiles,
-                    )
-                    if (!merge.success) {
-                        success = false
-                        summary = `Task completed but its worktree failed to merge cleanly — likely a conflicting edit with another task in the same level (e.g. both wired into src/App.tsx): ${merge.content}`
-                        logger.error(`Merge conflict for task ${taskId}: ${merge.content}`)
-                    } else {
-                        taskFiles[taskId] = merge.files
-                    }
-                }
-
-                results.push({ taskId, success, summary })
-                context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent!, success, summary }]
-            }
-        }
-        else {
-            for (const taskId of taskIds) {
-                const todo = this.todos.find(t => t.id === taskId)
-                if (!todo || !todo.agent) continue
-
+        
+        return startActiveObservation("multi-agent-parallel-runner", 
+            async (span): Promise<{ context: CallAgentContext[], state: SerializableState, results: { taskId: number, success: boolean, summary: string }[], taskFiles: Record<number, string[]> }> => {
+            let context = this.context
+            const state = this.state
+            const results: { taskId: number, success: boolean, summary: string }[] = []
+            const taskFiles: Record<number, string[]> = {}
+            if (taskIds.length > 1) {
+                span.update({statusMessage: `Spawning parallel subagents`})
                 const sandbox = await this.reconnectSandbox()
                 await this.worktreeGit.ensureRepo(sandbox)
-
-                const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
-                const result = await this.runSubAgentWithRetry(todo.agent, input, sandbox, PROJECT_ROOT)
-
-                results.push({ taskId, success: result.success, summary: result.summary })
-                context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
-                if (result.success) taskFiles[taskId] = []
+                const spawned = await Promise.all(taskIds.map(async (taskId) => {
+                    const todo = this.todos.find(t => t.id === taskId)
+                    if (!todo || !todo.agent) return null
+    
+                    const taskSandbox = await this.reconnectSandbox()
+                    const worktreePath = await this.worktreeGit.create(taskSandbox, taskId)
+    
+                    const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
+                    const result = await this.runSubAgentWithRetry(todo.agent, input, taskSandbox, worktreePath)
+    
+                    return { taskId, todo, result, taskSandbox }
+                }))
+    
+                for (const spawn of spawned) {
+                    if (!spawn) continue
+                    const { taskId, todo, result, taskSandbox } = spawn
+                    let success = result.success
+                    let summary = result.summary
+    
+                    if (success) {
+                        const merge = await this.worktreeGit.merge(
+                            taskSandbox, taskId,
+                            { task: todo.task, summary: result.summary },
+                            [...this.context, ...context],
+                            taskFiles,
+                        )
+                        if (!merge.success) {
+                            success = false
+                            summary = `Task completed but its worktree failed to merge cleanly — likely a conflicting edit with another task in the same level (e.g. both wired into src/App.tsx): ${merge.content}`
+                            startObservation(
+                                "merge-conflict",
+                                {input: {taskId, detail: merge.content}},
+                                {asType: "event"}
+                            ).end()
+                            span.update({level: "ERROR"})
+                            logger.error(`Merge conflict for task ${taskId}: ${merge.content}`)
+                        } else {
+                            taskFiles[taskId] = merge.files
+                        }
+                    }
+    
+                    results.push({ taskId, success, summary })
+                    context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent!, success, summary }]
+                }
             }
-        }
+            else {
+                span.update({statusMessage: `Spawning subagents sequentially`})
+                for (const taskId of taskIds) {
+                    const todo = this.todos.find(t => t.id === taskId)
+                    if (!todo || !todo.agent) continue
+    
+                    const sandbox = await this.reconnectSandbox()
+                    await this.worktreeGit.ensureRepo(sandbox)
+    
+                    const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
+                    const result = await this.runSubAgentWithRetry(todo.agent, input, sandbox, PROJECT_ROOT)
+    
+                    results.push({ taskId, success: result.success, summary: result.summary })
+                    context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
+                    if (result.success) taskFiles[taskId] = []
+                }
+            }
+            return { context, state, results, taskFiles }
 
-        return { context, state, results, taskFiles }
+        })
+
+
     }
 
     private async runMergeGate(taskFiles: Record<number, string[]>): Promise<{ success: boolean, state: SerializableState, summaries: string[] }> {
@@ -274,44 +258,52 @@ export class Orchestrator {
         let repeatCount = 0
         let loopCount = 0
 
-        while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
-            sandbox = await this.reconnectSandbox()
-            const tester = new TesterAgent(this.userId, this.projectId, sandbox)
-            await this.emitter.emit({ type: 'subagent_started', agent: 'tester', task: 'Verifying the build' })
-            const testerRes: TesterResponse = await tester.testCodebase(testerContext)
-            await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'Build verified' : 'Build check failed', success: testerRes.success })
-
-            const taskFileEntries = Object.entries(taskFiles)
-            const owningTask = taskFileEntries.length === 1
-                ? Number(taskFileEntries[0]![0])
-                : taskFileEntries.find(([, files]) => files.includes(testerRes.errorRes?.file ?? ''))?.[0]
-
-            const error: AgentError = testerRes.errorRes
-                ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester', taskId: owningTask !== undefined ? Number(owningTask) : undefined }
-                : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics", source: 'build' }
-
-            const currentErrorSignature = `${error.fileName}:${error.error}`
-            if (currentErrorSignature === previousErrorSignature) {
-                repeatCount++
-                if (repeatCount >= 2) return { success: false, state, summaries }
-            } else {
-                repeatCount = 0
+        return startActiveObservation("multi-agent-runMergeGate", async (span) => {
+            while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
+                sandbox = await this.reconnectSandbox()
+                startObservation(
+                    "tester-iteration",
+                    {input: {loopCount, maxIterations: TESTER_DEBUGGER_LOOP_MAX_ITERATIONS}},
+                    {asType: "event"}
+                ).end()
+                const tester = new TesterAgent(this.userId, this.projectId, sandbox)
+                await this.emitter.emit({ type: 'subagent_started', agent: 'tester', task: 'Verifying the build' })
+                const testerRes: TesterResponse = await tester.testCodebase(testerContext)
+                await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'Build verified' : 'Build check failed', success: testerRes.success })
+                
+                const taskFileEntries = Object.entries(taskFiles)
+                const owningTask = taskFileEntries.length === 1
+                    ? Number(taskFileEntries[0]![0])
+                    : taskFileEntries.find(([, files]) => files.includes(testerRes.errorRes?.file ?? ''))?.[0]
+    
+                const error: AgentError = testerRes.errorRes
+                    ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester', taskId: owningTask !== undefined ? Number(owningTask) : undefined }
+                    : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics", source: 'build' }
+    
+                const currentErrorSignature = `${error.fileName}:${error.error}`
+                if (currentErrorSignature === previousErrorSignature) {
+                    repeatCount++
+                    if (repeatCount >= 2) return { success: false, state, summaries }
+                } else {
+                    repeatCount = 0
+                }
+                previousErrorSignature = currentErrorSignature
+                state = { ...state, lastTestErrors: [...state.lastTestErrors, error] }
+    
+                const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], designNeeded: false }
+                const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
+                const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
+                await sandbox.SyncR2()
+    
+                state = { ...state, lastToolResult: { success: debuggerResult.success } }
+                summaries.push(debuggerResult.summary)
+                deployReady = await preDeployCheck(sandbox)
+                loopCount++
             }
-            previousErrorSignature = currentErrorSignature
-            state = { ...state, lastTestErrors: [...state.lastTestErrors, error] }
+            return { success: deployReady, state, summaries }
+        })
 
-            const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], designNeeded: false }
-            const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
-            const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
-            await sandbox.SyncR2()
 
-            state = { ...state, lastToolResult: { success: debuggerResult.success } }
-            summaries.push(debuggerResult.summary)
-            deployReady = await preDeployCheck(sandbox)
-            loopCount++
-        }
-
-        return { success: deployReady, state, summaries }
     }
 
     private async commitState(results: { taskId: number, summary: string }[]): Promise<void> {
@@ -326,11 +318,11 @@ export class Orchestrator {
     }
 
     async Execute(step: StepRunner): Promise<{ status: 'completed' | 'error', summary?: string, todos?: PlannerTodo[], reason?: string }> {
+        
         this.todos = await step.run("plan", () => this.plan()) as unknown as PlannerTodo[]
 
         const dag = new DAG(this.todos)
         const levels = dag.TopologicalSortParallel()
-
         for (let levelIndex = 0; levelIndex < levels.length; levelIndex++) {
             const taskIds = levels[levelIndex]!
             
@@ -368,8 +360,18 @@ export class Orchestrator {
             }
             // #TODO: decision.action === 'replan' to be completed midway. 
         }
-
-        const summary = await step.run("summarize", () => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.allSummaries))
+        const summary = await step.run("summarize", () =>
+            startActiveObservation("multi-agent-summarize", async (span): Promise<string> => {
+                span.update({input: {summaries: this.allSummaries.length}})
+                const out = await observeBaml(
+                    "summarize-llm",
+                    {summaries: this.allSummaries.length},
+                    (opts) => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.allSummaries, opts),
+                )
+                span.update({output: out})
+                return out
+            })
+        ) as string
         logger.info(`Orchestrator run ${this.runId} completed`)
         return { status: 'completed', summary, todos: this.todos }
     }

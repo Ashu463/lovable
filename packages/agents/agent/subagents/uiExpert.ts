@@ -7,6 +7,7 @@ import type { E2BSandbox } from "../utils/sandbox"
 import type { UIExpertTaskInput } from "../../types/subAgentsTypes"
 import { designFilePath } from "../utils/designPath"
 import { logger } from "../utils/logger"
+import { observeBaml } from "../utils/tracing"
 
 type UIExpertRequest = {userPrompt: string, semanticMem: string}
 
@@ -31,7 +32,11 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
     private async framePrompts(userPrompt: string, semanticMem: string, skills: Skill[]): Promise<DesignVariants> {
         try{
-            const res = await b.FramePrompts(UI_VARIANTS_PROMPT, userPrompt, semanticMem, skills)
+            const res = await observeBaml(
+                "FramePrompts",
+                { userPrompt },
+                (opts) => b.FramePrompts(UI_VARIANTS_PROMPT, userPrompt, semanticMem, skills, opts),
+            )
             logger.info(`Framed ${res.prompts.length} design variant prompt(s)`)
             return res
         }
@@ -123,7 +128,12 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
         if (this.htmlDesign === null) {
             this.htmlDesign = await this.setBaseTemplate(input)
         }
-        return await b.UIExpertAgent(UI_EXPERT_BASE_TEMPLATE_PROMPT, this.htmlDesign, context)
+        const html = this.htmlDesign
+        return await observeBaml(
+            "UIExpertAgent",
+            { task: context.task },
+            (opts) => b.UIExpertAgent(UI_EXPERT_BASE_TEMPLATE_PROMPT, html, context, opts),
+        )
     }
 
     override async executeFunction(response: UIExpertLLMResponse): Promise<UIExpertAgentResponse> {

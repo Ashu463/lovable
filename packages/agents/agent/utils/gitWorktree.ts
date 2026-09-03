@@ -2,6 +2,7 @@ import type { E2BSandbox } from "./sandbox"
 import { PROJECT_ROOT, SANDBOX_HOME } from "../config/systemConfig"
 import { b, type MergeConflictResolution } from "../../baml_client"
 import { MERGE_CONFLICT_RESOLVER_PROMPT } from "../config/systemPrompts"
+import { observeBaml } from "./tracing"
 
 type TaskInfo = { taskId: number, task: string, summary: string }
 
@@ -156,13 +157,17 @@ export class WorktreeGit {
 
         let resolution: MergeConflictResolution
         try {
-            resolution = await b.ResolveMergeConflict(MERGE_CONFLICT_RESOLVER_PROMPT, {
-                filePath: file,
-                conflictKind,
-                conflictText,
-                currentTask: { task: current.task, summary: current.summary },
-                trunkTask: trunkTask ? { task: trunkTask.task, summary: trunkTask.summary } : undefined,
-            })
+            resolution = await observeBaml(
+                "ResolveMergeConflict",
+                { file, conflictKind },
+                (opts) => b.ResolveMergeConflict(MERGE_CONFLICT_RESOLVER_PROMPT, {
+                    filePath: file,
+                    conflictKind,
+                    conflictText,
+                    currentTask: { task: current.task, summary: current.summary },
+                    trunkTask: trunkTask ? { task: trunkTask.task, summary: trunkTask.summary } : undefined,
+                }, opts),
+            )
         } catch (e) {
             return { resolved: false, reason: `ResolveMergeConflict call failed: ${e instanceof Error ? e.message : String(e)}` }
         }

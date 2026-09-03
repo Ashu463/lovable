@@ -9,6 +9,8 @@
     "inngest:dev": "bunx inngest-cli dev -u http://localhost:3001/api/inngest"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
     "@types/bun": "latest",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/pg": "^8.20.0",

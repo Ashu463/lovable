@@ -7,7 +7,8 @@ import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, UI_PREFERENCE_PROMPT, 
 import { Agent } from "./agent"
 import { PROJECT_ROOT } from "./config/systemConfig"
 import { Orchestrator, type StepRunner } from "./orchestrator"
-import { startRunSpan } from "./utils/tracing"
+import { startRunSpan, observeBaml } from "./utils/tracing"
+import { startObservation } from "@langfuse/tracing"
 import { UIExpert } from "./subagents/uiExpert"
 import type { SubAgentType } from "../types/subAgentsTypes"
 import { deployReactApp, type DeploymentResult } from "./MCPs/vercel"
@@ -83,14 +84,13 @@ export class CallAgent{
         // clarification call on a prompt we already know is ambiguous.
         if(questions.length > 0){
             logger.info(`Reusing previously generated questions, skipping complexity/clarification checks`)
+            startObservation("reused-questions", {input: {count: questions.length}}, {asType: "event"}).end()
             return {
                 status: 'clarification_needed',
                 questions: questions,
                 alreadySaved: true
             }
         }
-        // Answers now come from the DB, not the job payload, so they survive
-        // every later round — a UI preference pause no longer loses them.
         else if(answers.length > 0){
             logger.info(`Folding ${answers.length} previously answered question(s) into the prompt`)
             const qa = answers
@@ -102,13 +102,18 @@ export class CallAgent{
         else{
             if(cachedIsComplex !== null && cachedIsComplex !== undefined){
                 logger.info(`Reusing cached complexity verdict (${cachedIsComplex}) for project ${this.projectId}, skipping complexity checker LLM call`)
+                startObservation("reused-complexity-verdict", {input: {isComplex: cachedIsComplex}}, {asType: "event"}).end()
                 complexity = cachedIsComplex
             }
             else{
                 let complexityVerdict
                 try{
                     logger.info(`Running complexity checker`)
-                    complexityVerdict = await b.CheckComplexity(COMPLEXITY_CHECKER_PROMPT, userPrompt)
+                    complexityVerdict = await observeBaml(
+                        "CheckComplexity",
+                        { userPrompt },
+                        (opts) => b.CheckComplexity(COMPLEXITY_CHECKER_PROMPT, userPrompt, opts),
+                    )
                 }
                 catch(e){
                     logger.error(`Failed complexity checker ${e}`)
@@ -134,7 +139,11 @@ export class CallAgent{
             let clarifyingQuestions: Question[]
             try{
                 logger.info(`Running clarification checker`)
-                clarifyingQuestions = await b.GenerateClarifyingQuestions(CLARIFICATION_PROMPT, userPrompt, complexity)
+                clarifyingQuestions = await observeBaml(
+                    "GenerateClarifyingQuestions",
+                    { userPrompt, complexity },
+                    (opts) => b.GenerateClarifyingQuestions(CLARIFICATION_PROMPT, userPrompt, complexity, opts),
+                )
             }
             catch(e){
                 logger.error(`Failed clarification checker ${e}`)
@@ -156,21 +165,25 @@ export class CallAgent{
         if(complexity){
             logger.info(`Complex task — skipping single-design selection`)
 
-            // Unanswered ones come first: a partially answered set still needs
-            // the rest before any UIExpert task can run.
             if(bootstrap.uiPreferenceQuestions.length > 0){
                 logger.info(`Reusing ${bootstrap.uiPreferenceQuestions.length} previously asked UI preference question(s), still awaiting answers`)
+                startObservation("awaiting-ui-preferences", {input: {count: bootstrap.uiPreferenceQuestions.length}}, {asType: "event"}).end()
                 return { status: 'ui_preference_needed', questions: bootstrap.uiPreferenceQuestions, alreadySaved: true }
             }
             else if(bootstrap.currentUIPreferences.length > 0){
                 this.uiPreferences = bootstrap.currentUIPreferences.map((p) => ({question: p.questionText, answer: p.answer}))
                 logger.info(`Loaded ${this.uiPreferences.length} answered UI preference(s) for project ${this.projectId}`)
+                startObservation("reused-ui-preferences", {input: {count: bootstrap.currentUIPreferences.length}}, {asType: "event"}).end()
             }
             else{
                 let uiQuestions: Question[]
                 try{
                     logger.info(`Running UI preference checker`)
-                    uiQuestions = await b.GenerateUIPreferenceQuestions(UI_PREFERENCE_PROMPT, userPrompt)
+                    uiQuestions = await observeBaml(
+                        "GenerateUIPreferenceQuestions",
+                        { userPrompt },
+                        (opts) => b.GenerateUIPreferenceQuestions(UI_PREFERENCE_PROMPT, userPrompt, opts),
+                    )
                 }
                 catch(e){
                     logger.error(`Failed UI preference checker ${e}`)
@@ -231,6 +244,7 @@ export class CallAgent{
         const selectedDesign = designs.find((d) => d.isSelected)
         if(!selectedDesign){
              logger.info(`Reusing previously generated designs, still awaiting selection`)
+            startObservation("awaiting-design-selection", {input: {count: designs.length}}, {asType: "event"}).end()
             return {
                 status: 'select_design',
                 designs: designs.map((d): DesignOption => ({id: d.id, htmlContent: d.htmlContent})),
@@ -284,7 +298,11 @@ export class CallAgent{
         if(!answers && !selectedDesignId && !uiPreferences){
             let verdict: { isDevelopment: boolean }
             try{
-                verdict = await b.CheckIsDevelopmentRequest(DEVELOPMENT_GATE_PROMPT, userPrompt)
+                verdict = await observeBaml(
+                    "CheckIsDevelopmentRequest",
+                    { userPrompt },
+                    (opts) => b.CheckIsDevelopmentRequest(DEVELOPMENT_GATE_PROMPT, userPrompt, opts),
+                )
             }
             catch(e){
                 logger.error(`Development gate check failed, defaulting to development: ${e}`)
@@ -294,7 +312,11 @@ export class CallAgent{
                 logger.info(`Message judged conversational, skipping the build pipeline`)
                 let reply: string
                 try{
-                    const conversational = await b.RespondConversationally(CONVERSATIONAL_REPLY_PROMPT, userPrompt, priorContext, this.semanticMem)
+                    const conversational = await observeBaml(
+                        "RespondConversationally",
+                        { userPrompt },
+                        (opts) => b.RespondConversationally(CONVERSATIONAL_REPLY_PROMPT, userPrompt, priorContext, this.semanticMem, opts),
+                    )
                     reply = conversational.reply
                 }
                 catch(e){
@@ -532,10 +554,6 @@ export const runSimpleTaskFn = inngest.createFunction(
                 await sandbox.EnsureAlive()
                 const agent = new Agent(data.updatedPrompt, data.userId, data.projectId, data.runId, data.semanticMem, data.selectedDesign, sandbox, data.priorContext)
 
-                // Span goes INSIDE the step callback. If a retry replays this
-                // function, a finished step returns its cached value without
-                // executing, so a span wrapped around step.run would invent
-                // timings for work that never ran.
                 const span = await startRunSpan(data.runId, "agent-run", { input: data.updatedPrompt })
                 try {
                     const loopResult = await agent.runLoop()

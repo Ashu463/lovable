@@ -4,6 +4,7 @@ import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_G
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
 import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS, READ_RESULT_MAX_CHARS } from "../config/systemConfig"
+import { observeBaml } from "./tracing"
 
 function truncate(text: string, limit: number): string {
     if (text.length <= limit) return text
@@ -147,7 +148,11 @@ export class CoderContextManager extends ContextManager<CoderContext>{
             skills: context.skills,
             recentTurns: context.recentTurns
         }
-        const olderCompacted = await b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
+        const olderCompacted = await observeBaml(
+            "CompactCoderContext",
+            { entries: olderHalf.length },
+            (opts) => b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext, opts),
+        )
 
         return {
             task: context.task,
@@ -158,7 +163,11 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         }
     }
     override async SummarizeContext(context: CoderContext): Promise<CoderContext> {
-        return await b.SummarizeCoderContext(SUMMARIZE_CONTEXT_PROMPT, context)
+        return await observeBaml(
+            "SummarizeCoderContext",
+            { entries: context.dependentSummary?.length ?? 0 },
+            (opts) => b.SummarizeCoderContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
+        )
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"
@@ -195,7 +204,11 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
             skills: context.skills,
             recentTurns: context.recentTurns
         }
-        const olderCompacted = await b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
+        const olderCompacted = await observeBaml(
+            "CompactDebuggerContext",
+            { fixHistory: len },
+            (opts) => b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext, opts),
+        )
 
         return {
             repoTree: context.repoTree,
@@ -207,7 +220,11 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     }
     // I don't think we will ever need this coz debugger should fix the error before this could even hit
     override async SummarizeContext(context: DebuggerContext): Promise<DebuggerContext> {
-        return await b.SummarizeDebuggerContext(SUMMARIZE_CONTEXT_PROMPT, context)
+        return await observeBaml(
+            "SummarizeDebuggerContext",
+            { fixHistory: context.fixHistory?.length ?? 0 },
+            (opts) => b.SummarizeDebuggerContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
+        )
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"
