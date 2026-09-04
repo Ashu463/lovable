@@ -46,10 +46,16 @@ const worker = new Worker("run-agent", async (job) => {
       // Pinned to the run's own trace (derived from runId) instead of letting
       // Langfuse invent one. Without this, prep lands in one trace and
       // everything Inngest does later lands in a completely separate one.
+      // BullMQ re-processes a stalled job (maxStalledCount) with the same
+      // payload — mark that like the Inngest retries, so a re-run isn't a
+      // mystery in the trace.
+      if (job.attemptsMade > 0) {
+        startObservation("bullmq-retry", { input: { attempt: job.attemptsMade } }, { asType: "event", parentSpanContext: await runSpanContext(runId) }).end()
+      }
       await startActiveObservation(
         "prep",
         async (span) => {
-          span.update({ input: prompt })
+          span.update({ input: prompt, metadata: { bullAttempt: job.attemptsMade } })
           const output = await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
           span.update({ output })
         },

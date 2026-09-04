@@ -7,7 +7,7 @@ import { COMPLEXITY_CHECKER_PROMPT, CLARIFICATION_PROMPT, UI_PREFERENCE_PROMPT, 
 import { Agent } from "./agent"
 import { PROJECT_ROOT } from "./config/systemConfig"
 import { Orchestrator, type StepRunner } from "./orchestrator"
-import { startRunSpan, observeBaml } from "./utils/tracing"
+import { observeBaml, runSpanContext } from "./utils/tracing"
 import { startObservation } from "@langfuse/tracing"
 import { UIExpert } from "./subagents/uiExpert"
 import type { SubAgentType } from "../types/subAgentsTypes"
@@ -524,8 +524,11 @@ async function finalizeRun(step: StepRunner, data: RunEventData, summary: string
 
 export const runComplexTaskFn = inngest.createFunction(
     { id: "run-complex-task", triggers: [{ event: "callAgent/run.complex" }] },
-    async ({ event, step }) => {
+    async ({ event, step, attempt }) => {
         const data = event.data as RunEventData as ComplexTask
+        if (attempt > 0) {
+            startObservation("inngest-retry", { input: { attempt, fn: "run-complex-task" } }, { asType: "event", parentSpanContext: await runSpanContext(data.runId) }).end()
+        }
         try {
             const orchestrator = new Orchestrator(
                 data.userId, data.projectId, data.runId, data.sandboxId,
@@ -546,22 +549,17 @@ export const runComplexTaskFn = inngest.createFunction(
 
 export const runSimpleTaskFn = inngest.createFunction(
     { id: "run-simple-task", triggers: [{ event: "callAgent/run.simple" }] },
-    async ({ event, step }) => {
+    async ({ event, step, attempt }) => {
         const data = event.data as RunEventData as SimpleTask
+        if (attempt > 0) {
+            startObservation("inngest-retry", { input: { attempt, fn: "run-simple-task" } }, { asType: "event", parentSpanContext: await runSpanContext(data.runId) }).end()
+        }
         try {
             const result = await step.run("agent-run", async () => {
                 const sandbox = await E2BSandbox.StartSandbox(data.userId, data.projectId, data.sandboxId)
                 await sandbox.EnsureAlive()
                 const agent = new Agent(data.updatedPrompt, data.userId, data.projectId, data.runId, data.semanticMem, data.selectedDesign, sandbox, data.priorContext)
-
-                const span = await startRunSpan(data.runId, "agent-run", { input: data.updatedPrompt })
-                try {
-                    const loopResult = await agent.runLoop()
-                    span.update({ output: loopResult })
-                    return loopResult
-                } finally {
-                    span.end()
-                }
+                return agent.runLoop()
             }) as { success: boolean, summary: string }
 
             if (!result.success) {

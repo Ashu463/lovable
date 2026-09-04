@@ -4,8 +4,9 @@
 # They must run CONCURRENTLY, not chained with &&: each one is a long-lived
 # server that never exits, so `a && b && c` would start `a` and stop there.
 #
-# Everything is prefixed by service and streamed to both the terminal and
-# logs/run.log, so you can watch it live and still grep it afterwards.
+# Everything is prefixed by service and written to logs/run.log only — the
+# terminal stays quiet apart from the startup banner. Follow it with:
+#   tail -f apps/backend/logs/run.log
 
 set -uo pipefail
 cd "$(dirname "$0")/.."
@@ -20,8 +21,8 @@ trap 'echo; echo "[dev-all] shutting down..."; kill 0 2>/dev/null; exit 0' EXIT 
 
 run() {
   local name=$1; shift
-  # sed -u keeps it unbuffered so lines appear as they happen, not in blocks.
-  ( "$@" 2>&1 | sed -u "s/^/[$name] /" | tee -a "$LOG" ) &
+  # sed -u keeps it unbuffered so lines land in the file as they happen.
+  ( "$@" 2>&1 | sed -u "s/^/[$name] /" >> "$LOG" ) &
 }
 
 # The worker owns /api/inngest on :3001, and the Inngest dev server syncs
@@ -45,6 +46,7 @@ run api     bun --hot src/index.ts
 echo "[dev-all] worker  -> http://localhost:3001/api/inngest"
 echo "[dev-all] inngest -> http://localhost:8288"
 echo "[dev-all] logs    -> apps/backend/$LOG"
+echo "[dev-all] follow  -> tail -f apps/backend/$LOG"
 echo "[dev-all] Ctrl-C stops all three."
 
 wait

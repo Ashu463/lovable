@@ -23,7 +23,7 @@ import { toBamlError } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type { partial_types } from "./partial_types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, ConversationalReply, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DevelopmentVerdict, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, ConversationalReply, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DevelopmentVerdict, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlannedScreen, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 
 export class LlmResponseParser {
@@ -260,6 +260,29 @@ export class LlmResponseParser {
     }
   }
   
+  EnumerateScreens(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): types.PlannedScreen[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "EnumerateScreens",
+        llmResponse,
+        false,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as types.PlannedScreen[]
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   FramePrompts(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -375,7 +398,7 @@ export class LlmResponseParser {
     }
   }
   
-  PlanComplexTask(
+  PlanTasks(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
   ): types.PlannerTodo[] {
@@ -385,7 +408,7 @@ export class LlmResponseParser {
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "PlanComplexTask",
+        "PlanTasks",
         llmResponse,
         false,
         this.ctxManager.cloneContext(),
@@ -841,6 +864,29 @@ export class LlmStreamParser {
     }
   }
   
+  EnumerateScreens(
+      llmResponse: string,
+      __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
+  ): partial_types.PlannedScreen[] {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+      return this.runtime.parseLlmResponse(
+        "EnumerateScreens",
+        llmResponse,
+        true,
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __baml_options__?.clientRegistry,
+        __env__,
+      ) as partial_types.PlannedScreen[]
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   FramePrompts(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
@@ -956,7 +1002,7 @@ export class LlmStreamParser {
     }
   }
   
-  PlanComplexTask(
+  PlanTasks(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
   ): partial_types.PlannerTodo[] {
@@ -966,7 +1012,7 @@ export class LlmStreamParser {
         Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
       );
       return this.runtime.parseLlmResponse(
-        "PlanComplexTask",
+        "PlanTasks",
         llmResponse,
         true,
         this.ctxManager.cloneContext(),

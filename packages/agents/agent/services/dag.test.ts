@@ -9,7 +9,7 @@ function todo(id: number, dependency: number[] = []): PlannerTodo {
         agent: "coder",
         status: "pending",
         dependency,
-        designNeeded: false,
+        description: "", expectedToolCalls: 0,
     };
 }
 
@@ -88,7 +88,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 2,
@@ -96,7 +96,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [1],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 3,
@@ -104,7 +104,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [2],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 4,
@@ -112,7 +112,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [1],
-      designNeeded: true,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 5,
@@ -120,7 +120,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [2, 4],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 6,
@@ -128,7 +128,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [5],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 7,
@@ -136,7 +136,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [5],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 8,
@@ -144,7 +144,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [5],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 9,
@@ -152,7 +152,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [6],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
     {
       id: 10,
@@ -160,7 +160,7 @@ const todos: PlannerTodo[] = [
       agent: "coder",
       status: "pending",
       dependency: [3, 6, 7, 8, 9],
-      designNeeded: false,
+      description: "", expectedToolCalls: 0,
     },
   ];
 

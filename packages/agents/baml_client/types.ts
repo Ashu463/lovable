@@ -319,13 +319,22 @@ export interface Message {
   
 }
 
+export interface PlannedScreen {
+  id: string
+  name: string
+  designBrief: string
+  
+}
+
 export interface PlannerTodo {
   id: number
   task: string
+  description: string
   agent: "coder" | "uiExpert"
+  designRef?: string | null
   status: "pending" | "completed"
   dependency: number[]
-  designNeeded: boolean
+  expectedToolCalls: number
   
 }
 

@@ -134,10 +134,12 @@ function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -
 class PlannerTodo{
     id int
     task string
+    description string
     agent "coder" | "uiExpert"
+    designRef string?
     status "pending" | "completed"
     dependency int[]
-    designNeeded bool
+    expectedToolCalls int
 }
 class TaskComplexity{
     complexity bool

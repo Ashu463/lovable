@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannedScreen,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -218,13 +218,20 @@ export namespace partial_types {
       content?: string | null
       timestamp?: string | null
     }
+    export interface PlannedScreen {
+      id?: string | null
+      name?: string | null
+      designBrief?: string | null
+    }
     export interface PlannerTodo {
       id?: number | null
       task?: string | null
+      description?: string | null
       agent?: "coder" | "uiExpert" | null
+      designRef?: string | null
       status?: "pending" | "completed" | null
       dependency: number[]
-      designNeeded?: boolean | null
+      expectedToolCalls?: number | null
     }
     export interface Question {
       question?: string | null

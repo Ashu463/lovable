@@ -1,12 +1,13 @@
 import type { Screen } from "@google/stitch-sdk"
-import { makeOneScreen } from "../tools/stitch"
+import { makeOneScreen, fetchDesignHtml } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
 import { b, type CoderContext, type DesignVariants, type Skill, type WriteFile, type ReadFile, type EditFile, type RunCommand, type DeleteFile, type Done, type Abort } from "../../baml_client"
 import { UI_VARIANTS_PROMPT, UI_EXPERT_BASE_TEMPLATE_PROMPT } from "../config/systemPrompts"
 import type { E2BSandbox } from "../utils/sandbox"
 import type { UIExpertTaskInput } from "../../types/subAgentsTypes"
-import { designFilePath } from "../utils/designPath"
+import { designFilePath, designRefPath } from "../utils/designPath"
 import { logger } from "../utils/logger"
+import { PROJECT_ROOT } from "../config/systemConfig"
 import { observeBaml } from "../utils/tracing"
 
 type UIExpertRequest = {userPrompt: string, semanticMem: string}
@@ -70,7 +71,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
     async fetchDesigns(designs: { screen: Screen, prompt: string }[]): Promise<{ html: string, prompt: string }[]>{
         const settled = await Promise.allSettled(
-            designs.map(async (d) => ({ html: await this.fetchDesignHtml(d.screen), prompt: d.prompt }))
+            designs.map(async (d) => ({ html: await fetchDesignHtml(d.screen), prompt: d.prompt }))
         )
 
         const html = settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []))
@@ -83,27 +84,22 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
         return html
     }
-    async fetchDesignHtml(screen: Screen): Promise<string> {
-        let htmlUrl = await screen.getHtml();
-        for (let attempt = 1; attempt <= 5 && !htmlUrl; attempt++) {
-            logger.warn(`Screen ${screen.screenId} HTML not ready, retrying (${attempt}/5)`);
-            await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
-            htmlUrl = await screen.getHtml();
+    // Prefer the design the Planner generated up front (keyed by designRef,
+    // written at PROJECT_ROOT before worktrees exist). Only fall back to inline
+    // generation when there's no ref or the pre-phase degraded that screen — so
+    // the happy path no longer double-generates the design.
+    private async loadDesign(input: UIExpertTaskInput): Promise<string> {
+        const designRef = input.designRef
+        if (designRef) {
+            const path = designRefPath(designRef)
+            const readRes = await this.sandbox.Execute(this.sandbox.sandboxId, { action: 'read', path }, PROJECT_ROOT).catch(() => null)
+            if (readRes?.success && readRes.content.length > 0) {
+                return readRes.content
+            }
+            logger.warn(`No pre-generated design for ref ${designRef}, falling back to inline generation`)
         }
-
-        if (!htmlUrl) {
-            throw new Error(`Stitch never returned an HTML URL for screen ${screen.screenId}`);
-        }
-
-        const res = await fetch(htmlUrl);
-
-        if (!res.ok) {
-            throw new Error(`Failed to fetch HTML for screen ${screen.screenId}: ${res.status} ${res.statusText}`);
-        }
-
-        return await res.text();
+        return this.setBaseTemplate(input)
     }
-
 
     private async setBaseTemplate(input: UIExpertTaskInput): Promise<string> {
         const preferences = input.uiPreferences
@@ -113,7 +109,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
             ? `${input.task.task}\n\nUI preferences for this project:\n${preferences}`
             : input.task.task
         const screen = await makeOneScreen(prompt, this.userId)
-        const html = await this.fetchDesignHtml(screen)
+        const html = await fetchDesignHtml(screen)
 
         const path = designFilePath(input.task.taskId, input.task.task)
         const writeRes = await this.sandbox.Execute(this.sandbox.sandboxId, { action: 'writeFile', path, content: html }, this.baseDir)
@@ -126,7 +122,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
 
     override async callLLM(input: UIExpertTaskInput, context: CoderContext): Promise<UIExpertLLMResponse> {
         if (this.htmlDesign === null) {
-            this.htmlDesign = await this.setBaseTemplate(input)
+            this.htmlDesign = await this.loadDesign(input)
         }
         const html = this.htmlDesign
         return await observeBaml(

@@ -1,4 +1,5 @@
 import { b } from "../baml_client"
+import type { PlannedScreen } from "../baml_client"
 import type { UIPreferenceQA } from "../types/callAgentTypes"
 import type { Error as AgentError, PlannerTodo, ToolResult } from "../baml_client/types"
 import type { TesterContext } from "../baml_client"
@@ -9,12 +10,13 @@ import { SubAgent } from "./subAgent"
 import { TesterAgent, type TesterResponse } from "./subagents/tester"
 import type { InputMap, SubAgentType } from "../types/subAgentsTypes"
 import type { CallAgentContext, CallAgentState } from "./callAgent"
-import { PLAN_TASK_SYSTEM_PROMPT, CALL_AGENT_SUMMARY_PROMPT } from "./config/systemPrompts"
+import { CALL_AGENT_SUMMARY_PROMPT } from "./config/systemPrompts"
 import { TESTER_DEBUGGER_LOOP_MAX_ITERATIONS, PROJECT_ROOT, SUBAGENT_TASK_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS } from "./config/systemConfig"
 import { backendGql } from "./utils/backendClient"
 import { createRunEmitter, type EventEmitter } from "./events"
 import { logger } from "./utils/logger"
-import { startRunSpan, observeBaml } from "./utils/tracing"
+import { observeBaml } from "./utils/tracing"
+import { Planner, type DesignResult } from "./utils/planner"
 import { SkillStore } from "./skills"
 import { startActiveObservation, startObservation } from "@langfuse/tracing"
 
@@ -60,8 +62,8 @@ export class Orchestrator {
         return E2BSandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
     }
 
-    private buildSubAgentInput<T extends SubAgentType>(agentType: T, todo: { id: number, task: string, dependency: number[], designNeeded: boolean }, state: CallAgentState): InputMap[T] {
-        const base = { taskId: todo.id, task: todo.task, dependentTasks: todo.dependency, designNeeded: todo.designNeeded }
+    private buildSubAgentInput<T extends SubAgentType>(agentType: T, todo: { id: number, task: string, dependency: number[], designRef?: string | null, description?: string, expectedToolCalls?: number }, state: CallAgentState): InputMap[T] {
+        const base = { taskId: todo.id, task: todo.task, description: todo.description ?? "", expectedToolCalls: todo.expectedToolCalls ?? 0, dependentTasks: todo.dependency }
         switch (agentType) {
             case 'coder':
                 return {
@@ -76,6 +78,7 @@ export class Orchestrator {
                     agentType: 'uiExpert',
                     updatedPrompt: this.updatedPrompt,
                     uiPreferences: this.uiPreferences,
+                    designRef: todo.designRef ?? undefined,
                 } as unknown as InputMap[T]
             case 'debuggerr':
                 if (!state.lastToolResult) throw new Error(`debuggerr input requested without a last tool result`)
@@ -84,7 +87,6 @@ export class Orchestrator {
                     agentType: 'debuggerr',
                     callAgentContext: this.context,
                     semanticMem: this.semanticMem,
-                    designNeeded: todo.designNeeded,
                     errors: state.lastTestErrors,
                     toolResult: state.lastToolResult,
                 } as unknown as InputMap[T]
@@ -113,24 +115,6 @@ export class Orchestrator {
     // this exists.
     private async decideNextStep(_levelResults: { success: boolean }[], _remaining: PlannerTodo[]): Promise<RunDecision> {
         return { action: 'continue' }
-    }
-
-    private async plan(): Promise<PlannerTodo[]> {
-        return startActiveObservation("multi-agent-planner", async (span): Promise<PlannerTodo[]> => {
-            const planned = await observeBaml(
-                "PlanComplexTask",
-                { prompt: this.updatedPrompt, priorContext: this.priorContext },
-                (opts) => b.PlanComplexTask(PLAN_TASK_SYSTEM_PROMPT, this.updatedPrompt, this.priorContext, opts),
-            )
-            span.update({ output: planned })
-            await backendGql(
-                `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
-                    saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
-                }`,
-                { projectId: this.projectId, runId: this.runId, todos: planned },
-            ).catch(e => logger.error(`Failed to save todos for run ${this.runId}: ${e}`))
-            return planned
-        })
     }
 
     private async runSubAgentWithRetry<T extends SubAgentType>(
@@ -290,7 +274,7 @@ export class Orchestrator {
                 previousErrorSignature = currentErrorSignature
                 state = { ...state, lastTestErrors: [...state.lastTestErrors, error] }
     
-                const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [], designNeeded: false }
+                const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [] }
                 const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
                 const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
                 await sandbox.SyncR2()
@@ -319,7 +303,33 @@ export class Orchestrator {
 
     async Execute(step: StepRunner): Promise<{ status: 'completed' | 'error', summary?: string, todos?: PlannerTodo[], reason?: string }> {
         
-        this.todos = await step.run("plan", () => this.plan()) as unknown as PlannerTodo[]
+        const planner = new Planner(this.userId, this.projectId, this.runId)
+
+        // Call 1: enumerate screens (cheap) — unblocks the design phase.
+        const screens = await step.run("enumerate-screens", () =>
+            planner.enumerateScreens(this.updatedPrompt, this.priorContext)) as unknown as PlannedScreen[]
+
+        // plan-tasks (Call 2) and the Stitch design pre-phase both depend only on
+        // the screen list, so run them as concurrent steps — plan-tasks hides
+        // under the ~56s design wait. The design step reconnects the sandbox
+        // inside itself so the reconnect only runs when the step actually
+        // executes, not on every Inngest replay.
+        const [todos, designResults] = await Promise.all([
+            step.run("plan-tasks", () =>
+                planner.planTasks(this.updatedPrompt, this.priorContext, screens)),
+            step.run("generate-designs", async () => {
+                const sandbox = await this.reconnectSandbox()
+                return planner.generateDesigns(screens, sandbox)
+            }),
+        ]) as [PlannerTodo[], DesignResult[]]
+        this.todos = todos
+
+        const degraded = designResults.filter((d) => d.status === 'degraded')
+        if (degraded.length > 0) {
+            // Not fatal: these screens' uiExpert items fall back to a design-less
+            // build (Phase 4). Surfaced so a run isn't silently lower-fidelity.
+            logger.warn(`Design pre-phase: ${degraded.length}/${designResults.length} screen(s) degraded (built design-less): ${degraded.map((d) => d.screenId).join(', ')}`)
+        }
 
         const dag = new DAG(this.todos)
         const levels = dag.TopologicalSortParallel()
