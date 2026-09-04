@@ -241,7 +241,16 @@ export class SubAgent<T extends keyof ContextMap> {
             ...(await this.skillStore.getRoleSkills(role)),
             ...(await this.skillStore.getTaskCatalog(role)),
         ]
-        return { task: (this.input as BaseTaskInput).task.task, dependentSummary: summaries, repoTree: this.repoTree, skills: skills, recentTurns: [] }
+        const task = (this.input as BaseTaskInput).task
+        return {
+            task: task.task,
+            description: task.description,
+            expectedToolCalls: task.expectedToolCalls,
+            dependentSummary: summaries,
+            repoTree: this.repoTree,
+            skills: skills,
+            recentTurns: [],
+        }
     }
     async BuildCoderContext(): Promise<CoderContext>{
         logger.info(`Building context for coder`)

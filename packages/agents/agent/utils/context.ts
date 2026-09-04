@@ -129,6 +129,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         const recentTurns = [...dropStaleReads(context.recentTurns, res), summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
+            description: context.description, // fixed at task start, doesn't grow per-turn
+            expectedToolCalls: context.expectedToolCalls, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
             repoTree: context.repoTree,
             skills: res?.action === 'getSkill' ? applySkillLoad(context.skills, res, toolRes) : context.skills,
@@ -143,6 +145,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 
         const olderHalfContext: CoderContext = {
             task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
             dependentSummary: olderHalf,
             repoTree: context.repoTree,
             skills: context.skills,
@@ -156,6 +160,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 
         return {
             task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
             dependentSummary: [...olderCompacted.dependentSummary, ...recentHalf],
             repoTree: context.repoTree,
             skills: context.skills,
@@ -163,11 +169,25 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         }
     }
     override async SummarizeContext(context: CoderContext): Promise<CoderContext> {
-        return await observeBaml(
+        const summarized = await observeBaml(
             "SummarizeCoderContext",
             { entries: context.dependentSummary?.length ?? 0 },
             (opts) => b.SummarizeCoderContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
         )
+        // SUMMARIZE_CONTEXT_PROMPT only instructs the model on compacting the
+        // transcript, so the fixed-at-task-start fields it echoes back
+        // (task/description/expectedToolCalls/repoTree/skills) are unguided
+        // and not trustworthy — same reasoning CompactContext above already
+        // applies to task/repoTree/skills.
+        return {
+            task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
+            dependentSummary: summarized.dependentSummary,
+            repoTree: context.repoTree,
+            skills: context.skills,
+            recentTurns: summarized.recentTurns,
+        }
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"

@@ -113,6 +113,8 @@ export interface BraveResult {
 
 export interface CoderContext {
   task: string
+  description: string
+  expectedToolCalls: number
   dependentSummary: TaskSummary[]
   repoTree: string
   skills: Skill[]
@@ -131,6 +133,7 @@ export interface CoderSession {
 }
 
 export interface ComplexityVerdict {
+  reasoning: string
   complex: boolean
   
 }
@@ -316,6 +319,12 @@ export interface Message {
   role: "user" | "assistant" | "toolCall" | "system"
   content: string
   timestamp: string
+  
+}
+
+export interface PlanTasksOutput {
+  reasoning: string
+  todos: PlannerTodo[]
   
 }
 

@@ -26,6 +26,8 @@ test("getSkill content reaches context.skills intact, not truncated into recentT
 
     const context: CoderContext = {
         task: "build a todo app",
+        description: "Build a todo app with add/complete/delete.",
+        expectedToolCalls: 6,
         dependentSummary: [],
         repoTree: "./src/App.tsx",
         skills: catalog,
@@ -51,7 +53,7 @@ test("non-skill tool results are still truncated", async () => {
     const manager = new CoderContextManager();
     const hugeFile = "x".repeat(50_000);
     const context: CoderContext = {
-        task: "t", dependentSummary: [], repoTree: "", skills: [], recentTurns: [],
+        task: "t", description: "d", expectedToolCalls: 1, dependentSummary: [], repoTree: "", skills: [], recentTurns: [],
     };
 
     const updated = manager.appendTurn(

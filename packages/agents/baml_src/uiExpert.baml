@@ -69,7 +69,16 @@ function UIExpertAgent(
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        Whatever else {{context}} carries about the current codebase state.
+
+        # CURRENT ITEM
+
+        {{context.task}}
+        {{context.description}} - the fuller brief behind that task.
+        expectedToolCalls: {{context.expectedToolCalls}} - a soft budget for
+  this item, not a hard cap.
+
+        Whatever else {{context}} carries about the current codebase state
+  (repoTree, skills, dependentSummary, recentTurns).
 
         {% if htmlDesign %}{{ htmlDesign }} - the Stitch-generated design for
   this screen. Translate it into the base template; do not add business
@@ -88,6 +97,8 @@ test UIExpertAgentTest {
     htmlDesign "<div class=\"p-4\"><h1>Dashboard</h1></div>"
     context {
         task "Build the dashboard screen base template"
+        description "Scaffold the dashboard screen from its Stitch design; behavior comes in a later item."
+        expectedToolCalls 3
         dependentSummary []
         repoTree #"
         src/App.tsx

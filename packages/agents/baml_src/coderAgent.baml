@@ -11,6 +11,10 @@ class Done{
 
 class CoderContext{
     task string
+    // Fuller intent from the planner (the "why" behind task) and a soft
+    // tool-call budget hint. Both fixed at task start, same as task itself.
+    description string
+    expectedToolCalls int
     dependentSummary TaskSummary[]
     repoTree string
     skills Skill[]
@@ -26,7 +30,17 @@ function CoderAgent(
 
     prompt #"
         {{systemPrompt}}
-        Whatever else {{context}} carries about the current codebase state.
+
+        # CURRENT ITEM
+
+        {{context.task}}
+        {{context.description}} - the fuller brief behind that task.
+        expectedToolCalls: {{context.expectedToolCalls}} - a soft budget for
+  this item, not a hard cap.
+
+        Whatever else {{context}} carries about the current codebase state
+  (repoTree, skills, dependentSummary, recentTurns).
+
         {{ctx.output_format}}
     "#
 
@@ -39,6 +53,8 @@ test TestName {
     "#
     context {
         task "Add a hello world route"
+        description "Add a GET /hello route that returns a JSON greeting, used by the health-check page."
+        expectedToolCalls 4
         dependentSummary []
         repoTree #"
         hello world

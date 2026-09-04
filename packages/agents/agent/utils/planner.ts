@@ -55,12 +55,14 @@ export class Planner {
             "plan-tasks",
             async (span): Promise<PlannerTodo[]> => {
                 span.update({ input: { request, screens: screens.length } })
-                const todos = await observeBaml(
+                // reasoning is CoT scratch space for the decomposition — kept
+                // on the trace for debugging, never persisted to the DB.
+                const { reasoning, todos } = await observeBaml(
                     "PlanTasks",
                     { request, screens: screens.length },
                     (opts) => b.PlanTasks(PLAN_TASKS_PROMPT, request, context, screens, opts),
                 )
-                span.update({ output: todos })
+                span.update({ output: todos, metadata: { reasoning } })
                 await this.saveTodos(todos)
                 return todos
             },
@@ -71,12 +73,18 @@ export class Planner {
     // Persisted for the frontend's plan view; the executor reads todos from
     // memory (Inngest-memoized step return), not from here. Non-throwing so a
     // failed display-write never sinks the run.
+    //
+    // PlannedTodoInput only declares id/task/agent/status/dependency — mapped
+    // explicitly rather than passing PlannerTodo through as-is, since its
+    // extra fields (description/designRef/expectedToolCalls) are unknown
+    // input keys that make graphql-js reject the whole mutation.
     private async saveTodos(todos: PlannerTodo[]): Promise<void> {
+        const input = todos.map(({ id, task, agent, status, dependency }) => ({ id, task, agent, status, dependency }))
         await backendGql(
             `mutation SaveTodos($projectId: ID!, $runId: ID!, $todos: [PlannedTodoInput!]!) {
                 saveTodos(projectId: $projectId, runId: $runId, todos: $todos) { id taskId }
             }`,
-            { projectId: this.projectId, runId: this.runId, todos },
+            { projectId: this.projectId, runId: this.runId, todos: input },
         ).catch(e => logger.error(`Failed to save todos for run ${this.runId}: ${e}`))
     }
 

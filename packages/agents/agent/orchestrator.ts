@@ -452,8 +452,10 @@ DONE:
   Error class and prompt now surface as a hint to the debugger.
 
 STILL PENDING:
-- PLAN_TASK_SYSTEM_PROMPT has zero mention of the selected design — planner
-  never scopes a dedicated todo around implementing it.
+- RESOLVED by the two-phase planner: EnumerateScreens fixes the screen list
+  and generateDesigns produces each screen's design up front, keyed by
+  screen id; PLAN_TASKS_PROMPT's uiExpert items reference that id via
+  designRef, so design is scoped per-item now instead of unaddressed.
 - RUN_MAX_LLM_CALLS = 120 — commented as "the money guard," never actually
   enforced anywhere.
 - Model choice (client OpenAI → gpt-4o-mini) pinned across every BAML
