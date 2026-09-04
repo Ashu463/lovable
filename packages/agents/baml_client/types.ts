@@ -309,9 +309,9 @@ export interface MergeConflictContext {
 }
 
 export interface MergeConflictResolution {
+  reasoning: string
   resolved: boolean
   content?: string | null
-  reason: string
   
 }
 

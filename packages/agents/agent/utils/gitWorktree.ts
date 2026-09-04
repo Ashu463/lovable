@@ -173,7 +173,7 @@ export class WorktreeGit {
         }
 
         if (!resolution.resolved) {
-            return { resolved: false, reason: resolution.reason }
+            return { resolved: false, reason: resolution.reasoning }
         }
 
         if (resolution.content == null) {
@@ -183,6 +183,6 @@ export class WorktreeGit {
         }
         await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `git -C ${PROJECT_ROOT} add -- '${file}'` })
 
-        return { resolved: true, reason: resolution.reason }
+        return { resolved: true, reason: resolution.reasoning }
     }
 }

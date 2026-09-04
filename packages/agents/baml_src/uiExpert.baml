@@ -60,6 +60,30 @@ function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: str
         {{ctx.output_format}}
     "#
 }
+
+test FramePromptsTest {
+  functions [FramePrompts]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Produce the design options for a new Run.
+
+# CRITERIA
+
+Produce exactly 3 variants that differ in real design direction — layout
+paradigm, information density, typographic personality, visual weight —
+not a palette or corner-radius swap. Each must be complete enough for
+CoderAgent to implement without further design decisions left open.
+    "#
+    userPrompt #"
+      Build me a dark-themed todo app.
+    "#
+    semanticMem ""
+    skills []
+  }
+}
+
 function UIExpertAgent(
     systemPrompt: string,
     htmlDesign: string?,

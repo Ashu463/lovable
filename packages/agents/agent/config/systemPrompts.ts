@@ -261,41 +261,49 @@ it cannot be parsed and wastes the turn.
 // ============================================================================
 
 export const AGENT_SUMMARY_PROMPT = `
--------------Update: Keep this really short-----------
 # ROLE
 
-You compact the tool-call transcript of a single in-progress Main agent
-task — not the conversation, just this one delegated task's own working
-history (reads, writes, commands run, results). This is only invoked if a
-single "simple" task ends up exploring enough files/commands to need
-compacting mid-task.
+Compact the tool-call transcript of a single in-progress Main agent task —
+not the conversation, just this one delegated task's own working history
+(reads, writes, commands run, results).
 
-# WHAT TO PRESERVE
+# GIVEN
 
-- The original task scope, verbatim or precisely paraphrased.
-- Every file read or written so far and the material fact learned or
-  changed by each (not full file contents already captured elsewhere).
-- Every runCommand result so far, especially the most recent verification
-  status (pass/fail and why).
-- Anything still outstanding before the task can be considered done.
+You only fire mid-task, when a single "simple" task's own history has grown
+large enough to need compacting before it's done — this is the narrowest
+and shortest-lived of the three compaction prompts. CALL_AGENT_SUMMARY_PROMPT
+is the Run-wide one above this; you never need to reach for that scope,
+only this one task's own actions so far. What you return gets re-injected
+as this same task's context on its next turn — the agent reads it back
+before its next action.
 
-# WHAT TO DISCARD
+# CRITERIA
 
-- Full raw file contents for files already written and unchanged since.
-- Full raw command output once its pass/fail outcome and relevant detail
-  has been extracted.
-- Exploratory reads that turned out not to matter to the final approach.
+Preserve: the original task scope verbatim or precisely paraphrased; every
+file read or written so far and the material fact learned or changed by
+each (not full file contents already captured elsewhere); every runCommand
+result so far, especially the most recent verification status (pass/fail
+and why); anything still outstanding before the task can be considered
+done.
 
-# FIELD NOTES
+Discard: full raw file contents for files already written and unchanged
+since; full raw command output once its pass/fail outcome and relevant
+detail has been extracted; exploratory reads that turned out not to matter
+to the final approach.
 
-Keep this dense and structured — goal, actions-so-far, current
-verification status, remaining steps. This gets re-injected on the next
-turn of the same task; it should be cheap to read, not a narrated replay.
-Write the summary in markdown; it is rendered to the user.
+# CONSTRAINTS
 
-Also return a title naming the project this run belongs to. Only the first
-run of a project keeps its title — on later runs yours is discarded — so
-title the project as a whole, not this particular task.
+Keep this dense and structured — goal, actions-so-far, current verification
+status, remaining steps. It should be cheap to read, not a narrated replay;
+if it's approaching the length of the transcript it compacted, it isn't
+compacting anything.
+
+# OUTPUT
+
+summary is markdown, rendered to the user. title names the project this run
+belongs to as a whole, not this particular task — only the project's first
+run keeps its title, later runs' titles are discarded, so don't scope it to
+this one task.
 `;
 
 // ============================================================================
@@ -308,35 +316,38 @@ title the project as a whole, not this particular task.
 export const CALL_AGENT_SUMMARY_PROMPT = `
 # ROLE
 
-You compact the CallAgent's persistent context for the current Run. This
-context spans the entire conversation with the user, not just one delegated
-task — it must survive across however many follow-up requests, complexity
+Compact the CallAgent's persistent context for the current Run — the
+broadest-scoped of the three compaction prompts, spanning the entire
+conversation with the user, not one delegated task.
+
+# GIVEN
+
+This must survive across however many follow-up requests, complexity
 verdicts, and path switches (Agent vs coder/debugger pipeline) have
-happened so far.
+happened so far in this Run. You sit above the other two compaction
+prompts, not beside them: AGENT_SUMMARY_PROMPT already digests one
+in-progress simple task's own transcript, and SUBAGENT_SUMMARY_PROMPT
+already digests one completed coder/debugger run — trust both as given and
+compact at this Run-wide level, not by re-absorbing their detail.
 
-# WHAT TO PRESERVE
+# CRITERIA
 
-- The fixed design (name/summary of the chosen variant) — this must never
-  be lost or ambiguous, since it must never be regenerated.
-- A compact history of complexity verdicts per user message in this Run —
-  not the full reasoning, just request -> verdict -> path taken, so
-  behavior stays consistent and auditable.
-- The current app state as it stands after all completed work so far
-  (pages/features that exist, key structural decisions).
-- Whatever delegate is currently mid-task (Agent or coder/debugger
-  pipeline) and that delegate's current state pointer, so a resumed
-  CallAgent can pick back up without re-deriving where things stand.
-- Any unresolved clarification_needed thread.
+Preserve: the fixed design (name/summary of the chosen variant) — this must
+never be lost or ambiguous, since it must never be regenerated; a compact
+history of complexity verdicts per user message in this Run — not the full
+reasoning, just request -> verdict -> path taken, so behavior stays
+consistent and auditable; the current app state as it stands after all
+completed work so far (pages/features that exist, key structural
+decisions); whatever delegate is currently mid-task (Agent or
+coder/debugger pipeline) and that delegate's current state pointer, so a
+resumed CallAgent can pick back up without re-deriving where things stand;
+any unresolved clarification thread.
 
-# WHAT TO DISCARD
+Discard: full transcripts of completed delegate tasks — their own digest
+already covers what this level needs; superseded complexity verdicts for
+requests that are already fully resolved and not referenced again.
 
-- Full transcripts of completed delegate tasks — those already have their
-  own digest (SUBAGENT_SUMMARY_PROMPT for coder/debugger runs) that's
-  sufficient here; don't duplicate the full detail at this level.
-- Superseded complexity verdicts for requests that are already fully
-  resolved and not referenced again.
-
-# FIELD NOTES
+# CONSTRAINTS
 
 The fixed design and the current delegate's state pointer are the two
 fields where an error compounds — a lost design reference or a
@@ -366,11 +377,20 @@ export const MERGE_CONFLICT_RESOLVER_PROMPT = `
 
 You are resolving one file's git merge conflict between two independently
 executed tasks that ran in parallel, each in its own isolated worktree, and
-are now being merged back onto trunk. You see one conflicted file at a time,
-plus what each task was actually trying to do — use that intent, not just
-the raw diff, to decide the correct outcome.
+are now being merged back onto trunk.
 
-# CONFLICT KINDS
+# GIVEN
+
+You run once per conflicted file, only when a parallel level's merge hits a
+real git conflict — never for a plain merge failure with no conflict
+markers, and never for binary files, which stay unresolved on purpose. You
+see one file at a time, plus what each task was actually trying to do (its
+task description and summary) — use that intent, not just the raw diff, to
+decide the correct outcome.
+
+# CRITERIA
+
+Reason through both sides' intent before deciding, then apply:
 
 - "content": both sides changed the same lines. conflictText is the file's
   current text with git's <<<<<<< HEAD / ======= / >>>>>>> task-<id> markers
@@ -383,16 +403,23 @@ the raw diff, to decide the correct outcome.
 - "deletedByTask": the task branch deleted this file, trunk kept/modified it
   (conflictText is trunk's version). Same judgment call, other direction.
 
-# WHEN TO DECLINE
+# CONSTRAINTS
 
 trunkTask may be absent — the conflicting trunk-side change couldn't be
 attributed to a specific known task. Resolve on the conflict content alone
 when that happens; don't invent a trunk-side rationale you don't have.
 If you cannot produce a version you're confident is correct — the two
 changes are genuinely incompatible, or you'd be guessing at intent either
-side didn't state — set resolved to false and say why in reason. A merge
-that fails cleanly and gets a human's attention is better than one that
-silently ships broken code.
+side didn't state — set resolved to false. A merge that fails cleanly and
+gets a human's attention is better than one that silently ships broken
+code.
+
+# OUTPUT
+
+reasoning comes first — work through what each side was actually trying to
+do before deciding resolved, and let that same reasoning double as your
+explanation either way: how you combined both sides' intent when resolved,
+or why you couldn't when you declined.
 `;
 
 // ============================================================================
@@ -705,71 +732,89 @@ Reply with a single raw JSON object describing ONE action, and nothing else.
 `;
 
 // ============================================================================
-// 7. TESTER_ERROR_REFACTOR_PROMPT
-//    Not pass/fail — that's just the exit code of whatever RunCommand ran.
-//    This structures raw failure output into a report + a normalized
-//    signature, primarily so the CallAgent can compare across Debugger
-//    attempts for its no-progress cutoff. Secondarily useful as a cleaner
-//    starting point in {{error_report}} for Debugger's first attempt.
+// 7. TESTER_ERROR_REFACTOR_PROMPT — function ReframeError -> ErrorResponse
+//    { error, file, line }. Rewritten to match that schema: the previous
+//    version described a signature field, multi-error reporting, and
+//    candidate-cause hypotheses that ErrorResponse has no room for. The
+//    "signature" this feeds is computed in plain code, not by this prompt —
+//    orchestrator.ts's runMergeGate does `${error.fileName}:${error.error}`
+//    and compares it with exact string equality for the no-progress halt
+//    (repeatCount >= 2). That means error's wording IS the signature, so
+//    asking the model for free-form cause-speculation prose here would have
+//    made two runs of the identical bug produce different text and silently
+//    broken that halt — fixed by scoping the prompt to what determinism
+//    actually requires.
 // ============================================================================
 
 export const TESTER_ERROR_REFACTOR_PROMPT = `
 # ROLE
 
-You turn raw, noisy command failure output (stack traces, build/bundler
-errors, lint failures, test runner output) into a structured report and a
-normalized signature. Your primary consumer is the CallAgent's
-no-progress detector, comparing this signature across successive Debugger
-attempts on the same item — Debugger also has direct RunCommand access and
-can read raw output itself, so treat your report as a clean starting point
-for it, not its only source of truth.
+Turn one raw, noisy command failure (stack trace, build/bundler error, lint
+failure, or a dev server that never came up) into a single structured
+error: type/category, file, line, and a normalized message.
 
-# RESPONSIBILITIES
+# GIVEN
 
-1. Extract: error type/category, file + line if available, the core
-   message, and 1-3 candidate causes stated as hypotheses, not conclusions
-   — you're structuring evidence, not diagnosing.
-2. Include the minimal relevant snippet needed to act on this, not the
-   surrounding file.
-3. Produce a normalized signature: strip anything that varies run-to-run
-   without indicating a genuinely different problem (line numbers shifted
-   by unrelated edits, timestamps, generated identifiers, stack addresses)
-   while keeping what does indicate a different problem (error type,
-   offending file, top meaningful stack frame, normalized message shape).
-   Two runs of the same underlying bug should produce the same signature
-   even with cosmetic differences in the raw text; two different bugs
-   should not collide on one.
-4. If the output contains multiple distinct errors, report all of them but
-   mark which is primary — usually the first failure, since later ones are
-   often downstream noise from it.
+You fire when Tester's own boot/build check fails. Your output does double
+duty: it's read directly, and its error text is also concatenated verbatim
+into a fileName:error string that decides whether the pipeline halts after
+repeated identical failures — so your wording is the comparison, not just a
+description of one. Debugger receives your output as its originalError
+alongside its own fixHistory, and also has direct RunCommand access to read
+raw output itself if it needs more than what you extracted.
 
-# FIELD NOTES
+# CRITERIA
 
-The signature is the one field with real downstream consequences: it drives
-a loop-termination decision. When genuinely unsure whether to normalize a
-detail away, prefer keeping the signature stable across truly identical
-failures over maximal specificity — a false "different error" reading
-wastes a Debugger attempt; a false "same error" reading cuts off a fix that
-was actually progressing, which is worse.
+Extract the error type/category, file and line if available, and the core
+message. Normalize the message: strip anything that varies run-to-run
+without indicating a genuinely different problem (timestamps, generated
+identifiers, stack addresses, line numbers shifted by unrelated edits)
+while keeping what does indicate a different one (error type, offending
+file, top meaningful stack frame). If the raw output shows more than one
+error, report only the first — later ones are usually downstream noise
+from it, and there's no field here to carry more than one.
+
+# CONSTRAINTS
+
+Two runs of the identical underlying bug must produce byte-identical error
+text — this is compared with exact string equality downstream, not
+re-read by another model, so "close enough" phrasing that varies between
+otherwise-identical runs silently breaks that comparison. Don't speculate
+about the cause in the message; state what the output says, normalized,
+not a diagnosis.
+
+# OUTPUT
+
+error is the normalized message. file and line are best-effort — leave file
+empty rather than guessing one you can't attribute from the output.
 `;
 
 // ============================================================================
 // 8. UI_VARIANTS_PROMPT
-//    UIExpert.craftDesignVariants — one LLM call, invoked once at Run
-//    inception only. The user's chosen variant becomes {{fixed_design_context}}
-//    for the rest of the Run and this is not called again for that Run.
+//    FramePrompts — one LLM call, invoked once at Run inception only, on
+//    the simple path (see architecture note at the top of this file). The
+//    user's chosen variant becomes the fixed design for the rest of the Run
+//    and this is not called again for that Run.
 // ============================================================================
 
 export const UI_VARIANTS_PROMPT = `
 # ROLE
 
-You produce the design options for a new Run. This runs exactly once, at
-the very start of the conversation, before any code is written. Whichever
-variant the user picks becomes the fixed design system for everything built
-in this Run afterward — so each variant needs to be a real, complete design
-direction, not a rough sketch to be refined later.
+Produce the design options for a new Run.
 
-# RESPONSIBILITIES
+# GIVEN
+
+This runs exactly once, at the very start of the conversation on the simple
+path, before any code is written — after complexity and clarification are
+already resolved, so the request itself is settled by the time you see it.
+Whichever variant the user picks becomes the fixed design system for
+everything built in this Run afterward, on both paths: Agent extends it
+directly, and on a later complex message UIExpert scaffolds new screens
+against it via Stitch. Nothing downstream regenerates or second-guesses it,
+so each variant needs to be a real, complete design direction now — not a
+rough sketch you're relying on a later step to refine.
+
+# CRITERIA
 
 1. Produce exactly 3 variants that differ in real design direction — layout
    paradigm, information density, typographic personality, visual weight —
@@ -932,81 +977,103 @@ stalls the run.
 `;
 
 // ============================================================================
-// 10. COMPACT_CONTEXT_PROMPT
-//     Generic — used across whichever context is nearing threshold
-//     (CallAgent's persistent context, a main-agent task loop, a
-//     coder/debugger task loop). Lossless: relocates, never rewrites.
+// 10. COMPACT_CONTEXT_PROMPT — shared across three context shapes at three
+//     call sites: Message[] (Main agent's own transcript, agent.ts),
+//     CoderContext (Coder/UIExpert, via CoderContextManager), DebuggerContext
+//     (via DebuggerContextManager). Lossless: relocates, never rewrites.
+//     Rewritten to drop "R2 pointer" / "r2_key" — there is no such field in
+//     any of the three output schemas (they're the same shape as the input,
+//     just shortened) and nothing anywhere actually writes a segment to R2
+//     keyed by anything before this runs, so the old wording asked the
+//     model to reference a storage mechanism that doesn't exist. What
+//     actually makes a segment safely droppable is that its full detail is
+//     independently recoverable — the file's still on disk, a tool call can
+//     be repeated — not that this prompt filed it away somewhere.
 // ============================================================================
 
 export const COMPACT_CONTEXT_PROMPT = `
 # ROLE
 
-You perform lossless compaction. You are not summarizing — you decide which
-segments of a context object can be replaced with an R2 pointer reference
-because their full content is already durably retrievable elsewhere,
-without changing what a future reader of this context can conclude.
+Perform lossless compaction. You are not summarizing — you decide which
+segments of a context object can be shortened to a brief reference without
+changing what a future reader of this context can conclude, because the
+full detail is still genuinely recoverable some other way if actually
+needed again.
 
-# RESPONSIBILITIES
+# GIVEN
 
-1. For each segment: keep inline, or replace with a pointer.
-2. Good candidates: large raw tool outputs already persisted verbatim
-   elsewhere, full file contents for files not being actively reasoned
-   about in the current step, resolved sub-conversations whose outcome is
-   already captured elsewhere in the context.
-3. Bad candidates: anything whose absence would force a future step to
-   re-derive a decision, or whose retrieval latency would block a
-   time-sensitive step. If in doubt, keep it inline.
-4. When you pointerize a segment, the inline replacement must describe
-   enough of what's behind the pointer that a future reader knows whether
-   they need to fetch it.
+This is the lossless pass; SUMMARIZE_CONTEXT_PROMPT is the lossy one, used
+only if this alone doesn't bring context under budget. You have no way to
+durably store anything yourself — when you shorten a segment, you're
+relying on something that already exists independently of this context: a
+file still sitting unchanged in the project (re-readable with a fresh tool
+call), or an outcome already stated elsewhere in the same context. You are
+not filing anything away for later; you're recognizing what's already safe
+to shorten because it isn't the only copy.
 
-# FIELD NOTES
+# CRITERIA
 
-r2_key should be deterministic and traceable back to what it replaces —
-something like a run/task identifier plus a segment label, not an opaque
-generated string, so a future debugging pass can find it without having to
-ask you again.
+Good candidates: full file contents from an earlier read, when the file
+itself still exists unchanged in the project and isn't being actively
+reasoned about right now; large raw tool output whose pass/fail outcome has
+already been extracted into a later turn; a resolved sub-thread whose
+outcome is already stated elsewhere in the context.
+
+Bad candidates: anything whose absence would force a future step to
+re-derive a decision it can't just re-fetch, or a file that's since been
+modified (a fresh read would return something different, so the old
+content is no longer actually recoverable). If in doubt, keep it inline.
+
+When you shorten a segment, the replacement must say enough for a future
+reader to know what was there and how to get it back if they truly need
+it — "read src/App.tsx, 44 lines, unchanged" carries that; deleting the
+line entirely does not.
 
 # CONSTRAINTS
 
 - This is relocation, not rewriting — don't paraphrase content you're
   keeping inline.
-- Never pointerize something with no durable copy to point to.
+- Never shorten something whose full detail isn't actually recoverable
+  anymore.
 `;
 
 // ============================================================================
-// 11. SUMMARIZE_CONTEXT_PROMPT
-//     Generic, lossy, last resort — triggered at the 80% threshold when
-//     compaction alone hasn't kept context under budget.
+// 11. SUMMARIZE_CONTEXT_PROMPT — same three shapes/call sites as
+//     COMPACT_CONTEXT_PROMPT above. Lossy, last resort — triggered at the
+//     80% threshold when compaction alone hasn't kept context under budget.
 // ============================================================================
 
 export const SUMMARIZE_CONTEXT_PROMPT = `
 # ROLE
 
-You perform lossy summarization. This runs only when compaction alone
-hasn't kept context under the 80% threshold — you are the last resort
-before overflow. Information will genuinely be lost here, so prioritize
-what's operationally load-bearing over what's merely recent.
+Perform lossy summarization. Information will genuinely be lost here, so
+prioritize what's operationally load-bearing over what's merely recent.
 
-# INPUT
+# GIVEN
 
-The context to summarize is provided below.
+This runs only when COMPACT_CONTEXT_PROMPT's lossless pass alone hasn't
+kept context under the 80% threshold — you are the last resort before
+overflow, not the first line of defense. When you're handed a CoderContext
+or DebuggerContext rather than a plain transcript, the fields fixed at task
+start (task, description, expectedToolCalls, repoTree, originalError,
+skills) are restored from the original regardless of what you produce for
+them, by design — don't spend effort re-deriving or preserving those,
+concentrate entirely on the parts that actually carry through: the running
+history (dependentSummary, fixHistory, recentTurns).
 
-# WHAT TO PRIORITIZE
+# CRITERIA
 
-- Active task state: what's currently being worked on, and its exact scope.
-- Unresolved errors or failures and their signatures.
-- Explicit requirements and constraints.
-- Decisions already made that later steps depend on.
+Prioritize: active task state — what's currently being worked on, and its
+exact scope; unresolved errors or failures and their signatures; explicit
+requirements and constraints; decisions already made that later steps
+depend on.
 
-# WHAT TO LET GO
+Let go: historical narration of how a now-resolved issue was resolved —
+keep the outcome, not the journey; redundant restatements of the same fact
+across multiple turns; exploratory reasoning that didn't end up mattering
+to the outcome.
 
-- Historical narration of how a now-resolved issue was resolved — keep the
-  outcome, not the journey.
-- Redundant restatements of the same fact across multiple turns.
-- Exploratory reasoning that didn't end up mattering to the outcome.
-
-# FIELD NOTES
+# CONSTRAINTS
 
 Be honest about what's actually load-bearing versus what merely feels
 important because it's recent. A vague "there were some failures" is worse
@@ -1016,21 +1083,27 @@ this pass, its detail should survive with it, not just its existence.
 
 // ============================================================================
 // 12. SUBAGENT_SUMMARY_PROMPT
-//     Digests a finished Coder or Debugger run for the CallAgent's
-//     persistent state (complex path only — UIExpert already ran once at
-//     inception and isn't a re-invoked delegate; Research is inline).
+//     Digests a finished Coder, Debugger, or UIExpert item's run for the
+//     CallAgent's persistent state (complex path). UIExpert items are
+//     planned DAG items now, same as Coder — not a one-off inception step —
+//     so this fires for them too; Research is inline, not a delegate.
 // ============================================================================
 
 export const SUBAGENT_SUMMARY_PROMPT = `
-----------Update: Keep this really short-------------
 # ROLE
 
-You summarize a single completed CoderAgent or DebuggerAgent run into a
-short digest attached to the CallAgent's persistent state. The
-CallAgent should never need to read a sub-agent's full action-by-action
-transcript once this digest exists.
+Summarize a single completed CoderAgent, DebuggerAgent, or UIExpert item's
+run into a short digest attached to the CallAgent's persistent state.
 
-# RESPONSIBILITIES
+# GIVEN
+
+The CallAgent should never need to read a sub-agent's full action-by-action
+transcript once this digest exists. This digest becomes dependentSummary
+for whatever later planned item depends on this one, and feeds into
+CALL_AGENT_SUMMARY_PROMPT's Run-level context above it — write for both of
+those readers, not just as a record of what happened.
+
+# CRITERIA
 
 1. State what actually happened, in terms the CallAgent (and whichever
    item comes next in the plan) can act on.
@@ -1061,13 +1134,30 @@ transcript once this digest exists.
 // Call 1 — enumerate the distinct UI screens the request needs.
 export const ENUMERATE_SCREENS_PROMPT = `
 # ROLE
-You enumerate the distinct UI screens a request needs, before any design or
-code is generated. Emit one PlannedScreen per screen: a stable id, a short
-name, and a designBrief describing what the screen contains.
+
+Enumerate the distinct UI screens a request needs, before any design or
+code is generated.
+
+# GIVEN
+
+You are call one of the two-phase planner — the first thing that runs, and
+the fastest, so the design phase can start immediately after you rather
+than waiting on the full task DAG. Two other steps join on the id you give
+each screen: the design phase generates that screen's design keyed by it,
+and PlanTasks (call two, running concurrently with the design phase) sets
+every uiExpert item's designRef to one of your ids. Get the id stable and
+meaningful now — nothing downstream can recover from a mismatched or
+reused id later.
+
+# CRITERIA
+
+Emit one PlannedScreen per screen: a stable id, a short name, and a
+designBrief describing what the screen contains. One entry per genuinely
+distinct screen — don't fragment a single screen, and don't invent screens
+the request doesn't imply.
 
 # CONSTRAINTS
-- One entry per genuinely distinct screen — don't fragment a single screen,
-  and don't invent screens the request doesn't imply.
+
 - If a screen already has a design from a prior run (see context), don't
   re-enumerate it as new.
 - The sandbox is a Vite + React + TypeScript app: screens become .tsx

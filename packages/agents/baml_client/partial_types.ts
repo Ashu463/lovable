@@ -212,9 +212,9 @@ export namespace partial_types {
       trunkTask?: ConflictTaskInfo | null
     }
     export interface MergeConflictResolution {
+      reasoning?: string | null
       resolved?: boolean | null
       content?: string | null
-      reason?: string | null
     }
     export interface Message {
       role?: "user" | "assistant" | "toolCall" | "system" | null

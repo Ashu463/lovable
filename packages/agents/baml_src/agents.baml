@@ -276,4 +276,26 @@ currently active.
         {{ctx.output_format}}
     "#
 }
- 
+
+test CallAgentSummaryTest {
+  functions [CallAgentSummary]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Compact the CallAgent's persistent context for the current Run — the
+broadest-scoped of the three compaction prompts, spanning the entire
+conversation with the user, not one delegated task.
+
+# CRITERIA
+
+Preserve the fixed design, a compact history of complexity verdicts per
+message, the current app state, and whatever delegate is currently
+mid-task. Discard full transcripts of completed delegate tasks.
+    "#
+    summaries [
+      "User asked for a dark-themed todo app. Design fixed: \"Minimal Dark\" — single-column layout, slate palette.",
+      "User asked to add a due-date field. Judged simple, handled by Agent, completed successfully."
+    ]
+  }
+}

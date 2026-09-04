@@ -97,7 +97,7 @@ export default class TypeBuilder {
     
     MergeConflictContext: ClassViewer<'MergeConflictContext', "filePath" | "conflictKind" | "conflictText" | "currentTask" | "trunkTask">;
     
-    MergeConflictResolution: ClassViewer<'MergeConflictResolution', "resolved" | "content" | "reason">;
+    MergeConflictResolution: ClassViewer<'MergeConflictResolution', "reasoning" | "resolved" | "content">;
     
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
@@ -311,7 +311,7 @@ export default class TypeBuilder {
         ]);
         
         this.MergeConflictResolution = this.tb.classViewer("MergeConflictResolution", [
-          "resolved","content","reason",
+          "reasoning","resolved","content",
         ]);
         
         this.Message = this.tb.classViewer("Message", [

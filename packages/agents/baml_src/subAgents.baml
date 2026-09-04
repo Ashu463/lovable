@@ -73,39 +73,30 @@ class UIExpertSession {
 
   content string?
 }
-test TestName {
+test GenerateSubagentSummaryTest {
   functions [GenerateSubagentSummary]
   args {
     systemPrompt #"
-      
-# ROLE
+      # ROLE
 
-You summarize a single completed CoderAgent or DebuggerAgent run into a
-short digest attached to the CallAgent's persistent state. The
-CallAgent should never need to read a sub-agent's full action-by-action
-transcript once this digest exists.
+Summarize a single completed CoderAgent, DebuggerAgent, or UIExpert item's
+run into a short digest attached to the CallAgent's persistent state.
 
-# RESPONSIBILITIES
+# GIVEN
 
-1. State what actually happened, in terms the CallAgent (and whichever
-   item comes next in the plan) can act on.
-2. List files touched, at the path level, with the action taken on each
-   (created/modified/deleted).
-3. Note any decision or tradeoff made that a later step should be aware of
-   — e.g. "extended the existing X util rather than creating a new one;
-   later items touching X should expect this."
-4. State the outcome plainly: success, failure, or needs-input. If failure,
-   point at the relevant error signature rather than re-describing the
-   error in prose — that detail already lives in the structured error
-   report.
+This digest becomes dependentSummary for whatever later planned item
+depends on this one, and feeds into the Run-level context above it.
+
+# CRITERIA
+
+State what actually happened, list files touched with the action taken on
+each, note any decision a later step should be aware of, and state the
+outcome plainly — success, failure, or needs-input.
 
 # CONSTRAINTS
 
-- Don't re-narrate the reasoning process, only the outcome and what
-  downstream steps need to know.
-- Keep this genuinely short — if it's approaching the length of the
-  original transcript, it isn't a summary.
-
+Don't re-narrate the reasoning process. Keep this genuinely short — if it's
+approaching the length of the original transcript, it isn't a summary.
     "#
     subagentType #"
       coder

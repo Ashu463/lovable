@@ -240,11 +240,21 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     }
     // I don't think we will ever need this coz debugger should fix the error before this could even hit
     override async SummarizeContext(context: DebuggerContext): Promise<DebuggerContext> {
-        return await observeBaml(
+        const summarized = await observeBaml(
             "SummarizeDebuggerContext",
             { fixHistory: context.fixHistory?.length ?? 0 },
             (opts) => b.SummarizeDebuggerContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
         )
+        // Same reasoning as CoderContextManager.SummarizeContext: the prompt
+        // doesn't instruct the model on repoTree/originalError/skills, so
+        // its echoed-back copies of those aren't trustworthy.
+        return {
+            repoTree: context.repoTree,
+            originalError: context.originalError,
+            skills: context.skills,
+            fixHistory: summarized.fixHistory,
+            recentTurns: summarized.recentTurns,
+        }
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"
