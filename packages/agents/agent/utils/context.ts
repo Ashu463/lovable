@@ -4,6 +4,7 @@ import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_G
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
 import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS, READ_RESULT_MAX_CHARS } from "../config/systemConfig"
+import { observeBaml } from "./tracing"
 
 function truncate(text: string, limit: number): string {
     if (text.length <= limit) return text
@@ -128,6 +129,8 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         const recentTurns = [...dropStaleReads(context.recentTurns, res), summarizeTurn(res, toolRes)].slice(-RECENT_TURNS_LIMIT)
         return {
             task: context.task, // fixed at task start, doesn't grow per-turn
+            description: context.description, // fixed at task start, doesn't grow per-turn
+            expectedToolCalls: context.expectedToolCalls, // fixed at task start, doesn't grow per-turn
             dependentSummary: context.dependentSummary, // fixed at task start, doesn't grow per-turn
             repoTree: context.repoTree,
             skills: res?.action === 'getSkill' ? applySkillLoad(context.skills, res, toolRes) : context.skills,
@@ -142,15 +145,23 @@ export class CoderContextManager extends ContextManager<CoderContext>{
 
         const olderHalfContext: CoderContext = {
             task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
             dependentSummary: olderHalf,
             repoTree: context.repoTree,
             skills: context.skills,
             recentTurns: context.recentTurns
         }
-        const olderCompacted = await b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
+        const olderCompacted = await observeBaml(
+            "CompactCoderContext",
+            { entries: olderHalf.length },
+            (opts) => b.CompactCoderContext(COMPACT_CONTEXT_PROMPT, olderHalfContext, opts),
+        )
 
         return {
             task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
             dependentSummary: [...olderCompacted.dependentSummary, ...recentHalf],
             repoTree: context.repoTree,
             skills: context.skills,
@@ -158,7 +169,25 @@ export class CoderContextManager extends ContextManager<CoderContext>{
         }
     }
     override async SummarizeContext(context: CoderContext): Promise<CoderContext> {
-        return await b.SummarizeCoderContext(SUMMARIZE_CONTEXT_PROMPT, context)
+        const summarized = await observeBaml(
+            "SummarizeCoderContext",
+            { entries: context.dependentSummary?.length ?? 0 },
+            (opts) => b.SummarizeCoderContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
+        )
+        // SUMMARIZE_CONTEXT_PROMPT only instructs the model on compacting the
+        // transcript, so the fixed-at-task-start fields it echoes back
+        // (task/description/expectedToolCalls/repoTree/skills) are unguided
+        // and not trustworthy — same reasoning CompactContext above already
+        // applies to task/repoTree/skills.
+        return {
+            task: context.task,
+            description: context.description,
+            expectedToolCalls: context.expectedToolCalls,
+            dependentSummary: summarized.dependentSummary,
+            repoTree: context.repoTree,
+            skills: context.skills,
+            recentTurns: summarized.recentTurns,
+        }
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"
@@ -195,7 +224,11 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
             skills: context.skills,
             recentTurns: context.recentTurns
         }
-        const olderCompacted = await b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext)
+        const olderCompacted = await observeBaml(
+            "CompactDebuggerContext",
+            { fixHistory: len },
+            (opts) => b.CompactDebuggerContext(COMPACT_CONTEXT_PROMPT, olderHalfContext, opts),
+        )
 
         return {
             repoTree: context.repoTree,
@@ -207,7 +240,21 @@ export class DebuggerContextManager extends ContextManager<DebuggerContext>{
     }
     // I don't think we will ever need this coz debugger should fix the error before this could even hit
     override async SummarizeContext(context: DebuggerContext): Promise<DebuggerContext> {
-        return await b.SummarizeDebuggerContext(SUMMARIZE_CONTEXT_PROMPT, context)
+        const summarized = await observeBaml(
+            "SummarizeDebuggerContext",
+            { fixHistory: context.fixHistory?.length ?? 0 },
+            (opts) => b.SummarizeDebuggerContext(SUMMARIZE_CONTEXT_PROMPT, context, opts),
+        )
+        // Same reasoning as CoderContextManager.SummarizeContext: the prompt
+        // doesn't instruct the model on repoTree/originalError/skills, so
+        // its echoed-back copies of those aren't trustworthy.
+        return {
+            repoTree: context.repoTree,
+            originalError: context.originalError,
+            skills: context.skills,
+            fixHistory: summarized.fixHistory,
+            recentTurns: summarized.recentTurns,
+        }
     }
     override async IsolateContext(): Promise<string> {
         return await "TODO: implement this"

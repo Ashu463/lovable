@@ -119,7 +119,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client Groq
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -134,10 +134,12 @@ function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -
 class PlannerTodo{
     id int
     task string
+    description string
     agent "coder" | "uiExpert"
+    designRef string?
     status "pending" | "completed"
     dependency int[]
-    designNeeded bool
+    expectedToolCalls int
 }
 class TaskComplexity{
     complexity bool
@@ -263,7 +265,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client Groq
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the
@@ -274,4 +276,26 @@ currently active.
         {{ctx.output_format}}
     "#
 }
- 
+
+test CallAgentSummaryTest {
+  functions [CallAgentSummary]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Compact the CallAgent's persistent context for the current Run — the
+broadest-scoped of the three compaction prompts, spanning the entire
+conversation with the user, not one delegated task.
+
+# CRITERIA
+
+Preserve the fixed design, a compact history of complexity verdicts per
+message, the current app state, and whatever delegate is currently
+mid-task. Discard full transcripts of completed delegate tasks.
+    "#
+    summaries [
+      "User asked for a dark-themed todo app. Design fixed: \"Minimal Dark\" — single-column layout, slate palette.",
+      "User asked to add a due-date field. Judged simple, handled by Agent, completed successfully."
+    ]
+  }
+}

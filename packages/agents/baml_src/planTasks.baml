@@ -6,75 +6,105 @@ enum Agent {
   UIExpertAgent
   ResearcherAgent
 }
-function PlanComplexTask(systemPrompt: string, userPrompt: string, context: string) -> PlannerTodo[]{
-// context here is the CallAgent context sended with Agent, subagent, and planner task
-    client GroqArray
+class PlannedScreen {
+  id string
+  name string
+  designBrief string
+}
+
+// Call 1 of the two-phase planner: enumerate the screens the request needs.
+// Cheap and fast so the design (Stitch) phase can start immediately while
+// PlanTasks runs concurrently.
+function EnumerateScreens(systemPrompt: string, userPrompt: string, context: string) -> PlannedScreen[]{
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        {{userPrompt}} - the request to plan for, already past complexity and
-  clarification checks.
-        {{context}} - current app state and prior decisions.
+        {{userPrompt}} - the request to enumerate screens for.
+        {{context}} - current app state and prior decisions, including any
+  screens that already have designs from earlier runs (don't re-enumerate
+  those as new).
 
         {{ctx.output_format}}
-
     "#
 }
 
-test TestName {
-  functions [PlanComplexTask]
+class PlanTasksOutput {
+  reasoning string @description(#"
+    A short paragraph on the decomposition strategy — how you split the
+    request, why the ordering/dependencies are what they are. Written once
+    for the whole plan, before todos, not repeated per item.
+  "#)
+  todos PlannerTodo[]
+}
+
+// Call 2 of the two-phase planner: the task DAG, anchored to the screens from
+// EnumerateScreens. A uiExpert item's designRef MUST be one of the passed
+// screen ids.
+function PlanTasks(systemPrompt: string, userPrompt: string, context: string, screens: PlannedScreen[]) -> PlanTasksOutput{
+    client OpenAIGeneric
+    prompt #"
+        {{systemPrompt}}
+        {{userPrompt}} - the request to plan for.
+        {{context}} - current app state and prior decisions.
+        {{screens}} - the screens enumerated for this request. Every uiExpert
+  item must set designRef to one of these screen ids; coder items leave it null.
+
+        {{ctx.output_format}}
+    "#
+}
+
+test PlanTasksTest {
+  functions [PlanTasks]
   args {
     systemPrompt #"
       # ROLE
 
-You are the planner, invoked when the CallAgent has judged a request
-complex enough to need the full pipeline. You decompose the request into
-SubAgentsTodo items for CoderAgent to execute one at a time, plus a
-PlannerTodo summary for the CallAgent to relay to the user in plain
-language.
+You are call two of the planner: turn a request already judged complex into
+a PlannerTodo[] DAG for Coder and UIExpert to execute one item at a time.
 
-Coder is the only executor you're planning for. Debugger is invoked
-automatically and reactively if an item's verification fails — you don't
-plan for it. Research and documentation lookup are tools Coder reaches for
-itself mid-item — you don't plan separate research steps, though you may
-flag an item as research-heavy as a hint.
+# GIVEN
 
-# DECOMPOSITION PRINCIPLES
+Call one (EnumerateScreens) already ran and fixed the screen list you're
+given — a separate step is generating each screen's design concurrently
+with you, keyed by screen id.
 
-- Break work into the smallest units independently verifiable by a build/
-  test/lint command. A unit bundling unrelated changes makes it harder to
-  isolate what actually failed if verification fails.
-- Order items so that anything a later item structurally depends on comes
-  first. Mark items parallel-safe only when they touch genuinely disjoint
-  files/surfaces.
-- Don't over-decompose trivial requests into multiple items when one covers
-  it.
-- If an item is likely to require nontrivial documentation lookup or web
-  research before Coder can implement it confidently, note that as a hint
-  in the item — it's still one Coder-executed item, just flagged.
+# CRITERIA
+
+Reason through the shape of the decomposition first, then emit items. Emit
+one uiExpert item per screen that doesn't already have a design; set its
+designRef to that screen's id. Emit the corresponding Coder item(s) for that
+screen's behavior with a dependency on the uiExpert item's id. Write
+description as the fuller brief the executor needs, and expectedToolCalls
+as a realistic effort estimate.
 
 # CONSTRAINTS
 
-- Every item must be independently verifiable by a command Coder can run.
-- Scope what must be true when the item is done, not implementation detail
-  that's Coder's own decision to make.
-- If decomposing requires an assumption material enough to change the
-  outcome, don't guess — this should have been caught by the complexity
-  checker already, but if it wasn't, say so explicitly in the planner
-  summary rather than silently picking an interpretation.
+The sandbox is a Vite + React + TypeScript app — every item must assume
+.tsx components wired into src/App.tsx, never a standalone HTML page.
 
+# OUTPUT
+
+reasoning is one short paragraph on the decomposition strategy, written once
+for the whole plan before todos.
     "#
     userPrompt #"
-        Built a very complex todo app with black background.
-
-
+      Add a login screen with email/password and a dashboard that shows the
+      logged-in user's name.
     "#
     context #"
-      Should the todo data be persisted to a local browser database or a backend database with user authentication?
-Local storage only (browser-based)
-
-Which advanced feature is the priority for making this 'complex'
-Subtasks, categories, and tags
-
+      Fresh project, no prior runs, no existing screens.
     "#
+    screens [
+      {
+        id "login"
+        name "Login"
+        designBrief "Email/password form with a submit button."
+      },
+      {
+        id "dashboard"
+        name "Dashboard"
+        designBrief "Welcome header showing the logged-in user's name."
+      }
+    ]
   }
 }

@@ -15,6 +15,8 @@ import { createRunEmitter, type EventEmitter } from "./events"
 import { backendGql, SAVE_RUN_STATE } from "./utils/backendClient"
 import { logger } from "./utils/logger"
 import { SkillStore } from "./skills"
+import { observeBaml, runSpanContext } from "./utils/tracing"
+import { startActiveObservation, startObservation, updateActiveObservation } from "@langfuse/tracing"
 type SyncR2Request = {action: "write", path: string, content: string} | {action: "delete", path: string}
 
 type AgentLLMResponse = ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort
@@ -60,6 +62,12 @@ export class Agent{
             }
             catch(e){
                 lastError = e
+                // .end() matters: an event that never ends never exports.
+                startObservation(
+                    "llm-retry",
+                    {input: {label, attempt, maxAttempts, error: e instanceof Error ? e.message : String(e)}},
+                    {asType: "event"}
+                ).end()
                 logger.warn(`[Agent:${this.runId}] ${label} failed (attempt ${attempt}/${maxAttempts}): ${e instanceof Error ? e.message : String(e)}`)
                 if(attempt < maxAttempts){
                     await new Promise((resolve) => setTimeout(resolve, SUBAGENT_RETRY_BACKOFF_MS * attempt))
@@ -71,114 +79,145 @@ export class Agent{
 
     async runLoop(): Promise<AgentResponse>{
         logger.info(`[Agent:${this.runId}] runLoop starting, maxIterations=${AGENT_MAX_ITERATIONS}`)
-        try{
-            const updatedSystemPrompt = AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
+        return startActiveObservation("agent-loop", async (loopSpan): Promise<AgentResponse> => {
+            loopSpan.update({input: this.userPrompt})
+            try{
+                const updatedSystemPrompt = AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
+                while(this.iterations < AGENT_MAX_ITERATIONS){
+                    const shouldBreak: boolean = await startActiveObservation(`iteration-${this.iterations}`, async (): Promise<boolean> => {
+                        logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} starting`)
+                        let iterationLog: Message[] = [] // things which should collectively present in context as well as session
+                        let shouldBreak = false
 
-            while(this.iterations < AGENT_MAX_ITERATIONS){
-                logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} starting`)
-                let iterationLog: Message[] = [] // things which should collectively present in context as well as session
-                let shouldBreak = false
+                        const response: AgentLLMResponse = await this.withRetry(
+                            'AgentLLMCall',
+                            AGENT_LLM_RETRY_ATTEMPTS,
+                            (priorError) => this.callLLM(updatedSystemPrompt, this.userPrompt, priorError),
+                        );
+                        updateActiveObservation({metadata: {action: response.action}})
+                        logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} LLM action=${response.action}`)
 
-                const response: AgentLLMResponse = await this.withRetry(
-                    'AgentLLMCall',
-                    AGENT_LLM_RETRY_ATTEMPTS,
-                    (priorError) => this.callLLM(updatedSystemPrompt, this.userPrompt, priorError),
-                );
-                logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} LLM action=${response.action}`)
-
-                if(response.action === 'done') {
-                    logger.info(`[Agent:${this.runId}] LLM signaled completion at iteration ${this.iterations}`)
-                    iterationLog.push({
-                        role: 'assistant',
-                        content: `Task complete. Files edited: ${response.filesEdited.map(f => `${f.fileName} (${f.summary})`).join('; ') || 'none'}`,
-                        timestamp: new Date().toISOString()
-                    })
-                    shouldBreak = true
-                }
-                else if(response.action === 'abort'){
-                    logger.warn(`[Agent:${this.runId}] LLM aborted at iteration ${this.iterations}: ${response.reason}`)
-                    iterationLog.push({
-                        role: 'assistant',
-                        content: `Aborted: ${response.reason}`,
-                        timestamp: new Date().toISOString()
-                    })
-                    shouldBreak = true
-                }
-                else {
-                    const toolType = response.action
-                    logger.info(`[Agent:${this.runId}] Tool call requested: ${toolType}`)
-                    const toolRequestLog: Message = {
-                        role: 'assistant',
-                        content: `Requested tool call ${toolType} with args ${JSON.stringify(response)}`,
-                        timestamp: new Date().toISOString()
-                    }
-                    iterationLog.push(toolRequestLog)
-                    await this.emitter.emit({
-                        type: 'agent_tool_call',
-                        step: this.iterations,
-                        toolName: toolType
-                    })
-                    try{
-                        const toolResult: string | Screen = await this.executeTool(response)
-                        logger.info(`[Agent:${this.runId}] Tool call ${toolType} succeeded`)
-                        iterationLog.push({
-                            role: 'toolCall',
-                            content: `Result of ${toolType}: ${JSON.stringify(toolResult)}`,
-                            timestamp: new Date().toISOString()
+                        if(response.action === 'done') {
+                            logger.info(`[Agent:${this.runId}] LLM signaled completion at iteration ${this.iterations}`)
+                            startObservation(
+                                "llm-done",
+                                {input: {iteration: this.iterations, filesEdited: response.filesEdited.length}},
+                                {asType: "event"}
+                            ).end()
+                            iterationLog.push({
+                                role: 'assistant',
+                                content: `Task complete. Files edited: ${response.filesEdited.map(f => `${f.fileName} (${f.summary})`).join('; ') || 'none'}`,
+                                timestamp: new Date().toISOString()
+                            })
+                            shouldBreak = true
+                        }
+                        else if(response.action === 'abort'){
+                            logger.warn(`[Agent:${this.runId}] LLM aborted at iteration ${this.iterations}: ${response.reason}`)
+                            updateActiveObservation(
+                                {level: "WARNING", statusMessage: response.reason, metadata: {reason: response.reason}}
+                            )
+                            iterationLog.push({
+                                role: 'assistant',
+                                content: `Aborted: ${response.reason}`,
+                                timestamp: new Date().toISOString()
+                            })
+                            shouldBreak = true
+                        }
+                        else {
+                            const toolType = response.action
+                            
+                            logger.info(`[Agent:${this.runId}] Tool call requested: ${toolType}`)
+                            const toolRequestLog: Message = {
+                                role: 'assistant',
+                                content: `Requested tool call ${toolType} with args ${JSON.stringify(response)}`,
+                                timestamp: new Date().toISOString()
+                            }
+                            iterationLog.push(toolRequestLog)
+                            await this.emitter.emit({
+                                type: 'agent_tool_call',
+                                step: this.iterations,
+                                toolName: toolType
+                            })
+                            try{
+                                const toolResult: string | Screen = await this.executeTool(response)
+                                logger.info(`[Agent:${this.runId}] Tool call ${toolType} succeeded`)
+                                iterationLog.push({
+                                    role: 'toolCall',
+                                    content: `Result of ${toolType}: ${JSON.stringify(toolResult)}`,
+                                    timestamp: new Date().toISOString()
+                                })
+                                updateActiveObservation({metadata: {tool: toolType, toolOutcome: "succeeded"}})
+                                if(response.action === 'writeFile'){
+                                    await this.syncToR2({action: "write", path: response.path, content: response.content})
+                                }
+                                if(response.action === 'editFile'){
+                                    // An edit has no final content here, so push the project rather than one file.
+                                    await this.sandbox.SyncR2()
+                                }
+                                if(response.action === 'delete'){
+                                    await this.syncToR2({action: "delete", path: response.path})
+                                }
+                            }catch(e){
+                                logger.error(`[Agent:${this.runId}] Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`)
+                                updateActiveObservation({
+                                    level: "ERROR",
+                                    statusMessage: e instanceof Error ? e.message : String(e),
+                                    metadata: {tool: toolType, toolOutcome: "failed"},
+                                })
+                                iterationLog.push({
+                                    role: 'toolCall',
+                                    content: `Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`,
+                                    timestamp: new Date().toISOString()
+                                })
+                            }
+                        }
+                        iterationLog.map((log) =>{
+                            this.session.push(log)
+                            this.context.push(log)
                         })
-                        if(response.action === 'writeFile'){
-                            await this.syncToR2({action: "write", path: response.path, content: response.content})
-                        }
-                        if(response.action === 'editFile'){
-                            // An edit has no final content here, so push the project rather than one file.
-                            await this.sandbox.SyncR2()
-                        }
-                        if(response.action === 'delete'){
-                            await this.syncToR2({action: "delete", path: response.path})
-                        }
-                    }catch(e){
-                        logger.error(`[Agent:${this.runId}] Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`)
-                        iterationLog.push({
-                            role: 'toolCall',
-                            content: `Tool call ${toolType} failed: ${e instanceof Error ? e.message : String(e)}`,
-                            timestamp: new Date().toISOString()
-                        })
-                    }
-                }
-    
-                // update the context and session
-                iterationLog.map((log) =>{
-                    this.session.push(log)
-                    this.context.push(log)
-                })
 
-                this.context = await this.ManageContext()
-                if(shouldBreak){
-                    await this.saveSessionState()   // write to Postgres — failure recovery
-                    this.iterations++
-                    logger.info(`[Agent:${this.runId}] runLoop breaking after iteration ${this.iterations}`)
-                    break
+                        this.context = await this.ManageContext()
+                        if(shouldBreak){
+                            await this.saveSessionState()   // write to Postgres — failure recovery
+                            this.iterations++
+                            startObservation(
+                                "loop-break",
+                                {input: {iteration: this.iterations}},
+                                {asType: "event"}
+                            ).end()
+                            logger.info(`[Agent:${this.runId}] runLoop breaking after iteration ${this.iterations}`)
+                            return true
+                        }
+                        this.saveSessionState()   // write to Postgres — failure recovery
+                        this.iterations++
+                        return false
+                    },)
+                    if(shouldBreak) break
                 }
-                this.saveSessionState()   // write to Postgres — failure recovery
-                this.iterations++
             }
-        }
-        catch(e){
-            logger.error(`[Agent:${this.runId}] runLoop failed at iteration ${this.iterations}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
-            return{
-                success: false,
-                summary: `Main Agent failed with error, ${e}`
+            catch(e){
+                logger.error(`[Agent:${this.runId}] runLoop failed at iteration ${this.iterations}: ${e instanceof Error ? e.stack ?? e.message : String(e)}`)
+                loopSpan.update({level: "ERROR", statusMessage: e instanceof Error ? e.message : String(e)})
+                return{
+                    success: false,
+                    summary: `Main Agent failed with error, ${e}`
+                }
             }
-        }
-        logger.info(`[Agent:${this.runId}] runLoop finished after ${this.iterations} iterations, building summary`)
-        return {
-            success: true,
-            summary: await this.BuildSummary()
-        }
+            logger.info(`[Agent:${this.runId}] runLoop finished after ${this.iterations} iterations, building summary`)
+            const result: AgentResponse = {
+                success: true,
+                summary: await this.BuildSummary()
+            }
+            loopSpan.update({output: result, metadata: {iterations: this.iterations}})
+            return result
+        },
+        // Anchors this process's spans onto the run's shared trace.
+        {parentSpanContext: await runSpanContext(this.runId)},)
     }
 
     async callLLM(systemPrompt: string, userPrompt: string, priorError?: string): Promise<AgentLLMResponse>{
-        try{
+        return startActiveObservation("llm-call", async (span) => {
+            span.update({input: userPrompt, metadata: {isRetry: priorError !== undefined}})
             const context = priorError
                 ? [...this.context, {
                     role: 'system' as const,
@@ -186,14 +225,20 @@ export class Agent{
                     timestamp: new Date().toISOString(),
                 }]
                 : this.context
-
-            const response: AgentLLMResponse = await b.AgentLLMCall(systemPrompt, userPrompt, context, this.semanticMem, this.selectedDesign, this.callAgentContext)
-            return response
-        }
-        catch(e){
-            logger.error(`[Agent:${this.runId}] AgentLLMCall failed: ${e instanceof Error ? e.message : String(e)}`)
-            throw e
-        }
+            try{
+                const response = await observeBaml(
+                    "AgentCall",
+                    {systemPrompt, userPrompt},
+                    (opts) => b.AgentLLMCall(systemPrompt, userPrompt, context, this.semanticMem, this.selectedDesign, this.callAgentContext, opts),
+                )
+                span.update({output: response})
+                return response
+            }
+            catch(e){
+                logger.error(`[Agent:${this.runId}] AgentLLMCall failed: ${e instanceof Error ? e.message : String(e)}`)
+                throw e
+            }
+        })
     }
 
     async ManageContext(): Promise<Message[]>{
@@ -203,16 +248,38 @@ export class Agent{
 
         const len = this.context.length
         const olderHalf = this.context.slice(0, len/2)
-        const olderCompacted: Message[] = await b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf)
-        const updated: Message[] = [...olderCompacted, ...this.context.slice(len/2, len)]
-        const updatedTokens = this.estimateTokens(updated)
-        if(updatedTokens <= COMPACT_THRESHOLD){
-            logger.info(`[Agent:${this.runId}] Compaction brought context to ${updatedTokens} tokens`)
-            return updated
-        }
 
-        logger.warn(`[Agent:${this.runId}] Compaction insufficient (${updatedTokens} tokens), summarizing full context`)
-        return await b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, this.context)
+        return startActiveObservation("manage-context", async (span) => {
+            span.update({input: {tokens, entries: len}})
+
+            const olderCompacted = await observeBaml(
+                "agent-compact-context",
+                {entries: olderHalf.length},
+                (opts) =>  b.CompactContext(COMPACT_CONTEXT_PROMPT, olderHalf, opts),
+            )
+            const updated: Message[] = [...olderCompacted, ...this.context.slice(len/2, len)]
+            const updatedTokens = this.estimateTokens(updated)
+            if(updatedTokens <= COMPACT_THRESHOLD){
+                logger.info(`[Agent:${this.runId}] Compaction brought context to ${updatedTokens} tokens`)
+                span.update({output: {outcome: "compacted", before: tokens, after: updatedTokens}})
+                return updated
+            }
+
+            logger.warn(`[Agent:${this.runId}] Compaction insufficient (${updatedTokens} tokens), summarizing full context`)
+            startObservation(
+                "compaction-insufficient",
+                {input: {before: tokens, after: updatedTokens}},
+                {asType: "event"}
+            ).end()
+
+            const summarized = await observeBaml(
+                "agent-summarize-context",
+                {entries: this.context.length},
+                (opts) => b.SummarizeContext(SUMMARIZE_CONTEXT_PROMPT, this.context, opts),
+            )
+            span.update({output: {outcome: "summarized", before: tokens, entries: summarized.length}})
+            return summarized
+        })
     }
 
     estimateTokens(context: Message[]): number {
@@ -265,6 +332,8 @@ export class Agent{
     }
 
     async executeTool(toolCall: AgentToolCall): Promise<string | Screen> {
+        // `${toolCall}` stringified to "[object Object]" — an object needs JSON.
+        updateActiveObservation({metadata: {tool: toolCall.action, toolArgs: JSON.stringify(toolCall)}})
         switch (toolCall.action) {
             case 'apify':
                 logger.info(`[Agent:${this.runId}] Apify: scraping ${toolCall.urls.length} url(s), maxPages=${toolCall.maxPages}`)
@@ -286,9 +355,6 @@ export class Agent{
                 logger.info(`[Agent:${this.runId}] ReadFile: ${toolCall.path}`)
                 return (await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)).content
 
-            // Execute() reports in-sandbox failures via `success`, not by throwing,
-            // so these three surface it — otherwise runLoop treats a failed write
-            // as a success and syncs stale state to R2.
             case 'writeFile': {
                 logger.info(`[Agent:${this.runId}] WriteFile: ${toolCall.path}`)
                 const res = await this.sandbox.Execute(this.sandbox.sandboxId, toolCall)
@@ -334,26 +400,24 @@ export class Agent{
     }
 
     async BuildSummary(): Promise<string> {
-        try {
-            logger.info(`[Agent:${this.runId}] Building summary from ${this.session.length} session entries`)
-            const { title, summary } = await b.GenerateAgentSummary(AGENT_SUMMARY_PROMPT, this.session)
-
-            try{
-                await backendGql(
-                    `mutation NameProject($projectId: ID!, $name: String!) {
-                        nameProjectIfUnnamed(projectId: $projectId, name: $name)
-                    }`,
-                    { projectId: this.projectId, name: title }
-                )
-            } catch(e){
-                logger.error(`[Agent:${this.runId}] Failed to save project title: ${e}`)
-            }
-
+        logger.info(`[Agent:${this.runId}] Building summary from ${this.session.length} session entries`)
+        return startActiveObservation("build-summary", async (span) => {
+            span.update({input: {sessionLength: this.session.length}})
+            const {title, summary} = await observeBaml(
+                "agent-summary",
+                {sessionLength: this.session.length},
+                (opts) => b.GenerateAgentSummary(AGENT_SUMMARY_PROMPT, this.session, opts),
+            )
+            span.update({output: {title, summary}})
+            await backendGql(
+                `mutation NameProject($projectId: ID!, $name: String!) {
+                    nameProjectIfUnnamed(projectId: $projectId, name: $name)
+                }`,
+                { projectId: this.projectId, name: title }
+            ).catch(e => logger.error(`[Agent:${this.runId}] Failed to save project title: ${e}`))
             return summary
-        } catch (e) {
-            logger.error(`[Agent:${this.runId}] Error occurred while generating summary: ${e instanceof Error ? e.message : String(e)}`)
-            throw e
-        }
+        })
+        
     }
 
 }

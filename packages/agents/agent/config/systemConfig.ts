@@ -58,3 +58,11 @@ export const AGENT_LLM_RETRY_ATTEMPTS = 3
 // A 429 needs to wait out a window, not the ~1s a transient failure needs.
 export const RATE_LIMIT_BACKOFF_MS = 20_000
 export const RETRY_MAX_BACKOFF_MS = 60_000
+
+// Design pre-phase (Stitch). Bounded concurrency so a pool of screens overlaps
+// the ~56s generation waits without stampeding a rate-limited free-tier key.
+export const STITCH_DESIGN_CONCURRENCY = 3
+// Whole-screen generation retries before a screen is marked degraded (built
+// design-less rather than failing the run).
+export const STITCH_DESIGN_RETRY_ATTEMPTS = 3
+export const STITCH_DESIGN_BACKOFF_MS = 2_000

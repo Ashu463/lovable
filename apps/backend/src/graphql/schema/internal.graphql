@@ -17,7 +17,6 @@ input PlannedTodoInput {
   "Planner casing ('pending' / 'completed'), normalised server-side."
   status: String!
   dependency: [Int!]!
-  designNeeded: Boolean
 }
 
 "A generated design paired with the FramePrompts prompt that produced it."

@@ -22,7 +22,7 @@ import type { BamlRuntime, BamlCtxManager, Image, Audio, Pdf, Video } from "@bou
 import { toBamlError, HTTPRequest, ClientRegistry } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
 import type * as types from "./types"
-import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, ConversationalReply, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DevelopmentVerdict, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
+import type {Abort, Agent, AgentContext, AgentResponse, AgentSummary, Apify, ApifyRes, BraveRes, BraveResult, CoderContext, CoderSession, ComplexityVerdict, ConflictTaskInfo, Context7, ContextType, ConversationalReply, DebuggerContext, DebuggerSession, DebuggingDone, Decision, DeleteFile, Design, DesignVariants, DevelopmentVerdict, DocsSearch, Done, EditFile, EpisodicMemory, Error, ErrorResponse, FetchDocs, FileEdit, FileEditOp, Fixes, GetSkill, ItemRes, MergeConflictContext, MergeConflictResolution, Message, PlanTasksOutput, PlannedScreen, PlannerTodo, Question, ReadFile, Research, ResearcherContext, ResearcherResponse, ResearcherSession, RunCommand, SessionMap, Skill, StitchTool, SubAgentsContexts, TaskComplexity, TaskSummary, Tavily, TesterContext, TesterResponse, TesterSession, ToolResult, UIExpertContext, UIExpertSession, WebScrape, WebSearch, WriteFile} from "./types"
 import type TypeBuilder from "./type_builder"
 import type * as events from "./events"
 
@@ -368,6 +368,39 @@ export class HttpRequest {
     }
   }
   
+  EnumerateScreens(
+      systemPrompt: string,userPrompt: string,context: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "EnumerateScreens",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        false,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   FramePrompts(
       systemPrompt: string,userPrompt: string,semanticMem: string,skills: types.Skill[],
       __baml_options__?: BamlCallOptions<never>
@@ -533,8 +566,8 @@ export class HttpRequest {
     }
   }
   
-  PlanComplexTask(
-      systemPrompt: string,userPrompt: string,context: string,
+  PlanTasks(
+      systemPrompt: string,userPrompt: string,context: string,screens: types.PlannedScreen[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -551,9 +584,9 @@ export class HttpRequest {
       }
 
       return this.runtime.buildRequestSync(
-        "PlanComplexTask",
+        "PlanTasks",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"screens": screens
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -1199,6 +1232,39 @@ export class HttpStreamRequest {
     }
   }
   
+  EnumerateScreens(
+      systemPrompt: string,userPrompt: string,context: string,
+      __baml_options__?: BamlCallOptions<never>
+  ): HTTPRequest {
+    try {
+      const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
+      const __env__: Record<string, string> = Object.fromEntries(
+        Object.entries(__rawEnv__).filter(([_, value]) => value !== undefined) as [string, string][]
+      );
+
+      // Resolve client option to clientRegistry (client takes precedence)
+      let __clientRegistry__ = __baml_options__?.clientRegistry;
+      if (__baml_options__?.client) {
+        __clientRegistry__ = __clientRegistry__ || new ClientRegistry();
+        __clientRegistry__.setPrimary(__baml_options__.client);
+      }
+
+      return this.runtime.buildRequestSync(
+        "EnumerateScreens",
+        {
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
+        },
+        this.ctxManager.cloneContext(),
+        __baml_options__?.tb?.__tb(),
+        __clientRegistry__,
+        true,
+        __env__,
+      )
+    } catch (error) {
+      throw toBamlError(error);
+    }
+  }
+  
   FramePrompts(
       systemPrompt: string,userPrompt: string,semanticMem: string,skills: types.Skill[],
       __baml_options__?: BamlCallOptions<never>
@@ -1364,8 +1430,8 @@ export class HttpStreamRequest {
     }
   }
   
-  PlanComplexTask(
-      systemPrompt: string,userPrompt: string,context: string,
+  PlanTasks(
+      systemPrompt: string,userPrompt: string,context: string,screens: types.PlannedScreen[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -1382,9 +1448,9 @@ export class HttpStreamRequest {
       }
 
       return this.runtime.buildRequestSync(
-        "PlanComplexTask",
+        "PlanTasks",
         {
-          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"context": context,"screens": screens
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

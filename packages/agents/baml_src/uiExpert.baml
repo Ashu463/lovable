@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client GroqArray
+    client OpenAIGeneric
     prompt #"
         {{ _.role("system") }}
         {{systemPrompt}}
@@ -60,16 +60,49 @@ function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: str
         {{ctx.output_format}}
     "#
 }
+
+test FramePromptsTest {
+  functions [FramePrompts]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Produce the design options for a new Run.
+
+# CRITERIA
+
+Produce exactly 3 variants that differ in real design direction — layout
+paradigm, information density, typographic personality, visual weight —
+not a palette or corner-radius swap. Each must be complete enough for
+CoderAgent to implement without further design decisions left open.
+    "#
+    userPrompt #"
+      Build me a dark-themed todo app.
+    "#
+    semanticMem ""
+    skills []
+  }
+}
+
 function UIExpertAgent(
     systemPrompt: string,
     htmlDesign: string?,
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Done | Abort
 {
-    client GroqArray
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
-        Whatever else {{context}} carries about the current codebase state.
+
+        # CURRENT ITEM
+
+        {{context.task}}
+        {{context.description}} - the fuller brief behind that task.
+        expectedToolCalls: {{context.expectedToolCalls}} - a soft budget for
+  this item, not a hard cap.
+
+        Whatever else {{context}} carries about the current codebase state
+  (repoTree, skills, dependentSummary, recentTurns).
 
         {% if htmlDesign %}{{ htmlDesign }} - the Stitch-generated design for
   this screen. Translate it into the base template; do not add business
@@ -88,6 +121,8 @@ test UIExpertAgentTest {
     htmlDesign "<div class=\"p-4\"><h1>Dashboard</h1></div>"
     context {
         task "Build the dashboard screen base template"
+        description "Scaffold the dashboard screen from its Stitch design; behavior comes in a later item."
+        expectedToolCalls 3
         dependentSummary []
         repoTree #"
         src/App.tsx

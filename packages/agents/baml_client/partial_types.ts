@@ -20,7 +20,7 @@ $ pnpm add @boundaryml/baml
 
 import type { Image, Audio, Pdf, Video } from "@boundaryml/baml"
 import type { Checked, Check } from "./types"
-import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
+import type {  Abort,  Agent,  AgentContext,  AgentResponse,  AgentSummary,  Apify,  ApifyRes,  BraveRes,  BraveResult,  CoderContext,  CoderSession,  ComplexityVerdict,  ConflictTaskInfo,  Context7,  ContextType,  ConversationalReply,  DebuggerContext,  DebuggerSession,  DebuggingDone,  Decision,  DeleteFile,  Design,  DesignVariants,  DevelopmentVerdict,  DocsSearch,  Done,  EditFile,  EpisodicMemory,  Error,  ErrorResponse,  FetchDocs,  FileEdit,  FileEditOp,  Fixes,  GetSkill,  ItemRes,  MergeConflictContext,  MergeConflictResolution,  Message,  PlanTasksOutput,  PlannedScreen,  PlannerTodo,  Question,  ReadFile,  Research,  ResearcherContext,  ResearcherResponse,  ResearcherSession,  RunCommand,  SessionMap,  Skill,  StitchTool,  SubAgentsContexts,  TaskComplexity,  TaskSummary,  Tavily,  TesterContext,  TesterResponse,  TesterSession,  ToolResult,  UIExpertContext,  UIExpertSession,  WebScrape,  WebSearch,  WriteFile } from "./types"
 import type * as types from "./types"
 
 /******************************************************************************
@@ -70,6 +70,8 @@ export namespace partial_types {
     }
     export interface CoderContext {
       task?: string | null
+      description?: string | null
+      expectedToolCalls?: number | null
       dependentSummary: TaskSummary[]
       repoTree?: string | null
       skills: Skill[]
@@ -84,6 +86,7 @@ export namespace partial_types {
       content?: string | null
     }
     export interface ComplexityVerdict {
+      reasoning?: string | null
       complex?: boolean | null
     }
     export interface ConflictTaskInfo {
@@ -209,22 +212,33 @@ export namespace partial_types {
       trunkTask?: ConflictTaskInfo | null
     }
     export interface MergeConflictResolution {
+      reasoning?: string | null
       resolved?: boolean | null
       content?: string | null
-      reason?: string | null
     }
     export interface Message {
       role?: "user" | "assistant" | "toolCall" | "system" | null
       content?: string | null
       timestamp?: string | null
     }
+    export interface PlanTasksOutput {
+      reasoning?: string | null
+      todos: PlannerTodo[]
+    }
+    export interface PlannedScreen {
+      id?: string | null
+      name?: string | null
+      designBrief?: string | null
+    }
     export interface PlannerTodo {
       id?: number | null
       task?: string | null
+      description?: string | null
       agent?: "coder" | "uiExpert" | null
+      designRef?: string | null
       status?: "pending" | "completed" | null
       dependency: number[]
-      designNeeded?: boolean | null
+      expectedToolCalls?: number | null
     }
     export interface Question {
       question?: string | null

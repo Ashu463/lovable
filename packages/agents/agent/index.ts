@@ -21,10 +21,10 @@ export async function runCallAgent(
   selectedDesignId?: string,
 ): Promise<any> {
 
-  const orchestrator: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem)
+  const callAgent: CallAgent = new CallAgent(userId, projectId, sandbox, runId, semanticMem)
 
   try {
-    const result = await orchestrator.Execute(userPrompt, answers, selectedDesignId)
+    const result = await callAgent.Execute(userPrompt, answers, selectedDesignId)
     return result
   } catch (err) {
     await createRunEmitter(runId).emit({ type: "run_failed", error: String(err) })

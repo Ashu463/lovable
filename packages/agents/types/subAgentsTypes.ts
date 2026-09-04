@@ -11,6 +11,10 @@ export type SubAgentType = 'coder' | 'debuggerr' | 'tester' |  'researcher' |  '
 export type SubAgentsTodo = {
     taskId: number,
     task: string,
+    // Fuller intent from the planner (the "why" behind `task`) and a soft
+    // tool-call budget hint. Surfaced here for subagent prompts to consume.
+    description: string,
+    expectedToolCalls: number,
     dependentTasks: number[],
     agentSpecificData: SubAgentTodoDataMap[SubAgentType]
 }
@@ -43,6 +47,9 @@ export type ResearchTaskInput = BaseTaskInput
 export type UIExpertTaskInput = BaseTaskInput & {
     updatedPrompt: string
     uiPreferences: UIPreferenceQA[]
+    // The PlannedScreen id this item translates; its design was pre-generated
+    // by the Planner. Absent/degraded -> uiExpert falls back to inline gen.
+    designRef?: string
 }
 export type InputMap = {
     coder: CoderTaskInput;
