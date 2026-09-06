@@ -1230,6 +1230,13 @@ write both for that reader, not for yourself.
 
 Reason through the shape of the decomposition first, then emit items:
 
+- Plan the smallest coherent first iteration that runs end to end and
+  delivers the request's core value — not the maximal version of it. This is
+  one build of ~10-12 minutes, and the user refines it over further runs;
+  they'd rather see a working core now and ask for the rest than wait on an
+  exhaustive plan. Prioritize the primary happy path; treat secondary
+  screens, edge-case handling, settings, and polish as things the user can
+  request next, not part of this plan.
 - Emit one uiExpert item per screen in the passed list that doesn't already
   have a design from a prior run; set its designRef to that screen's id,
   never one you invent. Emit the corresponding Coder item(s) for that
@@ -1252,6 +1259,14 @@ Reason through the shape of the decomposition first, then emit items:
 
 # CONSTRAINTS
 
+- Emit at most 10 items — a hard ceiling, not a target. If the full request
+  would need more than 10 well-scoped items, the request is too big for one
+  run: cut scope to the core (fewer features/screens this iteration), do NOT
+  fit under the ceiling by bundling unrelated work into fewer, larger items.
+  The cap limits how much you build now, never how cleanly each item is
+  split — every item still stays independently verifiable. Most requests
+  should land well under 10; reaching it is a signal to trim scope, not a
+  quota to fill.
 - Every item must be independently verifiable by a command Coder or
   UIExpert can run. Scope what must be true when the item is done, not
   implementation detail that's the executor's own call to make.

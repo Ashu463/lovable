@@ -169,11 +169,22 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 // it wherever it lands in message order instead of always last.
                 setAwaitingDesigns(true);
                 return;
-              default:
-                pushMessage("system", describeEvent(event), "progress");
+              default: {
+                // The DAG tree (DagView) is the live view of subagent work —
+                // which agent is on which task, blinking while it runs, coloured
+                // when done. Piping those same events into the text feed just
+                // dumped raw tool calls ("read:./package.json") and full run
+                // digests that mean nothing to a non-technical user, so the
+                // subagent events only feed the tree, never the text feed.
+                const subagentNoise =
+                  event.type === "subagent_started" ||
+                  event.type === "subagent_progress" ||
+                  event.type === "subagent_completed";
+                if (!subagentNoise) pushMessage("system", describeEvent(event), "progress");
                 setState((prev) =>
                   prev.status === "running" ? { ...prev, feed: [...prev.feed, event] } : prev,
                 );
+              }
             }
           },
           onError: () => {

@@ -36,7 +36,10 @@ export async function makeOneScreen(prompt: string, userId: string): Promise<Scr
     logger.info(`Stitch project created: ${projectId}`)
     const project = stitch.project(projectId);
 
-    const screen: Screen = await project.generate(prompt);
+    // This product only ships Vite/React web apps, so screens are always
+    // desktop/web. Stitch defaults an unspecified deviceType to a phone-shaped
+    // screen, so "DESKTOP" is pinned here — never mobile/tablet.
+    const screen: Screen = await project.generate(prompt, "DESKTOP");
     logger.info(`Stitch screen generated: ${screen.screenId}`)
 
     const [htmlUrl, imageUrl] = await Promise.all([screen.getHtml(), screen.getImage()])
