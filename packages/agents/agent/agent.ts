@@ -81,8 +81,22 @@ export class Agent{
         logger.info(`[Agent:${this.runId}] runLoop starting, maxIterations=${AGENT_MAX_ITERATIONS}`)
         return startActiveObservation("agent-loop", async (loopSpan): Promise<AgentResponse> => {
             loopSpan.update({input: this.userPrompt})
+            let terminalAction: 'done' | 'abort' | undefined
+            let abortReason: string | undefined
             try{
                 const updatedSystemPrompt = AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
+                try {
+                    const repoTree = await this.sandbox.getRepoTree(PROJECT_ROOT)
+                    if (repoTree.trim()) {
+                        this.context.push({
+                            role: 'system',
+                            content: `Current project files (repo tree at run start):\n${repoTree}\n\nUse this to locate files directly — don't spend actions listing directories to rediscover what already exists here. Read a file only when you actually need its contents.`,
+                            timestamp: new Date().toISOString(),
+                        })
+                    }
+                } catch (e) {
+                    logger.warn(`[Agent:${this.runId}] Could not seed repo tree, agent will explore manually: ${e instanceof Error ? e.message : String(e)}`)
+                }
                 while(this.iterations < AGENT_MAX_ITERATIONS){
                     const shouldBreak: boolean = await startActiveObservation(`iteration-${this.iterations}`, async (): Promise<boolean> => {
                         logger.info(`[Agent:${this.runId}] Iteration ${this.iterations} starting`)
@@ -109,6 +123,7 @@ export class Agent{
                                 content: `Task complete. Files edited: ${response.filesEdited.map(f => `${f.fileName} (${f.summary})`).join('; ') || 'none'}`,
                                 timestamp: new Date().toISOString()
                             })
+                            terminalAction = 'done'
                             shouldBreak = true
                         }
                         else if(response.action === 'abort'){
@@ -121,6 +136,8 @@ export class Agent{
                                 content: `Aborted: ${response.reason}`,
                                 timestamp: new Date().toISOString()
                             })
+                            terminalAction = 'abort'
+                            abortReason = response.reason
                             shouldBreak = true
                         }
                         else {
@@ -203,12 +220,18 @@ export class Agent{
                     summary: `Main Agent failed with error, ${e}`
                 }
             }
-            logger.info(`[Agent:${this.runId}] runLoop finished after ${this.iterations} iterations, building summary`)
-            const result: AgentResponse = {
-                success: true,
-                summary: await this.BuildSummary()
+            logger.info(`[Agent:${this.runId}] runLoop finished after ${this.iterations} iterations (terminal=${terminalAction ?? 'iteration-cap'}), building summary`)
+            const summary = await this.BuildSummary()
+            let result: AgentResponse
+            if (terminalAction === 'done') {
+                result = { success: true, summary }
+            } else if (terminalAction === 'abort') {
+                result = { success: false, summary: `Main Agent aborted: ${abortReason ?? 'no reason given'}\n\n${summary}` }
+            } else {
+                result = { success: false, summary: `Main Agent hit the ${AGENT_MAX_ITERATIONS}-iteration cap without completing the task (never emitted done). The build was not verified and may be unfinished.\n\n${summary}` }
+                loopSpan.update({ level: "WARNING", statusMessage: `iteration cap (${AGENT_MAX_ITERATIONS}) reached without completion` })
             }
-            loopSpan.update({output: result, metadata: {iterations: this.iterations}})
+            loopSpan.update({output: result, metadata: {iterations: this.iterations, terminalAction: terminalAction ?? 'iteration-cap'}})
             return result
         },
         // Anchors this process's spans onto the run's shared trace.
@@ -417,7 +440,7 @@ export class Agent{
             ).catch(e => logger.error(`[Agent:${this.runId}] Failed to save project title: ${e}`))
             return summary
         })
-        
+
     }
 
 }

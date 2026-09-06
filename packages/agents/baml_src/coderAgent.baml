@@ -26,7 +26,7 @@ function CoderAgent(
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Research | GetSkill | Done | Abort
     {
-    client OpenAIGeneric
+    client OpenRouter
 
     prompt #"
         {{systemPrompt}}

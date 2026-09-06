@@ -188,6 +188,13 @@ export function RunProvider({ children }: { children: ReactNode }) {
 
   const submit = useCallback(
     async (userPrompt: string, projectId?: string) => {
+      // A call with no projectId starts a brand-new project, so its thread must
+      // not inherit the previous project's messages (which only reset()/resume()
+      // cleared before — a fresh submit just kept appending). A same-project
+      // follow-up passes projectId and keeps the full chat history for that
+      // project. setMessages([]) runs before pushMessage's functional update, so
+      // the new prompt lands in a cleanly emptied thread.
+      if (!projectId) setMessages([]);
       pushMessage("user", userPrompt);
       setState({ status: "submitting" });
       try {

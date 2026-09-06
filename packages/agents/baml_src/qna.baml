@@ -22,7 +22,7 @@ class ConversationalReply{
 }
 
 function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> DevelopmentVerdict {
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -32,7 +32,7 @@ function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> 
 }
 
 function RespondConversationally(systemPrompt: string, userPrompt: string, priorContext: string, semanticMem: string) -> ConversationalReply {
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to answer.
@@ -44,7 +44,7 @@ function RespondConversationally(systemPrompt: string, userPrompt: string, prior
 }
 
 function CheckComplexity(systemPrompt: string, userPrompt: string) -> ComplexityVerdict {
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -54,7 +54,7 @@ function CheckComplexity(systemPrompt: string, userPrompt: string) -> Complexity
 }
 
 function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, isComplex: bool) -> Question[] {
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -66,7 +66,7 @@ function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, i
 }
 
 function GenerateUIPreferenceQuestions(systemPrompt: string, userPrompt: string) -> Question[] {
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -75,6 +75,10 @@ function GenerateUIPreferenceQuestions(systemPrompt: string, userPrompt: string)
     "#
 }
 
+// Regression test: the word "complex" in the request is not itself
+// evidence of complexity (mirror of CheckComplexitySimpleTodoTest below,
+// which guards the same trap in the other direction) — a todo app stays
+// simple by CRITERIA regardless of which adjective the user attaches to it.
 test CheckComplexityTest {
   functions [CheckComplexity]
   args {
@@ -96,18 +100,32 @@ on how it's phrased.
 
 # CRITERIA
 
-Reason through the scope and risk first, then decide. Judge complex when the
-request plausibly touches multiple files/surfaces, introduces or changes
-structural/data-model decisions, or is the kind of change where a single
-generalist pass without a debugger safety net is a real risk of shipping
-something broken. Judge simple when it's a bounded, single-surface change a
-capable generalist could implement and verify directly — copy changes, small
-isolated features, single-component fixes.
+Reason through the scope and risk first, then decide. Almost every request
+touches more than one file and has some shape of data behind it — that
+alone is not what complex means here, or nothing would ever be simple.
+Judge simple by default for a single self-contained feature, however many
+files or however much state it takes to build: a todo app, a landing page,
+a calculator, a single form with validation, a settings panel. These stay
+simple even with a component, some useState, and a data shape, because one
+generalist can hold the whole thing in mind and verify it directly.
+
+Judge complex only when there's a genuine scale-up beyond that: several
+independent screens or routes that need to work together, a data model
+with multiple related entities (not one flat list of similar items),
+integration with an external system (auth, payments, a third-party API),
+or a change that touches existing code broadly enough that a mistake in
+one place plausibly breaks another — the kind of risk where not having a
+debugger safety net actually matters, not just "this has some structure."
 
 # CONSTRAINTS
 
-Judge actual scope, not phrasing or length — a terse message can still be
-structurally complex, and a long one can still be simple.
+Judge actual scope, not phrasing, length, or the presence of the word
+"simple" or "complex" in the request itself — a terse message can still be
+structurally complex, a long one can still be simple, and a user calling
+their own request "simple" or "complex" is not evidence either way. Don't
+let a feature being real (having state, interactivity, a data shape) push
+you toward complex by itself; ask whether it's genuinely one bounded thing
+or several things that need coordinating.
 
 # OUTPUT
 
@@ -116,6 +134,125 @@ restatement of it after the fact — write it before you've settled on complex.
     "#
     userPrompt #"
       Built a very complex todo app with black background.
+    "#
+  }
+}
+
+test CheckComplexitySimpleTodoTest {
+  functions [CheckComplexity]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Judge whether an incoming Run message is simple enough for the single
+main-agent path or complex enough to need the full coder/debugger pipeline.
+This verdict is not advisory — the CallAgent branches its execution path
+directly on it.
+
+# GIVEN
+
+Clarification runs as a separate, independent step regardless of what you
+decide here — don't factor missing detail or ambiguity into this call, only
+scope and risk. Your verdict also gets cached on the project and reused for
+later messages in the same Run, so weigh the request on its own merits, not
+on how it's phrased.
+
+# CRITERIA
+
+Reason through the scope and risk first, then decide. Almost every request
+touches more than one file and has some shape of data behind it — that
+alone is not what complex means here, or nothing would ever be simple.
+Judge simple by default for a single self-contained feature, however many
+files or however much state it takes to build: a todo app, a landing page,
+a calculator, a single form with validation, a settings panel. These stay
+simple even with a component, some useState, and a data shape, because one
+generalist can hold the whole thing in mind and verify it directly.
+
+Judge complex only when there's a genuine scale-up beyond that: several
+independent screens or routes that need to work together, a data model
+with multiple related entities (not one flat list of similar items),
+integration with an external system (auth, payments, a third-party API),
+or a change that touches existing code broadly enough that a mistake in
+one place plausibly breaks another — the kind of risk where not having a
+debugger safety net actually matters, not just "this has some structure."
+
+# CONSTRAINTS
+
+Judge actual scope, not phrasing, length, or the presence of the word
+"simple" or "complex" in the request itself — a terse message can still be
+structurally complex, a long one can still be simple, and a user calling
+their own request "simple" or "complex" is not evidence either way. Don't
+let a feature being real (having state, interactivity, a data shape) push
+you toward complex by itself; ask whether it's genuinely one bounded thing
+or several things that need coordinating.
+
+# OUTPUT
+
+reasoning comes first and is 1-2 sentences working out the judgment, not a
+restatement of it after the fact — write it before you've settled on complex.
+    "#
+    userPrompt #"
+      Build a very simple todo app.
+    "#
+  }
+}
+
+test CheckComplexityEcommerceTest {
+  functions [CheckComplexity]
+  args {
+    systemPrompt #"
+      # ROLE
+
+Judge whether an incoming Run message is simple enough for the single
+main-agent path or complex enough to need the full coder/debugger pipeline.
+This verdict is not advisory — the CallAgent branches its execution path
+directly on it.
+
+# GIVEN
+
+Clarification runs as a separate, independent step regardless of what you
+decide here — don't factor missing detail or ambiguity into this call, only
+scope and risk. Your verdict also gets cached on the project and reused for
+later messages in the same Run, so weigh the request on its own merits, not
+on how it's phrased.
+
+# CRITERIA
+
+Reason through the scope and risk first, then decide. Almost every request
+touches more than one file and has some shape of data behind it — that
+alone is not what complex means here, or nothing would ever be simple.
+Judge simple by default for a single self-contained feature, however many
+files or however much state it takes to build: a todo app, a landing page,
+a calculator, a single form with validation, a settings panel. These stay
+simple even with a component, some useState, and a data shape, because one
+generalist can hold the whole thing in mind and verify it directly.
+
+Judge complex only when there's a genuine scale-up beyond that: several
+independent screens or routes that need to work together, a data model
+with multiple related entities (not one flat list of similar items),
+integration with an external system (auth, payments, a third-party API),
+or a change that touches existing code broadly enough that a mistake in
+one place plausibly breaks another — the kind of risk where not having a
+debugger safety net actually matters, not just "this has some structure."
+
+# CONSTRAINTS
+
+Judge actual scope, not phrasing, length, or the presence of the word
+"simple" or "complex" in the request itself — a terse message can still be
+structurally complex, a long one can still be simple, and a user calling
+their own request "simple" or "complex" is not evidence either way. Don't
+let a feature being real (having state, interactivity, a data shape) push
+you toward complex by itself; ask whether it's genuinely one bounded thing
+or several things that need coordinating.
+
+# OUTPUT
+
+reasoning comes first and is 1-2 sentences working out the judgment, not a
+restatement of it after the fact — write it before you've settled on complex.
+    "#
+    userPrompt #"
+      Build a full e-commerce site with product listings, a shopping cart,
+      user accounts, and checkout with payment processing.
     "#
   }
 }

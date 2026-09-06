@@ -54,7 +54,7 @@ client<llm> OpenRouter {
   options {
     base_url "https://openrouter.ai/api/v1"
     api_key env.OPENROUTER_API_KEY
-    model "google/gemini-2.5-pro"
+    model "minimax/minimax-m3"
 
     // headers {
     //   "HTTP-Referer" "https://yourapp.com"
@@ -119,7 +119,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -265,7 +265,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenAIGeneric
+    client OpenRouter
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the
