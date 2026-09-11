@@ -31,6 +31,6 @@ export type SubAgentInstance = CoderAgent | DebuggerAgent | TesterAgent | UIExpe
 export type ToolRes = WriteFile | ReadFile | RunCommand | DeleteFile | FetchDocs | Research | Done
 
 export type AgentResponse = {
-    success: boolean, 
+    success: boolean,
     summary: string
 }

@@ -3,8 +3,8 @@ import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
 import { DEBUGGER_PROMPT } from "../config/systemPrompts";
 import { Researcher } from "./researcher";
+import { observeBaml } from "../utils/tracing"
 import { fetchDocs } from "../MCPs/context7";
-import { webScrape } from "../MCPs/apify";
 import type { E2BSandbox } from "../utils/sandbox";
 import { SkillStore } from "../skills";
 
@@ -39,7 +39,11 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
     override async callLLM(content: DebuggerRequest, context: DebuggerContext): Promise<DebuggerLLMResponse> {
         
         try{
-            const response = await b.DebuggerAgent(DEBUGGER_PROMPT, content.errors, context, content?.toolResult)
+            const response = await observeBaml(
+                "DebuggerAgent",
+                { errors: content.errors, fixAttempts: context.fixHistory?.length ?? 0 },
+                (opts) => b.DebuggerAgent(DEBUGGER_PROMPT, content.errors, context, content?.toolResult, opts),
+            )
 
             return response
         }

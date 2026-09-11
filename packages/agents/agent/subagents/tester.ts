@@ -5,6 +5,7 @@ import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/systemPrompts"
 import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
+import { observeBaml } from "../utils/tracing"
 
 type TesterInput = ""
 type TesterLLMResponse = ErrorResponse
@@ -74,7 +75,11 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
     override async callLLM(error: string, context: TesterContext): Promise<ErrorResponse> {
         let errorReFramed: ErrorResponse
         try {
-            errorReFramed = await b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error, context)
+            errorReFramed = await observeBaml(
+                "ReframeError",
+                { error },
+                (opts) => b.ReframeError(TESTER_ERROR_REFACTOR_PROMPT, error, context, opts),
+            )
 
         } catch (error) {
             logger.error(`ReframeError failed: ${error}`)

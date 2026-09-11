@@ -113,6 +113,8 @@ export interface BraveResult {
 
 export interface CoderContext {
   task: string
+  description: string
+  expectedToolCalls: number
   dependentSummary: TaskSummary[]
   repoTree: string
   skills: Skill[]
@@ -131,6 +133,7 @@ export interface CoderSession {
 }
 
 export interface ComplexityVerdict {
+  reasoning: string
   complex: boolean
   
 }
@@ -306,9 +309,9 @@ export interface MergeConflictContext {
 }
 
 export interface MergeConflictResolution {
+  reasoning: string
   resolved: boolean
   content?: string | null
-  reason: string
   
 }
 
@@ -319,13 +322,28 @@ export interface Message {
   
 }
 
+export interface PlanTasksOutput {
+  reasoning: string
+  todos: PlannerTodo[]
+  
+}
+
+export interface PlannedScreen {
+  id: string
+  name: string
+  designBrief: string
+  
+}
+
 export interface PlannerTodo {
   id: number
   task: string
+  description: string
   agent: "coder" | "uiExpert"
+  designRef?: string | null
   status: "pending" | "completed"
   dependency: number[]
-  designNeeded: boolean
+  expectedToolCalls: number
   
 }
 

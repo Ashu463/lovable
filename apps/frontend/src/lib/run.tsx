@@ -169,11 +169,22 @@ export function RunProvider({ children }: { children: ReactNode }) {
                 // it wherever it lands in message order instead of always last.
                 setAwaitingDesigns(true);
                 return;
-              default:
-                pushMessage("system", describeEvent(event), "progress");
+              default: {
+                // The DAG tree (DagView) is the live view of subagent work —
+                // which agent is on which task, blinking while it runs, coloured
+                // when done. Piping those same events into the text feed just
+                // dumped raw tool calls ("read:./package.json") and full run
+                // digests that mean nothing to a non-technical user, so the
+                // subagent events only feed the tree, never the text feed.
+                const subagentNoise =
+                  event.type === "subagent_started" ||
+                  event.type === "subagent_progress" ||
+                  event.type === "subagent_completed";
+                if (!subagentNoise) pushMessage("system", describeEvent(event), "progress");
                 setState((prev) =>
                   prev.status === "running" ? { ...prev, feed: [...prev.feed, event] } : prev,
                 );
+              }
             }
           },
           onError: () => {
@@ -188,6 +199,13 @@ export function RunProvider({ children }: { children: ReactNode }) {
 
   const submit = useCallback(
     async (userPrompt: string, projectId?: string) => {
+      // A call with no projectId starts a brand-new project, so its thread must
+      // not inherit the previous project's messages (which only reset()/resume()
+      // cleared before — a fresh submit just kept appending). A same-project
+      // follow-up passes projectId and keeps the full chat history for that
+      // project. setMessages([]) runs before pushMessage's functional update, so
+      // the new prompt lands in a cleanly emptied thread.
+      if (!projectId) setMessages([]);
       pushMessage("user", userPrompt);
       setState({ status: "submitting" });
       try {

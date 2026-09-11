@@ -105,7 +105,6 @@ export const internalResolvers = {
           agent: string;
           status: string;
           dependency: number[];
-          designNeeded?: boolean | null;
         }[];
       },
       ctx: GraphQLContext,
@@ -123,10 +122,6 @@ export const internalResolvers = {
               agent: t.agent as never,
               status: t.status === "completed" ? "COMPLETED" : "PENDING",
               dependency: t.dependency,
-              agentSpecificData:
-                t.designNeeded !== undefined && t.designNeeded !== null
-                  ? { designNeeded: t.designNeeded }
-                  : undefined,
             },
           }),
         ),

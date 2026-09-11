@@ -90,7 +90,7 @@ const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
     researcher: [skillsMapper.REPORT_FORMAT, skillsMapper.SOURCE_QUALITY_RUBRIC],
     uiExpert: [skillsMapper.DESIGN_SYSTEM, skillsMapper.RESPONSIVE_RULES, skillsMapper.UI_BASE_TEMPLATE],
 
-    agent: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY],
+    agent: [skillsMapper.DESIGN_SYSTEM, skillsMapper.DEPENDENCY_POLICY, skillsMapper.UI_BASE_TEMPLATE],
 };
 
 const TASK_SKILLS: Record<AgentKey, SkillId[]> = {

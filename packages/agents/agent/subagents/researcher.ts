@@ -4,6 +4,7 @@ import { webScrape } from "../MCPs/apify";
 import type { ResearcherContext } from "../../baml_client";
 import type { E2BSandbox } from "../utils/sandbox";
 import { logger } from "../utils/logger";
+import { startActiveObservation } from "@langfuse/tracing";
 
 /*
 what I'm thinking is that this researcher agent would use some RAG/memory things
@@ -29,28 +30,36 @@ export class Researcher extends BaseAgent<ResearcherInput, ResearcherContext, Re
     
 
     async WebSearch(query: string, maxResults: number): Promise<string>{
-        let res = ""
-        try{
-            res = await webSearch(query, maxResults)
-            logger.info(`Web search "${query}" returned ${res.length} chars`)
-        }
-        catch(e){
-            logger.error(`Web search "${query}" failed: ${e}`)
-            throw e;
-        }
-        return res
+        return startActiveObservation("web-search", async (span): Promise<string> => {
+            span.update({ input: { query, maxResults } })
+            try{
+                const res = await webSearch(query, maxResults)
+                logger.info(`Web search "${query}" returned ${res.length} chars`)
+                span.update({ output: { chars: res.length } })
+                return res
+            }
+            catch(e){
+                span.update({ level: "ERROR", statusMessage: e instanceof Error ? e.message : String(e) })
+                logger.error(`Web search "${query}" failed: ${e}`)
+                throw e;
+            }
+        })
     }
     async WebScrape(url: string[], maxPages: number): Promise<string>{
-        let res = ""
-        try{
-            res = await webScrape(url, maxPages)
-            logger.info(`Web scrape of ${url.length} url(s) returned ${res.length} chars`)
-        }
-        catch(e){
-            logger.error(`Web scrape of ${url.length} url(s) failed: ${e}`)
-            throw e;
-        }
-        return res
+        return startActiveObservation("web-scrape", async (span): Promise<string> => {
+            span.update({ input: { urls: url.length, maxPages } })
+            try{
+                const res = await webScrape(url, maxPages)
+                logger.info(`Web scrape of ${url.length} url(s) returned ${res.length} chars`)
+                span.update({ output: { chars: res.length } })
+                return res
+            }
+            catch(e){
+                span.update({ level: "ERROR", statusMessage: e instanceof Error ? e.message : String(e) })
+                logger.error(`Web scrape of ${url.length} url(s) failed: ${e}`)
+                throw e;
+            }
+        })
     }
 
     override async callLLM(content: string): Promise<string> {

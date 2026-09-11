@@ -4,19 +4,23 @@ import { redis } from "./redis";
 import { logger } from "./utils";
 import { prisma } from "./prisma";
 import { E2BSandbox } from "../../../../packages/agents/agent/utils/sandbox";
-import { runCallAgent, inngest, functions } from "../../../../packages/agents";
+import { runCallAgent, inngest, functions, runSpanContext } from "../../../../packages/agents";
+import { sdk, flushTraces } from "../telemetry/langfuse";
+import {startActiveObservation, startObservation} from '@langfuse/tracing'
 
-// This process already pulls in the whole @repo/agents graph to run jobs
-// (see queue.ts for why the API process deliberately doesn't) — so it's the
-// natural place to also serve the Inngest functions that graph defines,
-// rather than loading them into the lighter API process too.
 const inngestHandler = serve({ client: inngest, functions });
 const INNGEST_SERVE_PORT = Number(process.env.INNGEST_SERVE_PORT ?? 3001);
 Bun.serve({
   port: INNGEST_SERVE_PORT,
-  fetch(request) {
+  async fetch(request) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/inngest") return inngestHandler(request);
+    if (url.pathname === "/api/inngest") {
+      const response = await inngestHandler(request);
+      // Every Inngest step is its own request that ends right here. Anything
+      // still sitting in the span buffer may never get sent, so push it now.
+      await flushTraces();
+      return response;
+    }
     return new Response("Not found", { status: 404 });
   },
 });
@@ -39,15 +43,28 @@ const worker = new Worker("run-agent", async (job) => {
 
     try{
       logger.info(`Calling agent ${runId} with sandbox ${sandbox.sandboxId}`);
-      await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
+      // Pinned to the run's own trace (derived from runId) instead of letting
+      // Langfuse invent one. Without this, prep lands in one trace and
+      // everything Inngest does later lands in a completely separate one.
+      // BullMQ re-processes a stalled job (maxStalledCount) with the same
+      // payload — mark that like the Inngest retries, so a re-run isn't a
+      // mystery in the trace.
+      if (job.attemptsMade > 0) {
+        startObservation("bullmq-retry", { input: { attempt: job.attemptsMade } }, { asType: "event", parentSpanContext: await runSpanContext(runId) }).end()
+      }
+      await startActiveObservation(
+        "prep",
+        async (span) => {
+          span.update({ input: prompt, metadata: { bullAttempt: job.attemptsMade } })
+          const output = await runCallAgent(userId, projectId, prompt, runId, sandbox, semanticMem, answers, selectedDesignId);
+          span.update({ output })
+        },
+        { parentSpanContext: await runSpanContext(runId) },
+      )
     } catch(e){
       logger.error(`Failed to call agent ${runId}: ${e}`)
       throw e;
     }
-    // lockDuration has to outlast the longest gap between job progress, and a
-    // cold sandbox (R2 restore + npm install) alone has taken ~60s, so the old
-    // 60s lock could stall a job that was working fine. maxStalledCount 1 also
-    // meant a single worker restart killed whatever run was in flight.
     },{connection: redis, lockDuration: 300_000, stalledInterval: 30_000, maxStalledCount: 3, concurrency: 5}
 );
 

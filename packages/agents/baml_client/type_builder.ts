@@ -43,11 +43,11 @@ export default class TypeBuilder {
     
     BraveResult: ClassViewer<'BraveResult', "title" | "url" | "description" | "pageAge">;
     
-    CoderContext: ClassViewer<'CoderContext', "task" | "dependentSummary" | "repoTree" | "skills" | "recentTurns">;
+    CoderContext: ClassViewer<'CoderContext', "task" | "description" | "expectedToolCalls" | "dependentSummary" | "repoTree" | "skills" | "recentTurns">;
     
     CoderSession: ClassViewer<'CoderSession', "taskId" | "role" | "status" | "iterationCount" | "timestamp" | "content">;
     
-    ComplexityVerdict: ClassViewer<'ComplexityVerdict', "complex">;
+    ComplexityVerdict: ClassViewer<'ComplexityVerdict', "reasoning" | "complex">;
     
     ConflictTaskInfo: ClassViewer<'ConflictTaskInfo', "task" | "summary">;
     
@@ -97,11 +97,15 @@ export default class TypeBuilder {
     
     MergeConflictContext: ClassViewer<'MergeConflictContext', "filePath" | "conflictKind" | "conflictText" | "currentTask" | "trunkTask">;
     
-    MergeConflictResolution: ClassViewer<'MergeConflictResolution', "resolved" | "content" | "reason">;
+    MergeConflictResolution: ClassViewer<'MergeConflictResolution', "reasoning" | "resolved" | "content">;
     
     Message: ClassViewer<'Message', "role" | "content" | "timestamp">;
     
-    PlannerTodo: ClassViewer<'PlannerTodo', "id" | "task" | "agent" | "status" | "dependency" | "designNeeded">;
+    PlanTasksOutput: ClassViewer<'PlanTasksOutput', "reasoning" | "todos">;
+    
+    PlannedScreen: ClassViewer<'PlannedScreen', "id" | "name" | "designBrief">;
+    
+    PlannerTodo: ClassViewer<'PlannerTodo', "id" | "task" | "description" | "agent" | "designRef" | "status" | "dependency" | "expectedToolCalls">;
     
     Question: ClassViewer<'Question', "question" | "option">;
     
@@ -158,7 +162,7 @@ export default class TypeBuilder {
     constructor() {
         this.tb = new _TypeBuilder({
           classes: new Set([
-            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","ConflictTaskInfo","Context7","ConversationalReply","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DevelopmentVerdict","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MergeConflictContext","MergeConflictResolution","Message","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
+            "Abort","AgentContext","AgentResponse","AgentSummary","Apify","ApifyRes","BraveRes","BraveResult","CoderContext","CoderSession","ComplexityVerdict","ConflictTaskInfo","Context7","ConversationalReply","DebuggerContext","DebuggerSession","DebuggingDone","Decision","DeleteFile","Design","DesignVariants","DevelopmentVerdict","DocsSearch","Done","EditFile","EpisodicMemory","Error","ErrorResponse","FetchDocs","FileEdit","FileEditOp","Fixes","GetSkill","ItemRes","MergeConflictContext","MergeConflictResolution","Message","PlanTasksOutput","PlannedScreen","PlannerTodo","Question","ReadFile","Research","ResearcherContext","ResearcherResponse","ResearcherSession","RunCommand","SessionMap","Skill","StitchTool","SubAgentsContexts","TaskComplexity","TaskSummary","Tavily","TesterContext","TesterResponse","TesterSession","ToolResult","UIExpertContext","UIExpertSession","WebScrape","WebSearch","WriteFile",
           ]),
           enums: new Set([
             "Agent","ContextType",
@@ -199,7 +203,7 @@ export default class TypeBuilder {
         ]);
         
         this.CoderContext = this.tb.classViewer("CoderContext", [
-          "task","dependentSummary","repoTree","skills","recentTurns",
+          "task","description","expectedToolCalls","dependentSummary","repoTree","skills","recentTurns",
         ]);
         
         this.CoderSession = this.tb.classViewer("CoderSession", [
@@ -207,7 +211,7 @@ export default class TypeBuilder {
         ]);
         
         this.ComplexityVerdict = this.tb.classViewer("ComplexityVerdict", [
-          "complex",
+          "reasoning","complex",
         ]);
         
         this.ConflictTaskInfo = this.tb.classViewer("ConflictTaskInfo", [
@@ -307,15 +311,23 @@ export default class TypeBuilder {
         ]);
         
         this.MergeConflictResolution = this.tb.classViewer("MergeConflictResolution", [
-          "resolved","content","reason",
+          "reasoning","resolved","content",
         ]);
         
         this.Message = this.tb.classViewer("Message", [
           "role","content","timestamp",
         ]);
         
+        this.PlanTasksOutput = this.tb.classViewer("PlanTasksOutput", [
+          "reasoning","todos",
+        ]);
+        
+        this.PlannedScreen = this.tb.classViewer("PlannedScreen", [
+          "id","name","designBrief",
+        ]);
+        
         this.PlannerTodo = this.tb.classViewer("PlannerTodo", [
-          "id","task","agent","status","dependency","designNeeded",
+          "id","task","description","agent","designRef","status","dependency","expectedToolCalls",
         ]);
         
         this.Question = this.tb.classViewer("Question", [
