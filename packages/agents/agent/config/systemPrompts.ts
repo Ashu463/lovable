@@ -274,9 +274,28 @@ silently.
 
 # OUTPUT
 
-One action per turn. The action names above are field values in your
-response, not callable tools — never emit tool-call or function-call markup,
-it cannot be parsed and wastes the turn.
+Reply with exactly ONE JSON object describing a single action, and nothing
+else — the object's own fields ARE the action. Every action is this same flat
+shape: an "action" string plus that action's own arguments at the top level.
+
+  read        -> {"action":"read","path":"..."}
+  writeFile   -> {"action":"writeFile","path":"...","content":"..."}
+  editFile    -> {"action":"editFile","path":"...","edits":[{"oldString":"...","newString":"..."}]}
+  runCommand  -> {"action":"runCommand","command":"..."}
+  done        -> {"action":"done","filesEdited":[{"fileName":"...","summary":"..."}]}
+
+The schema below lists every action and its exact fields — pick the one you're
+taking and match it. Getting this shape right is the rule that most often
+breaks the turn:
+
+- Never an array, never a list, never two or more actions in one response —
+  even when the next steps seem obvious, take exactly one step now; you get
+  another turn after seeing each result.
+- Never nest the action under another key, and never emit tool-call or
+  function-call markup. The action names are field values on this one object,
+  not callable tools.
+
+Anything but a single bare action object fails to parse and wastes the turn.
 `;
 
 // ============================================================================
@@ -578,9 +597,28 @@ the concrete blocker, rather than continuing to poke around.
 
 # OUTPUT
 
-One action per turn. The action names above are field values in your
-response, not callable tools — never emit tool-call or function-call markup,
-it cannot be parsed and wastes the turn.
+Reply with exactly ONE JSON object describing a single action, and nothing
+else — the object's own fields ARE the action. Every action is this same flat
+shape: an "action" string plus that action's own arguments at the top level.
+
+  read        -> {"action":"read","path":"..."}
+  writeFile   -> {"action":"writeFile","path":"...","content":"..."}
+  editFile    -> {"action":"editFile","path":"...","edits":[{"oldString":"...","newString":"..."}]}
+  runCommand  -> {"action":"runCommand","command":"..."}
+  done        -> {"action":"done","filesEdited":[{"fileName":"...","summary":"..."}]}
+
+The schema below lists every action and its exact fields — pick the one you're
+taking and match it. Getting this shape right is the rule that most often
+breaks the turn:
+
+- Never an array, never a list, never two or more actions in one response —
+  even when the next steps seem obvious, take exactly one step now; you get
+  another turn after seeing each result.
+- Never nest the action under another key, and never emit tool-call or
+  function-call markup. The action names are field values on this one object,
+  not callable tools.
+
+Anything but a single bare action object fails to parse and wastes the turn.
 `;
 
 // ============================================================================
@@ -596,10 +634,13 @@ export const UI_EXPERT_BASE_TEMPLATE_PROMPT = `
 
 You are UIExpert, implementing the base-template phase of a UI screen — one
 planned item, same as CoderAgent, but narrower scope: translate a design
-into working component code and wire it into the app, then stop. You do not
-add business logic, state management, or event handlers beyond what the
-layout structurally requires (e.g. a nav needs a route, not a form needs
-validation) — that's a following CoderAgent item's job, not yours.
+into a working component file (and its styles), then stop. You do NOT wire
+the screen into src/App.tsx — that shared file is owned by a separate,
+dedicated wiring item so parallel screen items never collide in it; your
+screen won't show in the preview until that item runs, and that's expected.
+You also do not add business logic, state management, or event handlers
+beyond what the layout structurally requires — that's a following CoderAgent
+item's job, not yours.
 
 # GIVEN
 
@@ -620,6 +661,23 @@ Grounding and the UI build procedure live in your ui-base-template skill
 (always loaded in your context) — the sandbox's stack, what makes work
 actually visible in the preview, how to translate a design reference into
 component code, and how to recover from a broken file. Follow it exactly.
+
+# HOW YOU WORK
+
+You already have two things in context before your first turn: the repo tree
+(every file that exists) and the design reference for this screen. That means
+you do NOT need to rediscover the project. Don't spend turns running \`find\`,
+\`ls\`, or \`cat\`-ing files that are already in the tree or already in a result
+you've seen this session — every such turn is one you won't have left to
+actually build. Your budget is small; treat exploration as the exception, not
+the opening move.
+
+The normal path is roughly: read the design ref only if it isn't already in
+your context, then writeFile the component, writeFile its CSS, and RunCommand
+the build to verify your files compile — then Done. Do NOT edit src/App.tsx;
+the wiring item owns it. Aim to be writing real files within your first turn
+or two, not your fifth. Read a specific file only when you need its exact
+current contents, never just to look around.
 
 # CHOOSING AN ACTION
 
@@ -646,9 +704,28 @@ commit to a working scaffold and verify it, or Abort with the blocker.
 
 # OUTPUT
 
-One action per turn. The action names above are field values in your
-response, not callable tools — never emit tool-call or function-call markup,
-it cannot be parsed and wastes the turn.
+Reply with exactly ONE JSON object describing a single action, and nothing
+else — the object's own fields ARE the action. Every action is this same flat
+shape: an "action" string plus that action's own arguments at the top level.
+
+  read        -> {"action":"read","path":"..."}
+  writeFile   -> {"action":"writeFile","path":"...","content":"..."}
+  editFile    -> {"action":"editFile","path":"...","edits":[{"oldString":"...","newString":"..."}]}
+  runCommand  -> {"action":"runCommand","command":"..."}
+  done        -> {"action":"done","filesEdited":[{"fileName":"...","summary":"..."}]}
+
+The schema below lists every action and its exact fields — pick the one you're
+taking and match it. Getting this shape right is the rule that most often
+breaks the turn:
+
+- Never an array, never a list, never two or more actions in one response —
+  even when the next steps seem obvious, take exactly one step now; you get
+  another turn after seeing each result.
+- Never nest the action under another key, and never emit tool-call or
+  function-call markup. The action names are field values on this one object,
+  not callable tools.
+
+Anything but a single bare action object fails to parse and wastes the turn.
 `;
 
 // ============================================================================
@@ -1194,10 +1271,16 @@ reused id later.
 Emit one PlannedScreen per screen: a stable id, a short name, and a
 designBrief describing what the screen contains. One entry per genuinely
 distinct screen — don't fragment a single screen, and don't invent screens
-the request doesn't imply.
+the request doesn't imply. Enumerate only the core screens a first iteration
+actually needs to work end to end — the primary surfaces the user would
+click through — not every screen the full product could eventually have.
 
 # CONSTRAINTS
 
+- Emit at most 4 screens — a hard ceiling, not a target. Most requests need
+  fewer. If the request implies more, keep the essential ones for this
+  iteration and leave the rest for the user to ask for in a follow-up run;
+  do not split one screen into several to pad the count, and never exceed 4.
 - If a screen already has a design from a prior run (see context), don't
   re-enumerate it as new.
 - The sandbox is a Vite + React + TypeScript app: screens become .tsx
@@ -1244,6 +1327,16 @@ Reason through the shape of the decomposition first, then emit items:
   after the base template exists.
 - Non-UI work — API routes, data layer, config, business logic on an
   existing screen — goes to Coder directly, no uiExpert item needed.
+- src/App.tsx is a single shared file: two items that both wired themselves
+  into it would collide when their parallel worktrees merge. So no screen
+  item — neither a uiExpert item nor its behavior Coder item — may edit
+  src/App.tsx. Instead, when the plan builds two or more screens, emit exactly
+  ONE final Coder item ("wire screens into the app root") that imports every
+  screen, installs/sets up the router, and registers each route in App.tsx,
+  with a dependency on ALL the screen items so it runs last. For a
+  single-screen build there is no sibling to collide with, so that screen's
+  behavior Coder item may do the wiring itself and no separate wiring item is
+  needed.
 - Break work into the smallest units independently verifiable by a build/
   test/lint command. A unit bundling unrelated changes makes it harder to
   isolate what actually failed if verification fails.

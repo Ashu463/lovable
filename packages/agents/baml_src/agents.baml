@@ -3,11 +3,24 @@ client OpenAIGeneric {
   options {
     base_url env.LLM_BASE_URL
     api_key env.LLM_API_KEY
-    model "deepseek-v4-flash"
+    model "deepseek-flash"
     temperature 0.3
     response_format {
       type "json_object"
     }
+  }
+}
+// json_object requires an object at the JSON root, so it rejects top-level
+// array (and bare-string) responses even when correct. Same deepseek model as
+// OpenAIGeneric, minus response_format — used for functions whose return type
+// is a list or a plain string (mirrors the Groq/GroqArray split above).
+client OpenAIGenericArray {
+  provider "openai-generic"
+  options {
+    base_url env.LLM_BASE_URL
+    api_key env.LLM_API_KEY
+    model "deepseek-flash"
+    temperature 0.3
   }
 }
 client Gemini {
@@ -60,6 +73,25 @@ client<llm> OpenRouter {
     //   "HTTP-Referer" "https://yourapp.com"
     //   "X-Title" "My BAML App"
     // }
+  }
+}
+// Same OpenRouter/minimax endpoint, but forces a constrained JSON decode.
+// minimax-m3 otherwise emits prose preambles and leaks its native
+// <tool_call> channel tokens into the text output, both of which break
+// BAML's text-JSON parse (see run.log parse failures). Use this only for the
+// single-object tool-loop functions (AgentLLMCall/CoderAgent/UIExpertAgent/
+// DebuggerAgent) — json_object requires an object root, so it cannot be used
+// for the list-returning calls (EnumerateScreens, clarification questions).
+client<llm> OpenRouterJson {
+  provider "openai-generic"
+
+  options {
+    base_url "https://openrouter.ai/api/v1"
+    api_key env.OPENROUTER_API_KEY
+    model "minimax/minimax-m3"
+    response_format {
+      type "json_object"
+    }
   }
 }
 // retry_policy is what handles 429s: without it a single rate-limit
@@ -119,7 +151,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenRouter
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -265,7 +297,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
 
-    client OpenRouter
+    client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
         {{summaries}} - full Run history: the original request, the

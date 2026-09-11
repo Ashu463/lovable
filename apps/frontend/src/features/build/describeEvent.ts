@@ -16,6 +16,8 @@ export function describeEvent(event: CallAgentEvent): string {
           : "Model call failed.";
     case "designs_generating":
       return `Generating ${event.count} design directions — this takes about a minute.`;
+    case "design_progress":
+      return event.message;
     case "subagent_progress":
       return event.subagentSummary ?? `${event.agent} is working…`;
     case "subagent_completed":

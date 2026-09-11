@@ -7,6 +7,10 @@ export type CallAgentEvent = AgentEvents |
     { type: "call_agent_started"; }
     | { type: "clarification_needed"; questions: Question[] }
     | { type: "designs_generating"; count: number }
+    // Complex-path design pre-phase progress. Unlike designs_generating (the
+    // simple-path variant picker, which pauses for selection), this is a plain
+    // transient line — the complex path never pauses to pick a design.
+    | { type: "design_progress"; message: string }
     | { type: "select_design"; designs: DesignOption[] }
     | { type: "ui_preference_needed"; questions: UIPreferenceQuestion[] }
     | { type: "agent_progress"; step: 'llm_completed' | 'llm_failed' | 'toolCall'; toolCall?: string }

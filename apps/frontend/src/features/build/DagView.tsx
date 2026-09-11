@@ -69,19 +69,40 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
   const contentRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Map<number, HTMLElement>>(new Map());
 
+  // The plan is saved ~2min into the run (after PlanTasks), but this view
+  // mounts the instant the run goes "running" — a single fetch here races the
+  // save and comes back empty, leaving the graph blank for the whole run. So
+  // poll until the todos land, then stop.
   useEffect(() => {
     let cancelled = false;
     setTodos(null);
     setEdges([]);
-    gql<{ todos: Todo[] }>(TODOS, { projectId, runId })
-      .then((res) => {
-        if (!cancelled) setTodos(res.todos);
-      })
-      .catch(() => {
-        if (!cancelled) setTodos([]);
-      });
+
+    const fetchTodos = () =>
+      gql<{ todos: Todo[] }>(TODOS, { projectId, runId })
+        .then((res) => {
+          if (cancelled) return false;
+          if (res.todos.length > 0) {
+            setTodos(res.todos);
+            return true;
+          }
+          return false;
+        })
+        .catch(() => false);
+
+    let interval: ReturnType<typeof setInterval> | undefined;
+    void fetchTodos().then((got) => {
+      if (cancelled || got) return;
+      interval = setInterval(() => {
+        void fetchTodos().then((done) => {
+          if (done && interval) clearInterval(interval);
+        });
+      }, 3000);
+    });
+
     return () => {
       cancelled = true;
+      if (interval) clearInterval(interval);
     };
   }, [projectId, runId]);
 

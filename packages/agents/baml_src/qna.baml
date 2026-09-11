@@ -22,7 +22,7 @@ class ConversationalReply{
 }
 
 function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> DevelopmentVerdict {
-    client OpenRouter
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -32,7 +32,7 @@ function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> 
 }
 
 function RespondConversationally(systemPrompt: string, userPrompt: string, priorContext: string, semanticMem: string) -> ConversationalReply {
-    client OpenRouter
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to answer.
@@ -44,7 +44,7 @@ function RespondConversationally(systemPrompt: string, userPrompt: string, prior
 }
 
 function CheckComplexity(systemPrompt: string, userPrompt: string) -> ComplexityVerdict {
-    client OpenRouter
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -54,7 +54,7 @@ function CheckComplexity(systemPrompt: string, userPrompt: string) -> Complexity
 }
 
 function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, isComplex: bool) -> Question[] {
-    client OpenRouter
+    client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -66,7 +66,7 @@ function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, i
 }
 
 function GenerateUIPreferenceQuestions(systemPrompt: string, userPrompt: string) -> Question[] {
-    client OpenRouter
+    client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
