@@ -36,13 +36,19 @@ Follow this order. Most failures come from skipping step 1 or step 3.
 2. **Write the component.** A .tsx file holds imports, one component, and an
    export — nothing above the imports, nothing below the export.
 
-3. **Wire it into src/App.tsx in the same item.** Import it and render it.
-   If the item needs more than one route, install a router, set it up in
-   App.tsx, and register the route. Replace the starter content while you are
-   there; it is scaffolding, not something to preserve alongside your work.
-   "Match existing conventions" applies to real code, not to this starter.
+3. **Wiring into src/App.tsx is owned by one item, and it may not be yours.**
+   src/App.tsx is a shared file; when several screens are built in parallel,
+   only a single dedicated wiring item edits it, so the parallel screen items
+   don't collide there. Wire the screen into App.tsx (import it, render it,
+   set up the router/route, replace the starter content) **only if your task
+   explicitly tells you this item owns the wiring.** If it doesn't — you are a
+   base-template/scaffold item — write your screen and its styles and stop;
+   do NOT touch src/App.tsx. A later wiring item imports and routes it.
 
 4. **Build, and read the errors.** Fix what they point at, then build again.
+   A base-template item won't render in the preview until the wiring item
+   runs — that's expected; verify your own file compiles, don't force it into
+   App.tsx to "see" it.
 
 ## Recovering from a broken file
 

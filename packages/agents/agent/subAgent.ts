@@ -57,6 +57,11 @@ export class SubAgent<T extends keyof ContextMap> {
     private createContextManager(){
         switch(this.agentType){
             case 'coder': return new CoderContextManager() as any
+            // uiExpert shares CoderContext (same buildToolLoopContext), so it
+            // needs the same manager — without one, ManageContext never appends
+            // tool results to recentTurns and the loop re-reads the same file
+            // every iteration until it hits the cap.
+            case 'uiExpert': return new CoderContextManager() as any
             case 'debuggerr': return new DebuggerContextManager() as any
             default: return undefined
         }

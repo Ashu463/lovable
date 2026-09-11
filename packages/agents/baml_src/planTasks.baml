@@ -16,7 +16,7 @@ class PlannedScreen {
 // Cheap and fast so the design (Stitch) phase can start immediately while
 // PlanTasks runs concurrently.
 function EnumerateScreens(systemPrompt: string, userPrompt: string, context: string) -> PlannedScreen[]{
-    client OpenRouter
+    client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the request to enumerate screens for.
@@ -41,7 +41,7 @@ class PlanTasksOutput {
 // EnumerateScreens. A uiExpert item's designRef MUST be one of the passed
 // screen ids.
 function PlanTasks(systemPrompt: string, userPrompt: string, context: string, screens: PlannedScreen[]) -> PlanTasksOutput{
-    client OpenRouter
+    client OpenAIGeneric
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the request to plan for.

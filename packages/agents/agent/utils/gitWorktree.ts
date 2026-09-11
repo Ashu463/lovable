@@ -14,9 +14,22 @@ export class WorktreeGit {
     async ensureRepo(sandbox: E2BSandbox): Promise<void> {
         const check = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `test -d ${PROJECT_ROOT}/.git && echo yes || echo no` })
         if (check.content.includes('no')) {
+            await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `git init -q` })
+        }
+        // Identity must live on the repo, not just be passed inline to the
+        // worktree commits: `git merge` creates its own merge commit (and the
+        // conflict-resolution path commits too), neither of which carries a -c
+        // flag, so without repo-level identity a non-fast-forward merge fails
+        // with "Committer identity unknown" — which then surfaces as a bogus
+        // "merge conflict". Idempotent, so safe to run on an existing repo too.
+        await sandbox.Execute(sandbox.sandboxId, {
+            action: 'runCommand',
+            command: `git -C ${PROJECT_ROOT} config user.email agent@lovable.dev && git -C ${PROJECT_ROOT} config user.name lovable-agent`,
+        })
+        if (check.content.includes('no')) {
             await sandbox.Execute(sandbox.sandboxId, {
                 action: 'runCommand',
-                command: `git init -q && git add -A && git -c user.email=agent@lovable.dev -c user.name=lovable-agent commit -q -m "bootstrap" --allow-empty`,
+                command: `git -C ${PROJECT_ROOT} add -A && git -C ${PROJECT_ROOT} commit -q -m "bootstrap" --allow-empty`,
             })
         }
     }
@@ -53,9 +66,13 @@ export class WorktreeGit {
         })
         const files = diff.content.split('\n').map(f => f.trim()).filter(Boolean)
 
+        // Identity is passed inline (as well as being set on the repo by
+        // ensureRepo) so a non-fast-forward merge can always author its merge
+        // commit even if repo config is somehow missing — the exact failure
+        // that used to surface as a bogus "merge conflict".
         const merge = await sandbox.Execute(sandbox.sandboxId, {
             action: 'runCommand',
-            command: `git -C ${PROJECT_ROOT} merge --no-edit task-${taskId}`,
+            command: `git -c user.email=agent@lovable.dev -c user.name=lovable-agent -C ${PROJECT_ROOT} merge --no-edit task-${taskId}`,
         })
         if (merge.success) {
             const cleanup = await sandbox.Execute(sandbox.sandboxId, {
@@ -113,7 +130,7 @@ export class WorktreeGit {
             resolvedFiles.push(file)
         }
 
-        const commitMerge = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `git -C ${PROJECT_ROOT} commit --no-edit -q` })
+        const commitMerge = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: `git -c user.email=agent@lovable.dev -c user.name=lovable-agent -C ${PROJECT_ROOT} commit --no-edit -q` })
         if (!commitMerge.success) {
             return await this.abort(sandbox, `Resolved all conflicts but failed to finalize the merge commit: ${commitMerge.content}`)
         }
@@ -174,6 +191,16 @@ export class WorktreeGit {
 
         if (!resolution.resolved) {
             return { resolved: false, reason: resolution.reasoning }
+        }
+
+        // null content means "delete the file", which is only ever the right
+        // call for a delete/modify conflict (deletedByTrunk/deletedByTask). On
+        // a content conflict both sides *modified* the file, so null here isn't
+        // a delete verdict — it's a missing result. Treat it as unresolved and
+        // fall through to the abort path rather than silently destroying a file
+        // both tasks wanted.
+        if (conflictKind === 'content' && resolution.content == null) {
+            return { resolved: false, reason: `resolver returned no content for content conflict on ${file}` }
         }
 
         if (resolution.content == null) {

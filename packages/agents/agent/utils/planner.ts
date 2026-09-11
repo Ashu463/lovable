@@ -2,6 +2,7 @@ import { b } from "../../baml_client"
 import type { PlannerTodo, PlannedScreen } from "../../baml_client"
 import { ENUMERATE_SCREENS_PROMPT, PLAN_TASKS_PROMPT } from "../config/systemPrompts"
 import { backendGql } from "./backendClient"
+import { createRunEmitter, type EventEmitter } from "../events"
 import { startActiveObservation, startObservation } from "@langfuse/tracing"
 import { observeBaml, runSpanContext } from "./tracing"
 import { generateScreenHtml } from "../tools/stitch"
@@ -23,11 +24,14 @@ import { logger } from "./logger"
 export type DesignResult = { screenId: string, status: 'generated' | 'reused' | 'degraded', reason?: string }
 
 export class Planner {
+    private emitter: EventEmitter
     constructor(
         private userId: string,
         private projectId: string,
         private runId: string,
-    ) {}
+    ) {
+        this.emitter = createRunEmitter(runId)
+    }
 
     // Call 1: what screens does this request need. Cheap/fast so the design
     // phase (Phase 2) can start while planTasks runs concurrently.
@@ -103,6 +107,7 @@ export class Planner {
             "generate-designs",
             async (span): Promise<DesignResult[]> => {
                 span.update({ input: { screens: screens.length } })
+                await this.emitter.emit({ type: 'design_progress', message: `Designing ${screens.length} screen${screens.length === 1 ? '' : 's'}…` })
                 const results: DesignResult[] = []
 
                 for (let i = 0; i < screens.length; i += STITCH_DESIGN_CONCURRENCY) {
@@ -126,6 +131,7 @@ export class Planner {
                                     const writeRes = await sandbox.Execute(sandbox.sandboxId, { action: 'writeFile', path, content: html }, PROJECT_ROOT)
                                     if (!writeRes.success) throw new Error(`design write failed: ${writeRes.content}`)
                                     s.update({ output: { status: 'generated' } })
+                                    await this.emitter.emit({ type: 'design_progress', message: `Designed the ${screen.name} screen` })
                                     return { screenId: screen.id, status: 'generated' }
                                 } catch (e) {
                                     logger.warn(`Stitch design for screen ${screen.id} failed (attempt ${attempt}/${STITCH_DESIGN_RETRY_ATTEMPTS}): ${e instanceof Error ? e.message : String(e)}`)
