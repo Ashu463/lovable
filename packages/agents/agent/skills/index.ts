@@ -96,8 +96,6 @@ const ROLE_SKILLS: Record<AgentKey, SkillId[]> = {
 const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
     coder: [
         skillsMapper.SCAFFOLD_NEW_PROJECT,
-        skillsMapper.DATABASE_INTEGRATION,
-        skillsMapper.API_ROUTE_CONVENTIONS,
         skillsMapper.STATE_MANAGEMENT_RULES,
         skillsMapper.FORM_HANDLING,
     ],
@@ -108,8 +106,6 @@ const TASK_SKILLS: Record<AgentKey, SkillId[]> = {
     agent: [
         skillsMapper.SCAFFOLD_NEW_PROJECT,
         skillsMapper.ADD_A_ROUTE,
-        skillsMapper.DATABASE_INTEGRATION,
-        skillsMapper.API_ROUTE_CONVENTIONS,
         skillsMapper.STATE_MANAGEMENT_RULES,
         skillsMapper.FORM_HANDLING,
     ],

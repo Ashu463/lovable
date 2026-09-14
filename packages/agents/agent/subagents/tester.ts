@@ -2,7 +2,7 @@ import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { TESTER_ERROR_REFACTOR_PROMPT } from "../config/systemPrompts"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PORT, PROJECT_ROOT } from "../config/systemConfig"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PREVIEW_PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
 import { observeBaml } from "../utils/tracing"
@@ -28,8 +28,17 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         let stdOutBuf = ""
         let stdErrBuf = ""
         const sandbox = await Sandbox.connect(this.sandbox.sandboxId)
-        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev`, {
+        // --host 0.0.0.0 + --strictPort match GetPreviewUrl's own dev command
+        // (sandbox.ts) exactly, and for the same reasons: vite otherwise binds
+        // localhost-only, which the sandbox's external proxy can't route to,
+        // and the env var is required too — vite always allows a plain
+        // "localhost" request but 403s the proxied e2b hostname unless it's
+        // explicitly allow-listed. Without it, fetch() gets a real (non-ok)
+        // response instead of a connection error, so pollUntilUp still spins
+        // until timeout even against a perfectly healthy server.
+        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev -- --host 0.0.0.0 --strictPort`, {
             background: true,
+            envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' },
             onStdout: (data: string) => {stdOutBuf += data},
             onStderr: (data: string) => {stdErrBuf += data}
         })
@@ -43,8 +52,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
                     success: true
                 }
             }
-            logger.warn(`Dev server didn't come up in time, killing and reframing error`)
-            await handle.kill()
+            logger.warn(`Dev server didn't come up in time, reframing error`)
             const error = await this.callLLM(stdErrBuf || stdOutBuf || `Server didn't start within the timeout`, context)
             return {
                 success: false,
@@ -55,6 +63,9 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
             logger.error(`testCodebase failed: ${e}`)
             throw e
         }
+        finally{
+            await handle.kill().catch((e) => logger.warn(`Failed to kill dev server: ${e}`))
+        }
 
     }
 
@@ -62,8 +73,8 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         const deadline = Date.now() + MAX_BOOT_WAIT_MS
         while (Date.now() < deadline) {
             try {
-            const response = await fetch(sandbox.getHost(PORT))
-            if (response.ok) return true
+                const response = await fetch(`https://${sandbox.getHost(PREVIEW_PORT)}`)
+                if (response.ok) return true
             } catch {
             // connection refused / not up yet — keep polling
             }

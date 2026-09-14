@@ -76,7 +76,7 @@ env?: Record<string, string | undefined>
       }
       
   async CallAgentSummary(
-  systemPrompt: string,summaries: string[],
+  systemPrompt: string,userPrompt: string,summaries: string[],
   __baml_options__?: BamlCallOptions<never>
   ): Promise<HTTPRequest> {
     try {
@@ -95,7 +95,7 @@ env?: Record<string, string | undefined>
       return await this.runtime.buildRequest(
       "CallAgentSummary",
       {
-      "systemPrompt": systemPrompt,"summaries": summaries
+      "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
       },
       this.ctxManager.cloneContext(),
       __baml_options__?.tb?.__tb(),
@@ -940,7 +940,7 @@ env?: Record<string, string | undefined>
           }
           
       async CallAgentSummary(
-      systemPrompt: string,summaries: string[],
+      systemPrompt: string,userPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
       ): Promise<HTTPRequest> {
         try {
@@ -959,7 +959,7 @@ env?: Record<string, string | undefined>
           return await this.runtime.buildRequest(
           "CallAgentSummary",
           {
-          "systemPrompt": systemPrompt,"summaries": summaries
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
           },
           this.ctxManager.cloneContext(),
           __baml_options__?.tb?.__tb(),

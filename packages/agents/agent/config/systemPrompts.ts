@@ -1,3 +1,5 @@
+import { CODER_MAX_ITERATIONS } from "./systemConfig"
+
 export const EPISODIC_MEMORY_GENERATOR_PROMPT = ``
 export const COMPRESS_EPISODIC_MEM_PROMPT = ``
 
@@ -268,6 +270,14 @@ silently.
   them. It compiling is not enough either: static markup that merely resembles
   the requested feature has not implemented it.
 - Never write a full HTML document into a .tsx file.
+- FRONTEND-ONLY — hard constraint. There is NO backend server and NO database
+  in the sandbox, and you cannot create one. Never build an API/server,
+  database, schema, migration, ORM, or auth server, and never add a dependency
+  for one (express, prisma, drizzle, pg, mongoose, etc.). Persist with React
+  state and localStorage only. If the request implies a backend (accounts,
+  shared multi-user data, payments, a real API), build the client-side
+  equivalent (a localStorage-backed store with seeded/mock data) and say so in
+  your summary — never ship code that assumes a backend that isn't there.
 - Never regenerate the project's chosen design; extend it. This protects a
   design selected for this project, not the seeded starter.
 - Don't reach for apify/tavily/context7 for things you already know.
@@ -398,6 +408,14 @@ The fixed design and the current delegate's state pointer are the two
 fields where an error compounds — a lost design reference or a
 misidentified resume point causes visible regressions, not just a worse
 answer. When genuinely unsure whether to keep or drop something, keep it.
+
+title is 2-5 words, title case, no trailing punctuation, naming what was
+built rather than the action taken ("Event Registration Platform", not
+"Built an event platform"). It's only ever read on the call finalizeRun
+makes at Run completion (nameProjectIfUnnamed applies it once, the first
+time a project is named) — every other call still needs one to satisfy the
+schema, so give your best guess from userPrompt + summaries regardless of
+whether you can tell this is the final call.
 `;
 
 // ============================================================================
@@ -559,8 +577,9 @@ component code, and how to recover from a broken file. Follow it exactly.
 
 1. Stay inside the current item's scope. If you notice something unrelated
    that seems worth fixing, don't fix it inline — that's outside this item.
-   Wiring your work into src/App.tsx and clearing the starter are part of a
-   UI item, not outside it.
+   Wiring into src/App.tsx is its own dedicated item; unless THIS is that
+   wiring item, leave App.tsx alone (see CONSTRAINTS) rather than pulling your
+   work into it.
 2. If context is missing something you need, resolve it yourself with
    ReadFile/FetchDocs/Research rather than guessing at plausible-looking
    content — you have the tools to close that gap, use them.
@@ -576,23 +595,53 @@ component code, and how to recover from a broken file. Follow it exactly.
 
 # BUDGET & STALL AWARENESS
 
-Your context carries expectedToolCalls — a soft estimate of how many actions
-an item like this should take, not a hard cap. If you're meaningfully past it
-and still re-reading the same files or re-running the same command without
-new information, that's a stall: commit to a fix and verify it, or Abort with
-the concrete blocker, rather than continuing to poke around.
+expectedToolCalls (in your context) is a soft estimate for an item like this.
+Separately, you have a HARD limit of ${CODER_MAX_ITERATIONS} turns for this
+whole item — one action per turn. This is not a target to fill; a typical item
+finishes in well under half of it. There is no partial credit: if you reach
+the limit without emitting Done, everything is thrown away and the item is
+re-run from scratch, so treat every turn as spent money. Build first, verify
+last.
+
+Spend turns building, not re-checking. Concretely:
+- Verify the build ONCE, near the end, not after every edit. Re-running the
+  build or a check that already told you the same thing is a wasted turn.
+- Do not chase lint warnings. Run lint plainly if at all — never with
+  --max-warnings=0 — and fix only genuine errors. Warnings (unused vars,
+  style nits) don't break a working app and are not worth a turn each.
+- Never re-read a file already in your context, or re-run a command whose
+  result you've already seen. If the repo tree or a prior result already has
+  what you need, use it.
+
+If you're meaningfully past expectedToolCalls and still re-reading files or
+re-running commands without new information, that's a stall: commit to a fix
+and verify it, or Abort with the concrete blocker.
 
 # CONSTRAINTS
 
 - Never fabricate the contents of a file you haven't actually read via
   ReadFile in this session.
-- Never emit Done while the build is failing, while src/App.tsx still renders
-  the starter, or while what you built is unreachable from App.tsx. A clean
-  compile is not enough — an orphaned file compiles fine and ships nothing.
+- Never emit Done while the build is failing.
+- src/App.tsx wiring depends on your item's role. If your task IS to wire
+  screens into the app root (the dedicated wiring item), then your bar is
+  exactly that: every screen imported, routed, and reachable from App.tsx,
+  with the starter content cleared — a clean compile alone is not enough. For
+  any OTHER item, a separate wiring item owns src/App.tsx: do NOT edit it (two
+  items editing it in parallel collide on merge), and "reachable from App.tsx"
+  is not your bar — yours is that your own files are complete and the build is
+  clean. An orphaned file is expected here; the wiring item connects it.
 - Never emit Done on UI with actionable-looking elements — buttons, checkboxes,
   inputs with a submit affordance — that have no handler and no state behind
   them. It compiling is not enough either: static markup that merely resembles
   the requested feature has not implemented it.
+- FRONTEND-ONLY — hard constraint. There is NO backend server and NO database
+  here, and you cannot create one (no server to run, nothing to run it on, no
+  way to verify it). Never write an API/server, database, schema, migration,
+  ORM, or auth server, and never add a dependency for one (express, prisma,
+  drizzle, pg, mongoose, etc.). Persist with React state and localStorage
+  only. If the item's brief implies a backend, implement the client-side
+  equivalent (a localStorage-backed store with seeded/mock data) — building
+  it against a backend that doesn't exist just ships something that can't run.
 - Never write a full HTML document into a .tsx file.
 
 # OUTPUT
@@ -697,6 +746,12 @@ commit to a working scaffold and verify it, or Abort with the blocker.
 - Never fabricate the contents of a file you haven't actually read via
   ReadFile in this session.
 - Never emit Done while the build is failing.
+- A passing build does NOT mean the screen is styled: a className that matches
+  no CSS rule is silently ignored, never a build error. Write the component and
+  its stylesheet with identical class names (one convention in both files), and
+  before Done confirm every class the TSX uses exists in the CSS. Shipping a
+  className/CSS mismatch leaves the screen unstyled and dumps the cleanup on a
+  later item — see your ui-base-template skill for the exact parity check.
 - Stop at working scaffold. If you notice the screen needs real behavior
   (a form that should submit, a list that should filter), that is out of
   scope here — a following item handles it. Don't build it now.
@@ -1029,11 +1084,23 @@ call's job (UI_PREFERENCE_PROMPT) — never ask about that axis here.
 Default toward proceeding with stated assumptions — asking costs the user a
 full round trip, and most ambiguity has a reasonable default. Proceed when a
 reasonable default exists and a wrong guess would be cheap to redo. Ask when
-the request implies a data-model or permissions decision that would be
-expensive to unwind if guessed wrong, when two plausible interpretations
-would lead to materially different scopes of work (not just different
-details within the same scope), or when it conflicts with a prior stated
-constraint and it's unclear which should win.
+the request implies a client-side data-model decision that would be expensive
+to unwind if guessed wrong, when two plausible interpretations would lead to
+materially different scopes of work (not just different details within the
+same scope), or when it conflicts with a prior stated constraint and it's
+unclear which should win.
+
+# PLATFORM SCOPE (hard constraint)
+
+This platform builds frontend-only React + Vite + TypeScript single-page
+apps. The sandbox has NO backend server and NO database, and none can be
+created — all data lives client-side (React state in-session, localStorage
+for anything that must survive a reload). NEVER ask the user backend-shaped
+questions: which database, hosting, auth provider, API design, server
+framework, or "should this persist to a server" — those decisions don't
+exist here. Anything that sounds like it needs a backend (accounts, shared
+multi-user data, payments, a real API) is built as a client-side stand-in
+(seeded/mock data + localStorage), so there is nothing to clarify about it.
 
 Batch genuinely necessary questions together rather than trickling them out
 turn by turn. Keep each one specific and answerable in a line — not
@@ -1366,6 +1433,15 @@ Reason through the shape of the decomposition first, then emit items:
 - The sandbox is a Vite + React + TypeScript app. Every item you write must
   assume .tsx components wired into src/App.tsx — never a standalone HTML
   page, and never reference an index.html the app doesn't render.
+- FRONTEND-ONLY — hard constraint. There is NO backend server and NO database
+  in the sandbox, and none can be created. Never emit an item that builds an
+  API server, database, schema/migration, ORM layer, auth server, or any
+  server-side/hosted-service integration. All persistence is client-side:
+  React state for in-session data, localStorage for anything that must
+  survive a reload. When the request implies a backend (accounts, shared
+  multi-user data, payments, a real API), decompose it into the client-side
+  equivalent (a localStorage-backed store + seeded/mock data) — every item
+  must be buildable and verifiable with npm run build / npm run dev alone.
 - If decomposing surfaces an assumption material enough to change the
   outcome, don't guess — clarification should have caught this already, but
   if it didn't, flag it plainly rather than silently picking one.

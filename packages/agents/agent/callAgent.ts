@@ -506,7 +506,7 @@ type ComplexTask = {
 }
 export type RunEventData = SimpleTask | ComplexTask
 
-async function finalizeRun(step: StepRunner, data: RunEventData, summary: string, todos: PlannerTodo[]): Promise<void> {
+async function finalizeRun(step: StepRunner, data: RunEventData, summary: string, todos: PlannerTodo[], title?: string): Promise<void> {
     const previewUrl: string = await step.run("preview-url", async () => {
         const sandbox = await E2BSandbox.StartSandbox(data.userId, data.projectId, data.sandboxId)
         return sandbox.GetPreviewUrl()
@@ -517,6 +517,14 @@ async function finalizeRun(step: StepRunner, data: RunEventData, summary: string
         }`,
         { runId: data.runId, summary },
     ).catch((e) => logger.error(`Failed to save run summary for run ${data.runId}: ${e}`)))
+    if (title) {
+        await step.run("name-project", () => backendGql(
+            `mutation NameProject($projectId: ID!, $name: String!) {
+                nameProjectIfUnnamed(projectId: $projectId, name: $name)
+            }`,
+            { projectId: data.projectId, name: title },
+        ).catch((e) => logger.error(`Failed to save project title for run ${data.runId}: ${e}`)))
+    }
 
     const result: CallAgentResponse = { status: 'completed', previewUrl, summary }
     await step.run("emit-run-completed", () => createRunEmitter(data.runId).emit({ type: 'run_completed', result }))
@@ -537,7 +545,7 @@ export const runComplexTaskFn = inngest.createFunction(
             const orchestratorResult = await orchestrator.Execute(step)
             if (orchestratorResult.status === 'error') return orchestratorResult
 
-            await finalizeRun(step, data, orchestratorResult.summary ?? "", orchestratorResult.todos ?? [])
+            await finalizeRun(step, data, orchestratorResult.summary ?? "", orchestratorResult.todos ?? [], orchestratorResult.title)
             return orchestratorResult
         } catch (e) {
             const reason = `Complex run crashed: ${e instanceof Error ? e.message : String(e)}`

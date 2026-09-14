@@ -223,17 +223,18 @@ export class Orchestrator {
         let state = this.state
         const summaries: string[] = []
 
-        const preDeployCheck = async (sandbox: E2BSandbox): Promise<boolean> => {
+        const runBuild = async (sandbox: E2BSandbox): Promise<{ ok: boolean, error?: AgentError }> => {
             const buildResult = await sandbox.Execute(sandbox.sandboxId, { action: 'runCommand', command: 'npm run build' })
             if (!buildResult.success) {
-                state = { ...state, lastTestErrors: [...state.lastTestErrors, { fileName: "BUILD_CHECKER_ERROR", error: buildResult.stderr ?? "Unknown build error", source: 'build' }], lastToolResult: { success: false } }
-                return false
+                // content is stdout+stderr combined; tsc/vite write errors to
+                // stdout, so reading stderr alone left the debugger with an
+                // empty "BUILD_CHECKER_ERROR: " and nothing to localize.
+                return { ok: false, error: { fileName: "BUILD_CHECKER_ERROR", error: buildResult.content || buildResult.stderr || "Unknown build error", source: 'build' } }
             }
-            return true
+            return { ok: true }
         }
 
         let sandbox = await this.reconnectSandbox()
-        let deployReady = await preDeployCheck(sandbox)
         const testerContext: TesterContext = {
             skills: [...(await this.skillStore.globalSkills('tester')), ...(await this.skillStore.getRoleSkills('tester')), ...(await this.skillStore.getTaskSkillsFull('tester'))],
         }
@@ -243,27 +244,44 @@ export class Orchestrator {
         let loopCount = 0
 
         return startActiveObservation("multi-agent-runMergeGate", async (span) => {
+            let deployReady = false
+            // Two sequential gates, in order: compile, THEN runtime. The build is
+            // the cheap compile check; the tester boots `npm run dev` and is the
+            // runtime check — which only means anything once the code compiles, so
+            // it runs after a green build (not, as before, only when the build had
+            // already failed). Whichever gate fails feeds the Debugger; the loop
+            // exits only when both are green.
             while (loopCount < TESTER_DEBUGGER_LOOP_MAX_ITERATIONS && !deployReady) {
                 sandbox = await this.reconnectSandbox()
                 startObservation(
-                    "tester-iteration",
+                    "merge-gate-iteration",
                     {input: {loopCount, maxIterations: TESTER_DEBUGGER_LOOP_MAX_ITERATIONS}},
                     {asType: "event"}
                 ).end()
-                const tester = new TesterAgent(this.userId, this.projectId, sandbox)
-                await this.emitter.emit({ type: 'subagent_started', agent: 'tester', task: 'Verifying the build' })
-                const testerRes: TesterResponse = await tester.testCodebase(testerContext)
-                await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'Build verified' : 'Build check failed', success: testerRes.success })
-                
-                const taskFileEntries = Object.entries(taskFiles)
-                const owningTask = taskFileEntries.length === 1
-                    ? Number(taskFileEntries[0]![0])
-                    : taskFileEntries.find(([, files]) => files.includes(testerRes.errorRes?.file ?? ''))?.[0]
-    
-                const error: AgentError = testerRes.errorRes
-                    ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester', taskId: owningTask !== undefined ? Number(owningTask) : undefined }
-                    : state.lastTestErrors[state.lastTestErrors.length - 1] ?? { fileName: "BUILD_CHECKER_ERROR", error: "build failed but neither the build nor the tester reported specifics", source: 'build' }
-    
+
+                let error: AgentError
+                const build = await runBuild(sandbox)
+                if (!build.ok) {
+                    error = build.error!
+                } else {
+                    // Compiles — now confirm it actually boots.
+                    const tester = new TesterAgent(this.userId, this.projectId, sandbox)
+                    await this.emitter.emit({ type: 'subagent_started', agent: 'tester', task: 'Verifying the build' })
+                    const testerRes: TesterResponse = await tester.testCodebase(testerContext)
+                    await this.emitter.emit({ type: 'subagent_completed', agent: 'tester', summary: testerRes.success ? 'App boots cleanly' : 'App failed to boot', success: testerRes.success })
+                    if (testerRes.success) {
+                        deployReady = true
+                        break
+                    }
+                    const taskFileEntries = Object.entries(taskFiles)
+                    const owningTask = taskFileEntries.length === 1
+                        ? Number(taskFileEntries[0]![0])
+                        : taskFileEntries.find(([, files]) => files.includes(testerRes.errorRes?.file ?? ''))?.[0]
+                    error = testerRes.errorRes
+                        ? { fileName: testerRes.errorRes.file, error: `${testerRes.errorRes.error} (line ${testerRes.errorRes.line})`, source: 'tester', taskId: owningTask !== undefined ? Number(owningTask) : undefined }
+                        : { fileName: "RUNTIME_ERROR", error: "compiled but the dev server did not come up, and the tester reported no specifics", source: 'tester' }
+                }
+
                 const currentErrorSignature = `${error.fileName}:${error.error}`
                 if (currentErrorSignature === previousErrorSignature) {
                     repeatCount++
@@ -272,16 +290,15 @@ export class Orchestrator {
                     repeatCount = 0
                 }
                 previousErrorSignature = currentErrorSignature
-                state = { ...state, lastTestErrors: [...state.lastTestErrors, error] }
-    
+                state = { ...state, lastTestErrors: [...state.lastTestErrors, error], lastToolResult: { success: false } }
+
                 const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [] }
                 const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
                 const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
                 await sandbox.SyncR2()
-    
+
                 state = { ...state, lastToolResult: { success: debuggerResult.success } }
                 summaries.push(debuggerResult.summary)
-                deployReady = await preDeployCheck(sandbox)
                 loopCount++
             }
             return { success: deployReady, state, summaries }
@@ -301,7 +318,7 @@ export class Orchestrator {
         }
     }
 
-    async Execute(step: StepRunner): Promise<{ status: 'completed' | 'error', summary?: string, todos?: PlannerTodo[], reason?: string }> {
+    async Execute(step: StepRunner): Promise<{ status: 'completed' | 'error', summary?: string, title?: string, todos?: PlannerTodo[], reason?: string }> {
         
         const planner = new Planner(this.userId, this.projectId, this.runId)
 
@@ -370,20 +387,20 @@ export class Orchestrator {
             }
             // #TODO: decision.action === 'replan' to be completed midway. 
         }
-        const summary = await step.run("summarize", () =>
-            startActiveObservation("multi-agent-summarize", async (span): Promise<string> => {
+        const { title, summary } = await step.run("summarize", () =>
+            startActiveObservation("multi-agent-summarize", async (span): Promise<{ title: string, summary: string }> => {
                 span.update({input: {summaries: this.allSummaries.length}})
                 const out = await observeBaml(
                     "summarize-llm",
                     {summaries: this.allSummaries.length},
-                    (opts) => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.allSummaries, opts),
+                    (opts) => b.CallAgentSummary(CALL_AGENT_SUMMARY_PROMPT, this.updatedPrompt, this.allSummaries, opts),
                 )
                 span.update({output: out})
                 return out
             })
-        ) as string
+        ) as { title: string, summary: string }
         logger.info(`Orchestrator run ${this.runId} completed`)
-        return { status: 'completed', summary, todos: this.todos }
+        return { status: 'completed', summary, title, todos: this.todos }
     }
 }
 
