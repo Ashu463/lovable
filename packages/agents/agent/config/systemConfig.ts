@@ -16,7 +16,7 @@ export const AGENT_MAX_ITERATIONS = 25
 export const MAX_CONTEXT_WINDOW_LENGTH = 1_28_000
 export const COMPACTION_PARAMETER = 10
 export const COMPACT_THRESHOLD = 0.8*MAX_CONTEXT_WINDOW_LENGTH
-export const CODER_MAX_ITERATIONS = 18
+export const CODER_MAX_ITERATIONS = 24
 export const DEBUGGERR_MAX_ITERATIONS = 10
 // Researcher/tester are single-shot (see SubAgent.isSingleShotAgent), so their
 // loop breaks on the first pass and these caps never actually bind.
@@ -34,7 +34,7 @@ export const TESTER_DEBUGGER_LOOP_MAX_ITERATIONS = 3
 // not the whole run, so a complex DAG can still multiply them out. This is the
 // money guard; raise it once runs are trustworthy.
 export const RUN_MAX_LLM_CALLS = 120
-export const RECENT_TURNS_LIMIT = 20
+export const RECENT_TURNS_LIMIT = 50
 export const TOOL_RESULT_MAX_CHARS = 2000
 // only for READ tool
 export const READ_RESULT_MAX_CHARS = 12000

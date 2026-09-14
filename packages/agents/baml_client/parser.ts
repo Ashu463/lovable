@@ -56,7 +56,7 @@ export class LlmResponseParser {
   CallAgentSummary(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
+  ): types.AgentSummary {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -70,7 +70,7 @@ export class LlmResponseParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string
+      ) as types.AgentSummary
     } catch (error) {
       throw toBamlError(error);
     }
@@ -660,7 +660,7 @@ export class LlmStreamParser {
   CallAgentSummary(
       llmResponse: string,
       __baml_options__?: { tb?: TypeBuilder, clientRegistry?: ClientRegistry, env?: Record<string, string | undefined> }
-  ): string {
+  ): partial_types.AgentSummary {
     try {
       const __rawEnv__ = __baml_options__?.env ? { ...process.env, ...__baml_options__.env } : { ...process.env };
       const __env__: Record<string, string> = Object.fromEntries(
@@ -674,7 +674,7 @@ export class LlmStreamParser {
         __baml_options__?.tb?.__tb(),
         __baml_options__?.clientRegistry,
         __env__,
-      ) as string
+      ) as partial_types.AgentSummary
     } catch (error) {
       throw toBamlError(error);
     }

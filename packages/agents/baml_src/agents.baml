@@ -295,15 +295,15 @@ class SubAgentsContexts{
 }
 type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | ResearcherContext | UIExpertContext
 
-function CallAgentSummary(systemPrompt: string, summaries: string[]) -> string{
+function CallAgentSummary(systemPrompt: string, userPrompt: string, summaries: string[]) -> AgentSummary{
 
     client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
-        {{summaries}} - full Run history: the original request, the
-fixed design decision, every subsequent user message with its complexity
-verdict and which path handled it, and the state of whichever delegate is
-currently active.
+        {{userPrompt}} - the original request that started this Run.
+        {{summaries}} - full Run history: the fixed design decision, every
+subsequent user message with its complexity verdict and which path handled
+it, and the state of whichever delegate is currently active.
 
         {{ctx.output_format}}
     "#
@@ -317,14 +317,24 @@ test CallAgentSummaryTest {
 
 Compact the CallAgent's persistent context for the current Run — the
 broadest-scoped of the three compaction prompts, spanning the entire
-conversation with the user, not one delegated task.
+conversation with the user, not one delegated task. title only matters on
+the final call of a Run (see GIVEN); produce your best guess every time
+regardless, since you can't tell which call this is.
+
+# GIVEN
+
+nameProjectIfUnnamed only applies your title the first time a project is
+named, so producing one on every call is harmless even though only the
+final one's is ever read.
 
 # CRITERIA
 
 Preserve the fixed design, a compact history of complexity verdicts per
 message, the current app state, and whatever delegate is currently
-mid-task. Discard full transcripts of completed delegate tasks.
+mid-task. Discard full transcripts of completed delegate tasks. title is
+2-5 words, title case, naming what was built rather than the action taken.
     "#
+    userPrompt "Build a dark-themed todo app"
     summaries [
       "User asked for a dark-themed todo app. Design fixed: \"Minimal Dark\" — single-column layout, slate palette.",
       "User asked to add a due-date field. Judged simple, handled by Agent, completed successfully."

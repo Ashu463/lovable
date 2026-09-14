@@ -154,9 +154,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             }
             
         async CallAgentSummary(
-        systemPrompt: string,summaries: string[],
+        systemPrompt: string,userPrompt: string,summaries: string[],
         __baml_options__?: BamlCallOptions<never>
-        ): Promise<string> {
+        ): Promise<types.AgentSummary> {
           try {
           const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
           const __signal__ = __options__.signal;
@@ -168,7 +168,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
           // Check if onTick is provided - route through streaming if so
           if (__options__.onTick) {
           const __stream__ = this.stream.CallAgentSummary(
-          systemPrompt,summaries,
+          systemPrompt,userPrompt,summaries,
           __baml_options__
           );
 
@@ -192,7 +192,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             const __raw__ = await this.runtime.callFunction(
             "CallAgentSummary",
             {
-            "systemPrompt": systemPrompt,"summaries": summaries
+            "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
             },
             this.ctxManager.cloneContext(),
             __options__.tb?.__tb(),
@@ -203,7 +203,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
             __signal__,
             __options__.watchers,
             )
-            return __raw__.parsed(false) as string
+            return __raw__.parsed(false) as types.AgentSummary
             } catch (error) {
             throw toBamlError(error);
             }
@@ -1642,9 +1642,9 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                   }
                   
             CallAgentSummary(
-            systemPrompt: string,summaries: string[],
+            systemPrompt: string,userPrompt: string,summaries: string[],
             __baml_options__?: BamlCallOptions<never>
-            ): BamlStream<string, string>
+            ): BamlStream<partial_types.AgentSummary, types.AgentSummary>
               {
               try {
               const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
@@ -1691,7 +1691,7 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 const __raw__ = this.runtime.streamFunction(
                 "CallAgentSummary",
                 {
-                "systemPrompt": systemPrompt,"summaries": summaries
+                "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
                 },
                 undefined,
                 this.ctxManager.cloneContext(),
@@ -1703,10 +1703,10 @@ export type RecursivePartialNull<T> = MovedRecursivePartialNull<T>
                 __signal__,
                 __onTickWrapper__,
                 )
-                return new BamlStream<string, string>(
+                return new BamlStream<partial_types.AgentSummary, types.AgentSummary>(
                   __raw__,
-                  (a): string => a,
-                  (a): string => a,
+                  (a): partial_types.AgentSummary => a,
+                  (a): types.AgentSummary => a,
                   this.ctxManager.cloneContext(),
                   __options__.signal,
                   )

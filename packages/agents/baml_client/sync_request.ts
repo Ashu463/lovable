@@ -72,7 +72,7 @@ export class HttpRequest {
   }
   
   CallAgentSummary(
-      systemPrompt: string,summaries: string[],
+      systemPrompt: string,userPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -91,7 +91,7 @@ export class HttpRequest {
       return this.runtime.buildRequestSync(
         "CallAgentSummary",
         {
-          "systemPrompt": systemPrompt,"summaries": summaries
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),
@@ -936,7 +936,7 @@ export class HttpStreamRequest {
   }
   
   CallAgentSummary(
-      systemPrompt: string,summaries: string[],
+      systemPrompt: string,userPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
   ): HTTPRequest {
     try {
@@ -955,7 +955,7 @@ export class HttpStreamRequest {
       return this.runtime.buildRequestSync(
         "CallAgentSummary",
         {
-          "systemPrompt": systemPrompt,"summaries": summaries
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
         },
         this.ctxManager.cloneContext(),
         __baml_options__?.tb?.__tb(),

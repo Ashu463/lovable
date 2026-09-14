@@ -148,9 +148,9 @@ export class BamlSyncClient {
   }
   
   CallAgentSummary(
-      systemPrompt: string,summaries: string[],
+      systemPrompt: string,userPrompt: string,summaries: string[],
       __baml_options__?: BamlCallOptions<never>
-  ): string {
+  ): types.AgentSummary {
     try {
       const __options__ = { ...this.bamlOptions, ...(__baml_options__ || {}) }
       const __signal__ = __options__.signal;
@@ -180,7 +180,7 @@ export class BamlSyncClient {
       const __raw__ = this.runtime.callFunctionSync(
         "CallAgentSummary",
         {
-          "systemPrompt": systemPrompt,"summaries": summaries
+          "systemPrompt": systemPrompt,"userPrompt": userPrompt,"summaries": summaries
         },
         this.ctxManager.cloneContext(),
         __options__.tb?.__tb(),
@@ -191,7 +191,7 @@ export class BamlSyncClient {
         __signal__,
         __options__.watchers,
       )
-      return __raw__.parsed(false) as string
+      return __raw__.parsed(false) as types.AgentSummary
     } catch (error: any) {
       throw toBamlError(error);
     }

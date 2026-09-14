@@ -33,8 +33,18 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    colors, and component structure; don't substitute your own visual
    judgment for it.
 
-2. **Write the component.** A .tsx file holds imports, one component, and an
-   export — nothing above the imports, nothing below the export.
+2. **Write the component AND its stylesheet with identical class names.**
+   A .tsx file holds imports, one component, and an export — nothing above the
+   imports, nothing below the export. When you write the matching .css, every
+   selector must use the EXACT class name the TSX references — same string,
+   same convention. Pick one convention (e.g. hyphenated `ed-card-top`) and use
+   it in both files; do not write the TSX in one style (`ed-card-top`) and the
+   CSS in another (`.ed-card__top`). This is the single most common way a
+   screen ships completely unstyled: a className that matches no CSS rule is
+   just an ignored string — `tsc`/`vite build` never errors on it, so a broken,
+   unstyled screen passes the build and looks "done" when it isn't. The
+   safest habit is to write the component, then write the CSS by reading the
+   className strings straight out of the component you just wrote.
 
 3. **Wiring into src/App.tsx is owned by one item, and it may not be yours.**
    src/App.tsx is a shared file; when several screens are built in parallel,
@@ -45,10 +55,24 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    base-template/scaffold item — write your screen and its styles and stop;
    do NOT touch src/App.tsx. A later wiring item imports and routes it.
 
-4. **Build, and read the errors.** Fix what they point at, then build again.
-   A base-template item won't render in the preview until the wiring item
-   runs — that's expected; verify your own file compiles, don't force it into
-   App.tsx to "see" it.
+4. **Build, then verify styling parity — the build alone is not enough.**
+   Run the build and fix what it points at. But a green build does NOT mean the
+   screen is styled: unmatched className strings never error. So before Done,
+   confirm every class the TSX uses exists in the CSS. A quick check:
+
+   ```
+   comm -23 \
+     <(grep -oE 'className="[^"]+"' <your>.tsx | grep -oE '[A-Za-z0-9_-]+' | sort -u) \
+     <(grep -oE '\.[A-Za-z0-9_-]+' <your>.css | sed 's/^\.//' | sort -u)
+   ```
+
+   Anything it prints is a class the TSX uses that the CSS never defines —
+   reconcile it (add the rule, or fix the name) until the check prints nothing.
+   Do this once, in the same item that wrote the two files — don't ship the
+   mismatch for a later item to discover and drown in. A base-template item
+   won't render in the preview until the wiring item runs — that's expected;
+   verify your own files compile and their classes line up, don't force the
+   screen into App.tsx to "see" it.
 
 ## Recovering from a broken file
 

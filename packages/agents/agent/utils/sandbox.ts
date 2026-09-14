@@ -328,13 +328,7 @@ export class E2BSandbox{
     async GetPreviewUrl(): Promise<string>{
         const url = `https://${this.sandbox.getHost(PREVIEW_PORT)}`
         try{
-            const status = await this.probePreviewStatus()
-            if(status !== '' && status !== '000' && status !== '403') return url
-
-            if(status === '403'){
-                logger.info('Dev server is rejecting the proxied host, restarting it with allowedHosts set')
-                await this.sandbox.commands.run('pkill -f vite || true', { cwd: PROJECT_ROOT })
-            }
+            await this.sandbox.commands.run('pkill -f vite || true', { cwd: PROJECT_ROOT })
 
             await this.sandbox.commands.run(
                 `npm run dev -- --host 0.0.0.0 --strictPort`,
