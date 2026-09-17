@@ -36,6 +36,23 @@ export class WorktreeGit {
 
     async create(sandbox: E2BSandbox, taskId: number): Promise<string> {
         const path = `${SANDBOX_HOME}/worktrees/task-${taskId}`
+        // A prior attempt at this same taskId (e.g. one that died mid-work to
+        // a transient sandbox/network failure) only ever gets cleaned up on
+        // merge()'s success paths — a task that fails before reaching merge
+        // leaves its branch and worktree dir orphaned. runSubAgentWithRetry
+        // then calls create() again for the retry with no knowledge any of
+        // that needs tearing down first, so `worktree add -b task-{id}` hits
+        // "a branch named 'task-N' already exists" and the retry can never
+        // even get a working directory — one transient blip permanently
+        // breaks every subsequent attempt at that task for the rest of the
+        // run. Clearing both before creating makes this idempotent: a clean
+        // first run is unaffected (both commands no-op via `|| true`), a
+        // retry gets a genuinely fresh worktree instead of inheriting a
+        // half-written one from the attempt that just failed.
+        await sandbox.Execute(sandbox.sandboxId, {
+            action: 'runCommand',
+            command: `git -C ${PROJECT_ROOT} worktree remove -f ${path} 2>/dev/null || true; git -C ${PROJECT_ROOT} branch -D task-${taskId} 2>/dev/null || true`,
+        })
         await sandbox.Execute(sandbox.sandboxId, {
             action: 'runCommand',
             command: `git -C ${PROJECT_ROOT} worktree add -q ${path} -b task-${taskId} && ln -s ${PROJECT_ROOT}/node_modules ${path}/node_modules`,

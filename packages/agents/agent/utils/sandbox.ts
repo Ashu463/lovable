@@ -39,10 +39,23 @@ export class E2BSandbox{
         await sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
         return sandbox
     }
+    // Keyed by (userId, projectId): every StartSandbox call for the same
+    // project reconnects to the same underlying E2B sandbox and restores the
+    // exact same R2 files into the exact same PROJECT_ROOT — a parallel level
+    // calls this once for itself plus once per task (Orchestrator.runLevel),
+    // so a 3-task level fired 4 independent restores of the same file set.
+    // The in-flight PROMISE is cached, not a "restored N seconds ago"
+    // timestamp — callers in the same Promise.all fire near-simultaneously,
+    // so a timestamp check would still let all of them race past it before
+    // any one finished. Callers still each get their own E2BSandbox instance
+    // (safe for concurrent independent use, e.g. separate worktrees); only
+    // the restore's R2 round-trips are deduplicated.
+    private static restoreInFlight = new Map<string, Promise<void>>()
+
     static async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<E2BSandbox> {
         let sandbox: Sandbox | null = null
         // r2 -> sandbox.
-        
+
         if (sandboxId) {
             try {
                 sandbox = await Sandbox.connect(sandboxId)
@@ -57,7 +70,22 @@ export class E2BSandbox{
         }
 
         const instance = new E2BSandbox(sandbox, userId, projectId)
-        await instance.restoreOrBootstrap()
+
+        const key = `${userId}:${projectId}`
+        let restore = E2BSandbox.restoreInFlight.get(key)
+        if (!restore) {
+            restore = instance.restoreOrBootstrap()
+            E2BSandbox.restoreInFlight.set(key, restore)
+            // Only the entry THIS call created should be cleared, and only
+            // once it settles — a slower restore finishing after a newer one
+            // started would otherwise clear the newer (still in-flight) entry.
+            restore.finally(() => {
+                if (E2BSandbox.restoreInFlight.get(key) === restore) {
+                    E2BSandbox.restoreInFlight.delete(key)
+                }
+            })
+        }
+        await restore
         return instance
     }
     private async restoreOrBootstrap(): Promise<void> {

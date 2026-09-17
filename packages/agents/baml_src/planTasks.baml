@@ -16,6 +16,7 @@ class PlannedScreen {
 // Cheap and fast so the design (Stitch) phase can start immediately while
 // PlanTasks runs concurrently.
 function EnumerateScreens(systemPrompt: string, userPrompt: string, context: string) -> PlannedScreen[]{
+    // Direct deepseek, not OpenRouter — see PlanTasks below for why.
     client OpenAIGenericArray
     prompt #"
         {{systemPrompt}}
@@ -41,6 +42,12 @@ class PlanTasksOutput {
 // EnumerateScreens. A uiExpert item's designRef MUST be one of the passed
 // screen ids.
 function PlanTasks(systemPrompt: string, userPrompt: string, context: string, screens: PlannedScreen[]) -> PlanTasksOutput{
+    // Direct deepseek, not OpenRouter: this call has the most complex output
+    // schema in the pipeline (reasoning + a nested array of 8-field task
+    // objects), and OpenRouter's json_object pass-through only guarantees
+    // valid JSON syntax, not that it matches this shape — it returned "[]"
+    // and empty output here repeatedly, with no schema adherence to fall
+    // back on. Direct deepseek never showed this failure across the session.
     client OpenAIGeneric
     prompt #"
         {{systemPrompt}}

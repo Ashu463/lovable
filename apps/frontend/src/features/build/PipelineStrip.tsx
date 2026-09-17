@@ -18,7 +18,7 @@ export interface PipelineAgent {
 // (illustrative, fixed) and the workspace (driven by the real run state).
 export function PipelineStrip({ stages, agents }: { stages: PipelineStage[]; agents?: PipelineAgent[] }) {
   return (
-    <div className="flex items-center gap-0 overflow-x-auto border-y border-border bg-surface px-6 py-3.5">
+    <div className="flex items-center gap-0 overflow-x-auto border-y border-border bg-surface px-6 py-3">
       {stages.map((stage, i) => (
         <div key={stage.key} className="flex shrink-0 items-center">
           <div

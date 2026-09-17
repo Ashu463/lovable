@@ -67,28 +67,23 @@ client<llm> OpenRouter {
   options {
     base_url "https://openrouter.ai/api/v1"
     api_key env.OPENROUTER_API_KEY
-    model "minimax/minimax-m3"
-
-    // headers {
-    //   "HTTP-Referer" "https://yourapp.com"
-    //   "X-Title" "My BAML App"
-    // }
+    model "deepseek/deepseek-v4.1-flash"
   }
 }
-// Same OpenRouter/minimax endpoint, but forces a constrained JSON decode.
-// minimax-m3 otherwise emits prose preambles and leaks its native
-// <tool_call> channel tokens into the text output, both of which break
-// BAML's text-JSON parse (see run.log parse failures). Use this only for the
-// single-object tool-loop functions (AgentLLMCall/CoderAgent/UIExpertAgent/
-// DebuggerAgent) — json_object requires an object root, so it cannot be used
-// for the list-returning calls (EnumerateScreens, clarification questions).
+// Same OpenRouter/gpt-4o-mini endpoint as OpenRouter above, but forces a
+// constrained JSON decode — cheap insurance against a prose preamble around
+// the JSON breaking BAML's text-JSON parse (the exact failure mode minimax
+// hit repeatedly; gpt-4o-mini is much better-behaved but json_object costs
+// nothing to keep). Use for every function whose return type is a single
+// object; json_object requires an object root, so it can't be used for the
+// list/string-returning calls (those stay on plain OpenRouter, below).
 client<llm> OpenRouterJson {
   provider "openai-generic"
 
   options {
     base_url "https://openrouter.ai/api/v1"
     api_key env.OPENROUTER_API_KEY
-    model "minimax/minimax-m3"
+    model "deepseek/deepseek-v4.1-flash"
     response_format {
       type "json_object"
     }
@@ -151,7 +146,7 @@ class TesterResponse{
 }
 
 function ResearchAgent(query: string, systemPrompt: string, searchWay: string) -> ResearcherResponse{
-    client OpenAIGeneric
+    client OpenRouterJson
     prompt #"
         {{systemPrompt}}
         {{query}}
@@ -297,7 +292,7 @@ type SubAgentsContext = CoderContext | DebuggerContext | TesterContext | Researc
 
 function CallAgentSummary(systemPrompt: string, userPrompt: string, summaries: string[]) -> AgentSummary{
 
-    client OpenAIGenericArray
+    client OpenRouterJson
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the original request that started this Run.
