@@ -6,6 +6,15 @@ import { loadOwnedProject, loadOwnedRun, loadOwnedRunById } from "../authz";
 import { runQueue } from "../../lib/queue";
 import { logger } from "../../lib/utils";
 
+// A genuinely active run — simple or complex — always has something recent in
+// its event stream: a subagent tick, a tool call, a merge-gate iteration.
+// Silence past this window means nothing is going to advance the run, not a
+// slow LLM call (even a 162s single-turn generation we've seen is well under
+// this). Generous on purpose: a false "stalled" hides a real completion
+// behind a scary error; a slow true positive just takes a few extra minutes
+// to surface.
+const STALLED_THRESHOLD_MS = 5 * 60 * 1000;
+
 
 export const chatResolvers = {
   Query: {
@@ -43,13 +52,25 @@ export const chatResolvers = {
 
       // A run only leaves IN_PROGRESS when the agent emits a terminal event, so
       // a worker restart or a job that died mid-flight leaves the row building
-      // forever. The queue is the source of truth for whether work is pending:
-      // waiting/active/delayed covers every state a job can be in before it
-      // reaches the worker, so finding none means nothing will advance this run.
+      // forever — this is what stalled is meant to catch. It used to check
+      // BullMQ (waiting/active/delayed) for a pending job, but a complex run's
+      // real work happens in Inngest once the initial BullMQ "prep" job hands
+      // off to it — that handoff is early in the run, so BullMQ had nothing
+      // pending for the rest of a complex run's lifetime and this reported
+      // stalled=true (and the frontend showed "stopped unexpectedly") on any
+      // refresh mid-build, complete or not. Every agent action — subagent
+      // start/progress/completion, tool calls — writes a RunEvent, so its own
+      // recency is a queue-agnostic heartbeat: a run genuinely still working
+      // keeps producing events; one that's actually dead goes silent.
       let stalled = false;
       if (run.status === "IN_PROGRESS") {
-        const pending = await runQueue.getJobs(["waiting", "active", "delayed"]);
-        stalled = !pending.some((job) => job.data?.runId === run.id);
+        const lastEvent = await ctx.prisma.runEvent.findFirst({
+          where: { runId: run.id },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        });
+        const lastActivity = lastEvent?.createdAt ?? run.startedAt;
+        stalled = Date.now() - lastActivity.getTime() > STALLED_THRESHOLD_MS;
       }
 
       const project = await ctx.prisma.project.findUnique({

@@ -728,6 +728,13 @@ the wiring item owns it. Aim to be writing real files within your first turn
 or two, not your fifth. Read a specific file only when you need its exact
 current contents, never just to look around.
 
+Once writeFile succeeds and the build compiles, stop — Done, not another
+writeFile. "Refine the layout further," "add more polish," or re-writing the
+same file to reorganize what you already wrote are not reasons to continue;
+that is scope creep on a base-template item, not a fix. Rewrite a file again
+only to correct an actual defect (a build error, a missing piece the brief
+asked for) — never merely because a further pass could make it nicer.
+
 # CHOOSING AN ACTION
 
 Same actions as CoderAgent, minus research/docs lookup — this phase doesn't
@@ -1409,6 +1416,17 @@ Reason through the shape of the decomposition first, then emit items:
   isolate what actually failed if verification fails.
 - Order items so anything a later item structurally depends on comes first.
   Mark items parallel-safe only when they touch genuinely disjoint files.
+- Wall-clock time is the ~10-12 minute target above, not just item count: a
+  DEEP dependency chain (item C waits on B waits on A) takes as long as its
+  longest chain, one item after another, no matter how few items total exist
+  or how well-scoped each one is — a plan with 9 items in 3 sequential stages
+  is much slower than one with 9 items in 2 wide, mostly-parallel stages.
+  Prefer breadth over depth: give a later item a real dependency only when it
+  truly cannot start without that specific earlier item's output (e.g. behavior
+  needs its own screen's template) — never chain two items just because they
+  both touch the same general feature area when they could instead each depend
+  directly on the shared base (the data layer, a screen's own template) and
+  run alongside each other.
 - Don't over-decompose a trivial request into multiple items when one
   covers it.
 - Write description as the fuller brief the executor actually needs —

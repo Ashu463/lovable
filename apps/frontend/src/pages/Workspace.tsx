@@ -345,7 +345,7 @@ export function Workspace() {
         />
       </StatusLine>
 
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <span className={cn("h-2 w-2 rounded-sm", resuming ? "bg-muted" : isFailed ? "bg-danger" : isDone ? "bg-ok" : "bg-accent")} />
           {resuming ? (
@@ -380,7 +380,7 @@ export function Workspace() {
       <PipelineStrip stages={stages} agents={agents} />
 
       {state.status === "running" && (
-        <div className="px-4 py-3">
+        <div className="px-4 py-2.5">
           <DagView projectId={state.projectId} runId={state.runId} feed={state.feed} />
         </div>
       )}

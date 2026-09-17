@@ -153,7 +153,7 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
   const byId = new Map(todos.map((t) => [t.taskId, t]));
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-surface/40 px-4 py-4">
+    <div className="max-h-[280px] overflow-x-auto overflow-y-auto rounded-xl border border-border bg-surface/40 px-4 py-4">
       <div ref={contentRef} className="relative flex w-max items-stretch gap-12">
         {/* Edges live behind the nodes; the node backgrounds paint over them. */}
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">

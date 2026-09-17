@@ -13,7 +13,7 @@ class DesignVariants{
     prompts string[]
 }
 function FramePrompts(systemPrompt: string, userPrompt: string, semanticMem: string, skills: Skill[]) -> DesignVariants{
-    client OpenAIGeneric
+    client OpenRouterJson
     prompt #"
         {{ _.role("system") }}
         {{systemPrompt}}
@@ -90,7 +90,7 @@ function UIExpertAgent(
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Done | Abort
 {
-    client OpenAIGeneric
+    client OpenRouterJson
     prompt #"
         {{systemPrompt}}
 
