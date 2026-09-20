@@ -76,7 +76,7 @@ client OpenAI {
     provider "openai"
     retry_policy RateLimitBackoff
     options {
-        model "gpt-4o-mini"
+        model "gpt-5-mini"
         // temperature 0.3
     }
 }

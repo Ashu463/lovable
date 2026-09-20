@@ -2,7 +2,7 @@ import Sandbox from "e2b"
 import { BaseAgent } from "./baseAgent"
 import { b, type ErrorResponse, type TesterContext } from "../../baml_client"
 import { prompt } from "../config/promptProfile"
-import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, PREVIEW_PORT, PROJECT_ROOT } from "../config/systemConfig"
+import { MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, TESTER_PREVIEW_PORT, PROJECT_ROOT } from "../config/systemConfig"
 import type { E2BSandbox } from "../utils/sandbox"
 import { logger } from "../utils/logger"
 import { observeBaml } from "../utils/tracing"
@@ -36,7 +36,10 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         // explicitly allow-listed. Without it, fetch() gets a real (non-ok)
         // response instead of a connection error, so pollUntilUp still spins
         // until timeout even against a perfectly healthy server.
-        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev -- --host 0.0.0.0 --strictPort`, {
+        // Runs on TESTER_PREVIEW_PORT, deliberately NOT PREVIEW_PORT: GetPreviewUrl
+        // serves the user's live app there and `pkill -f vite`s before it starts, so
+        // sharing a port made the two kill each other (see TESTER_PREVIEW_PORT).
+        const handle = await sandbox.commands.run(`cd ${PROJECT_ROOT} && npm run dev -- --host 0.0.0.0 --port ${TESTER_PREVIEW_PORT} --strictPort`, {
             background: true,
             envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' },
             onStdout: (data: string) => {stdOutBuf += data},
@@ -73,7 +76,7 @@ export class TesterAgent extends BaseAgent<TesterInput, TesterContext, TesterLLM
         const deadline = Date.now() + MAX_BOOT_WAIT_MS
         while (Date.now() < deadline) {
             try {
-                const response = await fetch(`https://${sandbox.getHost(PREVIEW_PORT)}`)
+                const response = await fetch(`https://${sandbox.getHost(TESTER_PREVIEW_PORT)}`)
                 if (response.ok) return true
             } catch {
             // connection refused / not up yet — keep polling

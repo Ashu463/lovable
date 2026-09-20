@@ -1399,6 +1399,17 @@ Reason through the shape of the decomposition first, then emit items:
   never one you invent. Emit the corresponding Coder item(s) for that
   screen's behavior with a dependency on the uiExpert item's id, so they run
   after the base template exists.
+- A uiExpert item's ONLY deliverable is that screen's React component file
+  (e.g. src/pages/BoardsList.tsx) — written, styled with Tailwind classes,
+  and compiling. The screen's visual design ALREADY EXISTS: the design phase
+  generated it up front, keyed by the screen id you set as designRef, and
+  UIExpert receives it automatically. UIExpert translates that design into the
+  component; it does not author one. So never scope a uiExpert item to produce
+  a design, a "UI spec", a JSON/TS design artifact, a style guide, or any
+  other intermediate file — there is no such step, nothing downstream consumes
+  one, and an item scoped that way can never satisfy its own completion check
+  (component written + build passes). Word the item as building the screen's
+  component, not as designing the screen.
 - Non-UI work — API routes, data layer, config, business logic on an
   existing screen — goes to Coder directly, no uiExpert item needed.
 - src/App.tsx is a single shared file: two items that both wired themselves

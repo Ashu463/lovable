@@ -3,7 +3,7 @@ import { b, type CoderContext, type DebuggerContext, type EpisodicMemory, type R
 import { COMPACT_CONTEXT_PROMPT, COMPRESS_EPISODIC_MEM_PROMPT, EPISODIC_MEMORY_GENERATOR_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "../config/systemPrompts"
 import { encoding_for_model } from "tiktoken"
 import { type Message } from "../../baml_client"
-import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS, READ_RESULT_MAX_CHARS } from "../config/systemConfig"
+import { RECENT_TURNS_LIMIT, COMPACT_THRESHOLD, MAX_CONTEXT_WINDOW_LENGTH, TOOL_RESULT_MAX_CHARS, READ_RESULT_MAX_CHARS, WRITE_ECHO_MAX_CHARS } from "../config/systemConfig"
 import { observeBaml } from "./tracing"
 
 function truncate(text: string, limit: number): string {
@@ -39,9 +39,40 @@ function summarizeTurn(res: any, toolRes: any): Message {
     const result = res?.action === 'getSkill'
         ? `loaded into skills (${rawResultText(toolRes).length} chars)`
         : extractResultText(res, toolRes)
+
+    let written = ''
+    if (res?.action === 'writeFile' && typeof res?.content === 'string' && toolRes?.success !== false) {
+        const content: string = res.content
+        const head = Math.floor(WRITE_ECHO_MAX_CHARS * 0.75)
+        const tail = WRITE_ECHO_MAX_CHARS - head
+        const excerpt = content.length <= WRITE_ECHO_MAX_CHARS
+            ? content
+            : `${content.slice(0, head)}\n... [${content.length - WRITE_ECHO_MAX_CHARS} chars trimmed from the middle] ...\n${content.slice(-tail)}`
+        written = ` (${content.length} bytes, ${content.split('\n').length} lines)\n`
+            + `--- what you wrote (trimmed) ---\n${excerpt}\n--- end ---\n`
+            + `Seeing this excerpt means the write landed on disk exactly as you sent it. `
+            + `You do not need to re-read or rewrite this file to confirm that it exists or is complete. `
+            + `It does not tell you whether the file compiles — only a build does that, at whatever `
+            + `point your workflow calls for one.`
+    }
+    else if (res?.action === 'editFile' && Array.isArray(res?.edits) && toolRes?.success !== false) {
+        const edits: { oldString?: string, newString?: string }[] = res.edits
+        const perEditBudget = Math.max(200, Math.floor(WRITE_ECHO_MAX_CHARS / edits.length))
+        const shown = edits.map((e, i) => {
+            const ns = e.newString ?? ''
+            const trimmed = ns.length <= perEditBudget ? ns : `${ns.slice(0, perEditBudget)}... [trimmed]`
+            return `edit ${i + 1} now reads:\n${trimmed}`
+        }).join('\n---\n')
+        written = `\n--- what changed (trimmed) ---\n${shown}\n--- end ---\n`
+            + `Seeing this means every edit applied exactly as you sent it. `
+            + `You do not need to re-read this file to confirm the edit landed. `
+            + `It does not tell you whether the file compiles — only a build does that, at whatever `
+            + `point your workflow calls for one.`
+    }
+
     return {
         role: 'toolCall',
-        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}`,
+        content: `${res?.action ?? 'unknown'}${label ? ` ${label}` : ''} -> ${result}${written}`,
         timestamp: new Date().toISOString()
     }
 }

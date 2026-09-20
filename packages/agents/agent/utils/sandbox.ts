@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox, SandboxNotFoundError } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, PREVIEW_START_ATTEMPTS, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
 import { logger } from './logger';
 import { applyEdits } from '../tools/edit';
 
@@ -353,32 +353,60 @@ export class E2BSandbox{
         return probe.stdout.trim()
     }
 
+    // This is the last step before a human sees anything: every task can have
+    // succeeded and the build passed, and a single transient failure here still
+    // leaves the user with no app and the run unfinalized (observed 2026-09-20 —
+    // a port race with the tester killed the server mid-boot, GetPreviewUrl threw
+    // "signal: terminated", and ~20 minutes of green work surfaced as nothing).
+    // Unlike the agents' own work, nothing upstream retries this, so it retries
+    // itself rather than discarding a whole successful run on one blip.
     async GetPreviewUrl(): Promise<string>{
         const url = `https://${this.sandbox.getHost(PREVIEW_PORT)}`
-        try{
-            await this.sandbox.commands.run('pkill -f vite || true', { cwd: PROJECT_ROOT })
+        let lastError: unknown
+        for (let attempt = 1; attempt <= PREVIEW_START_ATTEMPTS; attempt++) {
+            try{
+                // Clear any dev server still holding the port before binding it: a
+                // previous run's, or a tester orphan (`npm run dev` spawns vite as a
+                // CHILD, so killing the command leaves vite alive on the port).
+                //
+                // The pattern is bracketed on purpose. `[v]ite` is a regex matching
+                // the string "vite", but this command's own command line literally
+                // contains "[v]ite", which that regex does NOT match — so pkill
+                // cannot kill the shell running it. A plain `pkill -f vite` DOES
+                // match its own shell and SIGTERMs itself; `|| true` can't rescue
+                // that because the shell is killed, not merely exiting non-zero.
+                // It surfaced as "signal: terminated" thrown from this function,
+                // which broke run finalization AND every project load (project.ts
+                // calls GetPreviewUrl too) — sandbox healthy, app never appearing.
+                await this.sandbox.commands.run(`pkill -f '[v]ite' 2>/dev/null || true`, { cwd: PROJECT_ROOT })
 
-            await this.sandbox.commands.run(
-                `npm run dev -- --host 0.0.0.0 --strictPort`,
-                {
-                    cwd: PROJECT_ROOT,
-                    background: true,
-                    envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' }
-                }
-            )
-
-            const deadline = Date.now() + MAX_BOOT_WAIT_MS
-            while(Date.now() < deadline){
+                // Let the OS release the port before --strictPort tries to bind it;
+                // without this the fresh vite can fail outright on a still-closing socket.
                 await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-                const s = await this.probePreviewStatus()
-                if(s !== '' && s !== '000' && s !== '403') return url
-            }
 
-            throw new Error(`dev server did not start listening on port ${PREVIEW_PORT} within ${MAX_BOOT_WAIT_MS}ms`)
-        }catch(e){
-            logger.error(`Error occurred while running server ${e}`)
-            throw new Error(`Error occurred while starting the preview server: ${e instanceof Error ? e.message : String(e)}`)
+                await this.sandbox.commands.run(
+                    `npm run dev -- --host 0.0.0.0 --port ${PREVIEW_PORT} --strictPort`,
+                    {
+                        cwd: PROJECT_ROOT,
+                        background: true,
+                        envs: { __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.e2b.app' }
+                    }
+                )
+
+                const deadline = Date.now() + MAX_BOOT_WAIT_MS
+                while(Date.now() < deadline){
+                    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+                    const s = await this.probePreviewStatus()
+                    if(s !== '' && s !== '000' && s !== '403') return url
+                }
+
+                throw new Error(`dev server did not start listening on port ${PREVIEW_PORT} within ${MAX_BOOT_WAIT_MS}ms`)
+            }catch(e){
+                lastError = e
+                logger.error(`Preview server start failed (attempt ${attempt}/${PREVIEW_START_ATTEMPTS}): ${e instanceof Error ? e.message : String(e)}`)
+            }
         }
+        throw new Error(`Error occurred while starting the preview server after ${PREVIEW_START_ATTEMPTS} attempts: ${lastError instanceof Error ? lastError.message : String(lastError)}`)
     }
     Release(){
         this.sandbox.kill()

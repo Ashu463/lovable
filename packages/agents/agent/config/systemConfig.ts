@@ -6,6 +6,19 @@ export const POLL_INTERVAL_MS = 500
 // react-template's `dev` script is a bare `vite`, whose own default port is
 // 5173 — this just names that default, it doesn't force a different one.
 export const PREVIEW_PORT = 5173
+// The tester boots its own `npm run dev` purely to check the app comes up, then
+// kills it — but it used to do that on PREVIEW_PORT, the same port GetPreviewUrl
+// serves the user's live app from. Both also use --strictPort (no fallback) and
+// GetPreviewUrl unconditionally `pkill -f vite`, so the two raced: whichever ran
+// second killed the other's server, and GetPreviewUrl's await then rejected with
+// "signal: terminated", throwing away a fully successful run at the final step
+// (observed 2026-09-20: all 6 tasks done, build green, no preview, no
+// run_completed). Giving the tester its own port removes the contention.
+export const TESTER_PREVIEW_PORT = 5174
+// GetPreviewUrl is the last step before a human sees anything and nothing
+// upstream retries it, so one transient failure discards an entire successful
+// run. Retry it rather than throwing on the first blip.
+export const PREVIEW_START_ATTEMPTS = 2
 export const BACKEND_URL = process.env.BACKEND_URL ?? `http://localhost:3000`
 export const REDIS_HOST = process.env.REDIS_HOST ?? "redis"
 export const REDIS_PORT = Number(process.env.REDIS_PORT ?? 6380)
@@ -37,7 +50,14 @@ export const RUN_MAX_LLM_CALLS = 120
 export const RECENT_TURNS_LIMIT = 50
 export const TOOL_RESULT_MAX_CHARS = 2000
 // only for READ tool
-export const READ_RESULT_MAX_CHARS = 12000
+// Raised from 12000 -> 15000 (2026-09-20): store.tsx was 12,155 bytes, just over
+// the old limit, so every read of it silently omitted its middle section. Edits
+// built from that truncated view kept missing (oldString not found) because the
+// real file had the omitted chunk restored — task 5 spent 48 calls and ~1.47M
+// input tokens across two attempts largely fighting this one file. 15000 clears
+// that case with margin without jumping straight to 20000.
+export const READ_RESULT_MAX_CHARS = 15000
+export const WRITE_ECHO_MAX_CHARS = 800
 export const REPO_TREE_PRUNE_DIRS = [
     'node_modules', '.git', 'dist', 'build', '.next', '.turbo',
     'coverage', '.cache', '.vite', '.output', 'vendor'
