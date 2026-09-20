@@ -24,7 +24,7 @@ class Message {
 }
 function CompressContext(systemPrompt: string, session: string[]) -> EpisodicMemory{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{session}}
@@ -67,7 +67,7 @@ function SummarizeContext(systemPrompt: string, context: Message[]) -> Message[]
 // Used in Subagents
 function CompactCoderContext(systemPrompt: string, context: CoderContext) -> CoderContext{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{context}} - the full context object, segmented.
@@ -77,7 +77,7 @@ function CompactCoderContext(systemPrompt: string, context: CoderContext) -> Cod
 }
 function CompactDebuggerContext(systemPrompt: string, context: DebuggerContext) -> DebuggerContext{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{context}} - the full context object, segmented.
@@ -87,7 +87,7 @@ function CompactDebuggerContext(systemPrompt: string, context: DebuggerContext) 
 }
 function SummarizeCoderContext(systemPrompt: string, context: CoderContext) -> CoderContext{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{context}} - the full context, already past compaction.
@@ -97,7 +97,7 @@ function SummarizeCoderContext(systemPrompt: string, context: CoderContext) -> C
 }
 function SummarizeDebuggerContext(systemPrompt: string, context: DebuggerContext) -> DebuggerContext{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{context}} - the full context, already past compaction.

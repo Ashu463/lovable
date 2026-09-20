@@ -11,8 +11,6 @@ class Done{
 
 class CoderContext{
     task string
-    // Fuller intent from the planner (the "why" behind task) and a soft
-    // tool-call budget hint. Both fixed at task start, same as task itself.
     description string
     expectedToolCalls int
     dependentSummary TaskSummary[]
@@ -26,7 +24,7 @@ function CoderAgent(
     context: CoderContext,
 ) -> WriteFile | ReadFile | EditFile | RunCommand | DeleteFile | Research | GetSkill | Done | Abort
     {
-    client OpenRouterJson
+    client OpenAI
 
     prompt #"
         {{systemPrompt}}

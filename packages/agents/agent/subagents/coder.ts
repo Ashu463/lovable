@@ -1,4 +1,4 @@
-import { CODER_PROMPT } from "../config/systemPrompts";
+import { prompt } from "../config/promptProfile";
 import {b, type Abort, type CoderContext, type DeleteFile, type Done, type EditFile, type FetchDocs, type GetSkill, type Message, type ReadFile, type Research, type ResearcherResponse, type RunCommand, type ToolResult, type WriteFile} from '../../baml_client'
 import { Researcher } from "./researcher";
 import { observeBaml } from "../utils/tracing"
@@ -33,7 +33,7 @@ export class CoderAgent extends BaseAgent<CoderTaskInput, CoderContext, CoderLLM
         return await observeBaml(
             "CoderAgent",
             { task: context.task, dependencies: context.dependentSummary?.length ?? 0 },
-            (opts) => b.CoderAgent(CODER_PROMPT, context, opts),
+            (opts) => b.CoderAgent(prompt("CODER_PROMPT"), context, opts),
         )
     }
     override async executeFunction(response: CoderLLMResponse): Promise<CoderAgentResponse> {

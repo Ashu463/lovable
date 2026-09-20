@@ -1,15 +1,3 @@
-// Main-agent-only tools. The file/command/skill tools it shares with the
-// subagents live in agents.baml, so this file only declares what's unique here.
-//
-// Each carries a literal `action` discriminator, matching CoderAgent's union —
-// this is what AgentLLMCall returns directly. The previous shape wrapped every
-// tool in a `ToolCall` class of ten mutually-exclusive optional fields, which
-// models kept getting wrong in three separate ways: omitting the redundant
-// `type` discriminator (which nulled the whole ToolCall), carrying over the
-// previous turn's `type`, and flattening args to the top level (where BAML
-// silently dropped them as unknown keys). A flat discriminated union removes
-// all three failure modes, because there's no redundant field left to disagree
-// with the payload.
 class StitchTool {
   action "stitch"
   prompt string
@@ -43,14 +31,7 @@ function AgentLLMCall(
   callAgentContext: string
   ) -> ReadFile | WriteFile | EditFile | DeleteFile | RunCommand | GetSkill | Apify | Context7 | Tavily | StitchTool | Done | Abort{
 
-    client OpenRouterJson
-    // Ordering is deliberate: everything above {{context}} is fixed for the whole
-    // run, so it forms a stable prefix the provider's prompt cache can reuse on
-    // every iteration. {{context}} is the only part that grows per turn, so it
-    // sits last — putting it earlier (as it was) pushed ~600 tokens of otherwise
-    // static text behind the changing part, where it got re-charged in full each
-    // turn. {{ctx.output_format}} stays after it so the schema is the last thing
-    // the model reads before answering.
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the specific, already-clarified request you're
@@ -80,7 +61,7 @@ class AgentSummary {
 
 function GenerateAgentSummary(systemPrompt: string, context: Message[]) -> AgentSummary{
 
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{context}} the turn-by-turn tool-call history for this task so far.

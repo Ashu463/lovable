@@ -1,7 +1,7 @@
 import type { WriteFile, ReadFile, RunCommand, Research, Done, Error, DebuggingDone, ToolResult, FileEdit, Message, DebuggerContext, EditFile, DocsSearch, GetSkill, Abort } from "../../baml_client";
 import { BaseAgent } from "./baseAgent";
 import { b } from "../../baml_client";
-import { DEBUGGER_PROMPT } from "../config/systemPrompts";
+import { prompt } from "../config/promptProfile";
 import { Researcher } from "./researcher";
 import { observeBaml } from "../utils/tracing"
 import { fetchDocs } from "../MCPs/context7";
@@ -42,7 +42,7 @@ export class DebuggerAgent extends BaseAgent<DebuggerRequest, DebuggerContext, D
             const response = await observeBaml(
                 "DebuggerAgent",
                 { errors: content.errors, fixAttempts: context.fixHistory?.length ?? 0 },
-                (opts) => b.DebuggerAgent(DEBUGGER_PROMPT, content.errors, context, content?.toolResult, opts),
+                (opts) => b.DebuggerAgent(prompt("DEBUGGER_PROMPT"), content.errors, context, content?.toolResult, opts),
             )
 
             return response

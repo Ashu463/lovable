@@ -1,7 +1,8 @@
 import type { Screen } from "@google/stitch-sdk"
 import { b, type Abort, type Apify, type Context7, type DeleteFile, type Done, type EditFile, type GetSkill, type Message, type ReadFile, type RunCommand, type StitchTool, type Tavily, type WriteFile } from "../baml_client"
 import type { AgentResponse, SSEBody } from "../types/agentTypes"
-import { COMPACT_CONTEXT_PROMPT, AGENT_SUMMARY_PROMPT, AGENT_SYSTEM_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/systemPrompts"
+import { COMPACT_CONTEXT_PROMPT, AGENT_SUMMARY_PROMPT, SUMMARIZE_CONTEXT_PROMPT } from "./config/systemPrompts"
+import { prompt } from "./config/promptProfile"
 import { COMPACT_THRESHOLD, COMPACTION_PARAMETER, AGENT_MAX_ITERATIONS, AGENT_LLM_RETRY_ATTEMPTS, SUBAGENT_RETRY_BACKOFF_MS, PROJECT_ROOT, SANDBOX_HOME } from "./config/systemConfig"
 import { webScrape } from "./MCPs/apify"
 import { fetchDocs } from "./MCPs/context7"
@@ -84,7 +85,7 @@ export class Agent{
             let terminalAction: 'done' | 'abort' | undefined
             let abortReason: string | undefined
             try{
-                const updatedSystemPrompt = AGENT_SYSTEM_PROMPT + await this.buildSystemPrompt()
+                const updatedSystemPrompt = prompt("AGENT_SYSTEM_PROMPT") + await this.buildSystemPrompt()
                 try {
                     const repoTree = await this.sandbox.getRepoTree(PROJECT_ROOT)
                     if (repoTree.trim()) {

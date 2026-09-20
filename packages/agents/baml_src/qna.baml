@@ -54,7 +54,7 @@ function CheckComplexity(systemPrompt: string, userPrompt: string) -> Complexity
 }
 
 function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, isComplex: bool) -> Question[] {
-    client OpenAIGenericArray
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -66,7 +66,7 @@ function GenerateClarifyingQuestions(systemPrompt: string, userPrompt: string, i
 }
 
 function GenerateUIPreferenceQuestions(systemPrompt: string, userPrompt: string) -> Question[] {
-    client OpenAIGenericArray
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.

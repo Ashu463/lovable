@@ -1,25 +1,19 @@
 client OpenAIGeneric {
-  provider "openai-generic"
+  provider "openai"
+  retry_policy RateLimitBackoff
   options {
-    base_url env.LLM_BASE_URL
-    api_key env.LLM_API_KEY
-    model "deepseek-flash"
+    model "gpt-4o-mini"
     temperature 0.3
     response_format {
       type "json_object"
     }
   }
 }
-// json_object requires an object at the JSON root, so it rejects top-level
-// array (and bare-string) responses even when correct. Same deepseek model as
-// OpenAIGeneric, minus response_format — used for functions whose return type
-// is a list or a plain string (mirrors the Groq/GroqArray split above).
 client OpenAIGenericArray {
-  provider "openai-generic"
+  provider "openai"
+  retry_policy RateLimitBackoff
   options {
-    base_url env.LLM_BASE_URL
-    api_key env.LLM_API_KEY
-    model "deepseek-flash"
+    model "gpt-4o-mini"
     temperature 0.3
   }
 }
@@ -46,9 +40,6 @@ client Groq {
   }
 }
 
-// Groq's json_object mode requires an object at the JSON root, so it
-// rejects top-level array responses (e.g. "[]") even when correct.
-// Used for functions whose return type is an array.
 client GroqArray {
   provider "openai-generic"
 
@@ -61,41 +52,32 @@ client GroqArray {
     temperature 0.3
   }
 }
-client<llm> OpenRouter {
-  provider "openai-generic"
 
+client<llm> OpenRouter {
+  provider "openai"
+  retry_policy RateLimitBackoff
   options {
-    base_url "https://openrouter.ai/api/v1"
-    api_key env.OPENROUTER_API_KEY
-    model "deepseek/deepseek-v4.1-flash"
+    model "gpt-4o-mini"
+    temperature 0.3
   }
 }
-// Same OpenRouter/gpt-4o-mini endpoint as OpenRouter above, but forces a
-// constrained JSON decode — cheap insurance against a prose preamble around
-// the JSON breaking BAML's text-JSON parse (the exact failure mode minimax
-// hit repeatedly; gpt-4o-mini is much better-behaved but json_object costs
-// nothing to keep). Use for every function whose return type is a single
-// object; json_object requires an object root, so it can't be used for the
-// list/string-returning calls (those stay on plain OpenRouter, below).
 client<llm> OpenRouterJson {
-  provider "openai-generic"
-
+  provider "openai"
+  retry_policy RateLimitBackoff
   options {
-    base_url "https://openrouter.ai/api/v1"
-    api_key env.OPENROUTER_API_KEY
-    model "deepseek/deepseek-v4.1-flash"
+    model "gpt-4o-mini"
+    temperature 0.3
     response_format {
       type "json_object"
     }
   }
 }
-// retry_policy is what handles 429s: without it a single rate-limit
-// response kills the whole run, since every agent call routes through here.
 client OpenAI {
     provider "openai"
     retry_policy RateLimitBackoff
     options {
         model "gpt-4o-mini"
+        // temperature 0.3
     }
 }
 

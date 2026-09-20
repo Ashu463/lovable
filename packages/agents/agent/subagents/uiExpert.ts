@@ -2,7 +2,8 @@ import type { Screen } from "@google/stitch-sdk"
 import { makeOneScreen, fetchDesignHtml } from "../tools/stitch"
 import { BaseAgent } from "./baseAgent"
 import { b, type CoderContext, type DesignVariants, type Skill, type WriteFile, type ReadFile, type EditFile, type RunCommand, type DeleteFile, type Done, type Abort } from "../../baml_client"
-import { UI_VARIANTS_PROMPT, UI_EXPERT_BASE_TEMPLATE_PROMPT } from "../config/systemPrompts"
+import { UI_VARIANTS_PROMPT } from "../config/systemPrompts"
+import { prompt } from "../config/promptProfile"
 import type { E2BSandbox } from "../utils/sandbox"
 import type { UIExpertTaskInput } from "../../types/subAgentsTypes"
 import { designFilePath, designRefPath } from "../utils/designPath"
@@ -128,7 +129,7 @@ export class UIExpert extends BaseAgent<UIExpertTaskInput, CoderContext, UIExper
         return await observeBaml(
             "UIExpertAgent",
             { task: context.task },
-            (opts) => b.UIExpertAgent(UI_EXPERT_BASE_TEMPLATE_PROMPT, html, context, opts),
+            (opts) => b.UIExpertAgent(prompt("UI_EXPERT_BASE_TEMPLATE_PROMPT"), html, context, opts),
         )
     }
 

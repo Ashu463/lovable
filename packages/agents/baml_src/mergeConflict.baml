@@ -31,7 +31,7 @@ class MergeConflictResolution {
 }
 
 function ResolveMergeConflict(systemPrompt: string, conflict: MergeConflictContext) -> MergeConflictResolution {
-    client OpenRouterJson
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{conflict}}
