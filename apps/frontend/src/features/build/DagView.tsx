@@ -68,6 +68,7 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
   const [edges, setEdges] = useState<Edge[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Map<number, HTMLElement>>(new Map());
+  const lastProjectId = useRef<string | null>(null);
 
   // The plan is saved ~2min into the run (after PlanTasks), but this view
   // mounts the instant the run goes "running" — a single fetch here races the
@@ -75,8 +76,15 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
   // poll until the todos land, then stop.
   useEffect(() => {
     let cancelled = false;
-    setTodos(null);
-    setEdges([]);
+    // Only wipe immediately on a genuine project switch — a DAG from another
+    // project must never show. A follow-up run in the SAME project keeps
+    // showing the previous plan until the new one lands, rather than
+    // instantly blanking for the ~2min PlanTasks takes on the new run.
+    if (lastProjectId.current !== projectId) {
+      setTodos(null);
+      setEdges([]);
+    }
+    lastProjectId.current = projectId;
 
     const fetchTodos = () =>
       gql<{ todos: Todo[] }>(TODOS, { projectId, runId })

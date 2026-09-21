@@ -22,7 +22,7 @@ class ConversationalReply{
 }
 
 function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> DevelopmentVerdict {
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.
@@ -32,7 +32,7 @@ function CheckIsDevelopmentRequest(systemPrompt: string, userPrompt: string) -> 
 }
 
 function RespondConversationally(systemPrompt: string, userPrompt: string, priorContext: string, semanticMem: string) -> ConversationalReply {
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to answer.
@@ -44,7 +44,7 @@ function RespondConversationally(systemPrompt: string, userPrompt: string, prior
 }
 
 function CheckComplexity(systemPrompt: string, userPrompt: string) -> ComplexityVerdict {
-    client OpenAIGeneric
+    client OpenAI
     prompt #"
         {{systemPrompt}}
         {{userPrompt}} - the message to assess.

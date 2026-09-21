@@ -1,20 +1,24 @@
+// Migrated to gpt-5-mini (2026-09-21). gpt-5-mini rejects any explicit
+// temperature other than its default (1) — "Unsupported value: 'temperature'
+// does not support 0.3 with this model" (400 Bad Request) — so temperature is
+// dropped here entirely, same as the OpenAI client below; it's not settable
+// on this model at all, not just switched to a different value.
 client OpenAIGeneric {
   provider "openai"
   retry_policy RateLimitBackoff
   options {
-    model "gpt-4o-mini"
-    temperature 0.3
+    model "gpt-5-mini"
     response_format {
       type "json_object"
     }
   }
 }
+// Unused — no function references this client (checked 2026-09-21).
 client OpenAIGenericArray {
   provider "openai"
   retry_policy RateLimitBackoff
   options {
-    model "gpt-4o-mini"
-    temperature 0.3
+    model "gpt-5-mini"
   }
 }
 client Gemini {
@@ -53,20 +57,21 @@ client GroqArray {
   }
 }
 
+// Migrated to gpt-5-mini (2026-09-21) — same temperature-drop as OpenAIGeneric
+// above; used by CompactContext/SummarizeContext/SummarizeEpisodic.
 client<llm> OpenRouter {
   provider "openai"
   retry_policy RateLimitBackoff
   options {
-    model "gpt-4o-mini"
-    temperature 0.3
+    model "gpt-5-mini"
   }
 }
+// Unused — no function references this client (checked 2026-09-21).
 client<llm> OpenRouterJson {
   provider "openai"
   retry_policy RateLimitBackoff
   options {
-    model "gpt-4o-mini"
-    temperature 0.3
+    model "gpt-5-mini"
     response_format {
       type "json_object"
     }

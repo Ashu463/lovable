@@ -376,6 +376,9 @@ export class Orchestrator {
                 return { status: 'error', reason }
             }
 
+            const sandboxForSync = await this.reconnectSandbox()
+            await step.run(`level-${levelIndex}-sync-r2`, () => sandboxForSync.SyncR2())
+
             await step.run(`level-${levelIndex}-commit-state`, () => this.commitState(levelOut.results))
             // await step.run(`level-${levelIndex}-context-engine-push`, () => this.pushToContextEngine())
 
