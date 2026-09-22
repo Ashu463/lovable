@@ -64,6 +64,7 @@ export const REPO_TREE_PRUNE_DIRS = [
 ]
 export const REPO_TREE_MAX_ENTRIES = 400
 export const RUN_COMMAND_TIMEOUT_MS = 300_000
+export const SYNC_R2_TIMEOUT_MS = 300_000
 export const SANDBOX_TIMEOUT_MS = 60 * 60 * 1000
 export const SANDBOX_KEEPALIVE_INTERVAL_MS = 10 * 60 * 1000
 export const TASK_SANDBOX_RETRY_LIMIT = 5

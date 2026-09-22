@@ -34,18 +34,6 @@ export class WorktreeGit {
         }
     }
 
-    // A worktree task's changes get committed for free, as a side effect of
-    // merge() bringing its branch into trunk. A task that runs directly on
-    // trunk (no worktree — a level with only one task, see orchestrator.ts's
-    // sequential branch) never goes through merge() at all, so without this
-    // its writes just sit on disk untracked forever. That silently hides them
-    // from every worktree a LATER level creates (worktrees branch off trunk's
-    // last COMMIT, not its raw working directory) — those siblings then can't
-    // see the file, may reinvent their own version at the same path, and
-    // their eventual merge fails outright with "untracked working tree files
-    // would be overwritten by merge" (observed 2026-09-21). --allow-empty
-    // matches ensureRepo's bootstrap commit: a task that touched nothing
-    // still gets an empty commit rather than erroring on "nothing to commit".
     async commitTrunk(sandbox: E2BSandbox, taskId: number): Promise<void> {
         await sandbox.Execute(sandbox.sandboxId, {
             action: 'runCommand',

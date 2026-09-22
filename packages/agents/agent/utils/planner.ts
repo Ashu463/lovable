@@ -150,11 +150,6 @@ export class Planner {
                     results.push(...chunkResults)
                 }
 
-                // Push the freshly-written designs to R2. Without this, an E2B
-                // recycle+restore between here and the uiExpert would lose them
-                // (they're written to the live sandbox only). newly-generated
-                // designs are the only ones at risk — reused ones are already
-                // persisted, and a full skip needs no sync.
                 if (results.some((r) => r.status === 'generated')) {
                     await sandbox.SyncR2().catch((e) => logger.error(`Failed to sync designs to R2: ${e}`))
                     startObservation("designs-synced", { input: { count: results.filter((r) => r.status === 'generated').length } }, { asType: "event" }).end()

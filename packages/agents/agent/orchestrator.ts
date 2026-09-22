@@ -44,6 +44,7 @@ export class Orchestrator {
     private emitter: EventEmitter
     private skillStore: SkillStore = new SkillStore()
     private worktreeGit = new WorktreeGit()
+    private sandbox: E2BSandbox | null = null
 
     constructor(
         private userId: string,
@@ -59,7 +60,14 @@ export class Orchestrator {
     }
 
     private async reconnectSandbox(): Promise<E2BSandbox> {
-        return E2BSandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
+        if (!this.sandbox) {
+            this.sandbox = await E2BSandbox.StartSandbox(this.userId, this.projectId, this.sandboxId)
+        }
+        if (this.sandbox.sandboxId !== this.sandboxId) {
+            logger.warn(`Run ${this.runId} adopting replacement sandbox ${this.sandbox.sandboxId} (was ${this.sandboxId})`)
+            this.sandboxId = this.sandbox.sandboxId
+        }
+        return this.sandbox
     }
 
     private buildSubAgentInput<T extends SubAgentType>(agentType: T, todo: { id: number, task: string, dependency: number[], designRef?: string | null, description?: string, expectedToolCalls?: number }, state: CallAgentState): InputMap[T] {
@@ -194,6 +202,15 @@ export class Orchestrator {
                     results.push({ taskId, success, summary })
                     context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent!, success, summary }]
                 }
+
+                // Temporary fix of running npm install over the git worktrees.
+                if (Object.values(taskFiles).some(files => files.includes('package.json'))) {
+                    const trunkSandbox = await this.reconnectSandbox()
+                    const install = await trunkSandbox.Execute(trunkSandbox.sandboxId, { action: 'runCommand', command: 'npm install' }, PROJECT_ROOT)
+                    if (!install.success) {
+                        logger.error(`Trunk npm install after merging package.json changes failed: ${install.content}`)
+                    }
+                }
             }
             else {
                 span.update({statusMessage: `Spawning subagents sequentially`})
@@ -207,6 +224,8 @@ export class Orchestrator {
                     const input = this.buildSubAgentInput(todo.agent, todo, toCallAgentState(state))
                     const result = await this.runSubAgentWithRetry(todo.agent, input, sandbox, PROJECT_ROOT)
     
+                    if (result.success) await this.worktreeGit.commitTrunk(sandbox, taskId)
+
                     results.push({ taskId, success: result.success, summary: result.summary })
                     context = [...context, { taskId, task: todo.task, agentAssigned: todo.agent, success: result.success, summary: result.summary }]
                     if (result.success) taskFiles[taskId] = []
@@ -295,7 +314,7 @@ export class Orchestrator {
                 const debugTodo = { task: "", id: Math.floor(Math.random() * 1000) + 1000, dependency: [] }
                 const debuggerInput = this.buildSubAgentInput('debuggerr', debugTodo, toCallAgentState(state))
                 const debuggerResult = await this.runSubAgentWithRetry('debuggerr', debuggerInput, sandbox, PROJECT_ROOT)
-                await sandbox.SyncR2()
+                sandbox.SyncR2().catch((e) => logger.error(`Mid-loop SyncR2 failed (non-blocking): ${e instanceof Error ? e.message : String(e)}`))
 
                 state = { ...state, lastToolResult: { success: debuggerResult.success } }
                 summaries.push(debuggerResult.summary)
@@ -326,11 +345,6 @@ export class Orchestrator {
         const screens = await step.run("enumerate-screens", () =>
             planner.enumerateScreens(this.updatedPrompt, this.priorContext)) as unknown as PlannedScreen[]
 
-        // plan-tasks (Call 2) and the Stitch design pre-phase both depend only on
-        // the screen list, so run them as concurrent steps — plan-tasks hides
-        // under the ~56s design wait. The design step reconnects the sandbox
-        // inside itself so the reconnect only runs when the step actually
-        // executes, not on every Inngest replay.
         const [todos, designResults] = await Promise.all([
             step.run("plan-tasks", () =>
                 planner.planTasks(this.updatedPrompt, this.priorContext, screens)),
@@ -343,8 +357,6 @@ export class Orchestrator {
 
         const degraded = designResults.filter((d) => d.status === 'degraded')
         if (degraded.length > 0) {
-            // Not fatal: these screens' uiExpert items fall back to a design-less
-            // build (Phase 4). Surfaced so a run isn't silently lower-fidelity.
             logger.warn(`Design pre-phase: ${degraded.length}/${designResults.length} screen(s) degraded (built design-less): ${degraded.map((d) => d.screenId).join(', ')}`)
         }
 

@@ -1,7 +1,7 @@
 import { CommandExitError, Sandbox, SandboxNotFoundError } from 'e2b'
 import type { DeleteFile, EditFile, ReadFile, RunCommand, WriteFile } from '../../baml_client';
 import { R2 } from '../services/file-storage/fileStorage';
-import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, PREVIEW_START_ATTEMPTS, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES } from '../config/systemConfig';
+import { SANDBOX_HOME, PROJECT_ROOT, RUN_COMMAND_TIMEOUT_MS, SANDBOX_TIMEOUT_MS, PREVIEW_PORT, PREVIEW_START_ATTEMPTS, MAX_BOOT_WAIT_MS, POLL_INTERVAL_MS, SANDBOX_KEEPALIVE_INTERVAL_MS, REPO_TREE_PRUNE_DIRS, REPO_TREE_MAX_ENTRIES, SYNC_R2_TIMEOUT_MS } from '../config/systemConfig';
 import { logger } from './logger';
 import { applyEdits } from '../tools/edit';
 
@@ -52,6 +52,8 @@ export class E2BSandbox{
     // the restore's R2 round-trips are deduplicated.
     private static restoreInFlight = new Map<string, Promise<void>>()
 
+    private static knownGoodSandboxIds = new Set<string>()
+
     static async StartSandbox(userId: string, projectId: string, sandboxId?: string): Promise<E2BSandbox> {
         let sandbox: Sandbox | null = null
         // r2 -> sandbox.
@@ -61,12 +63,14 @@ export class E2BSandbox{
                 sandbox = await Sandbox.connect(sandboxId)
                 await sandbox.setTimeout(SANDBOX_TIMEOUT_MS)
             } catch (e) {
+                 logger.warn(`Could not reconnect to sandbox ${sandboxId} (${e instanceof Error ? e.message : String(e)}) — creating a REPLACEMENT sandbox. Callers must adopt the new id.`)
                 sandbox = null
             }
         }
 
         if (!sandbox) {
             sandbox = await Sandbox.create('react-sandbox-node22', { timeoutMs: SANDBOX_TIMEOUT_MS })
+            logger.warn(`Created replacement sandbox ${sandbox.sandboxId}${sandboxId ? ` (was ${sandboxId})` : ''}`)
         }
 
         const instance = new E2BSandbox(sandbox, userId, projectId)
@@ -89,11 +93,15 @@ export class E2BSandbox{
         return instance
     }
     private async restoreOrBootstrap(): Promise<void> {
+        if (E2BSandbox.knownGoodSandboxIds.has(this.sandboxId)) {
+            logger.info(`Sandbox ${this.sandboxId} already in sync with R2, skipping restore`)
+            return
+        }
+
         const files = await this.r2.listFiles(this.r2.filesPrefix(this.userId, this.projectId))
 
         if (files.length > 0) {
             logger.info(`Restoring ${files.length} files from R2`)
-    
             for (const key of files) {
                 const relativePath = key.replace(this.r2.filesPrefix(this.userId, this.projectId), '')
                 const content = await this.r2.getFile(key)
@@ -113,6 +121,8 @@ export class E2BSandbox{
                 }
             }
 
+            await this.ensureGitRepo()
+            E2BSandbox.knownGoodSandboxIds.add(this.sandboxId)
             logger.info('Restore complete')
         } else {
             logger.info('Bootstrapping fresh sandbox')
@@ -135,20 +145,30 @@ export class E2BSandbox{
                 throw new Error('Bootstrap failed: npm install did not succeed')
             }
 
+            await this.ensureGitRepo()
             logger.info(`Bootstrap complete, sandboxId: ${this.sandboxId}`)
 
             await this.SyncR2()
         }
 
     }
+
+    private async ensureGitRepo(): Promise<void> {
+        const check = await this.sandbox.commands.run(`test -d ${PROJECT_ROOT}/.git && echo yes || echo no`)
+        if (check.stdout.trim() === 'yes') return
+
+        logger.info(`No .git at ${PROJECT_ROOT} after restore — initializing repo`)
+        await this.sandbox.commands.run(
+            `git init -q && git config user.email agent@lovable.dev && git config user.name lovable-agent && git add -A && git commit -q -m "restored from R2" --allow-empty`,
+            { cwd: PROJECT_ROOT, timeoutMs: RUN_COMMAND_TIMEOUT_MS },
+        )
+    }
+
     private resolvePath(path: string, baseDir: string): string {
         if (path.startsWith('/')) return path
         return `${baseDir}/${path.replace(/^\.\//, '')}`
     }
 
-    // Called before every task: E2B kills a sandbox at the plan's runtime cap
-    // (1h Hobby / 24h Pro), so the previous task may have outlived it.
-    // Returns true if it had to put a new sandbox in place.
     async EnsureAlive(): Promise<boolean> {
         try{
             await this.sandbox.commands.run('true')
@@ -276,6 +296,14 @@ export class E2BSandbox{
             else if(payload.action === 'runCommand'){
                 const cwd = payload.cwd ? this.resolvePath(payload.cwd, baseDir) : baseDir
                 try{
+                    if (/^\s*npm\s+(install|i)(\s|$)/.test(payload.command) && cwd.includes('/worktrees/task-')) {
+                        await this.sandbox.commands.run(
+                            `if [ -L node_modules ]; then rm node_modules && cp -al ${PROJECT_ROOT}/node_modules node_modules; fi`,
+                            { cwd, timeoutMs: RUN_COMMAND_TIMEOUT_MS }
+                        ).then(() => logger.info(`De-symlinked node_modules before install (${cwd})`))
+                         .catch((e) => logger.warn(`Failed to de-symlink node_modules before install in ${cwd}, proceeding anyway: ${e}`))
+                    }
+
                     const cmdRes = await this.sandbox.commands.run(payload.command, {
                         cwd,
                         timeoutMs: RUN_COMMAND_TIMEOUT_MS
@@ -319,8 +347,33 @@ export class E2BSandbox{
             then load the code from the s3's that directory itself.
         - else run npm create-vite@latest and return the current tree of the code. 
         */
-    
+
     async SyncR2(){
+        const start = Date.now()
+        logger.info(`SyncR2 starting for sandbox ${this.sandboxId}`)
+        try {
+            await this.doSyncR2WithTimeout()
+            E2BSandbox.knownGoodSandboxIds.add(this.sandboxId)
+            logger.info(`SyncR2 complete for sandbox ${this.sandboxId} (${Date.now() - start}ms)`)
+        } catch (e) {
+            logger.error(`SyncR2 failed for sandbox ${this.sandboxId} after ${Date.now() - start}ms: ${e instanceof Error ? e.message : String(e)}`)
+            throw e
+        }
+    }
+
+    private async doSyncR2WithTimeout(): Promise<void> {
+        let timer: ReturnType<typeof setTimeout>
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`SyncR2 exceeded ${SYNC_R2_TIMEOUT_MS}ms`)), SYNC_R2_TIMEOUT_MS)
+        })
+        try {
+            await Promise.race([this.doSyncR2(), timeout])
+        } finally {
+            clearTimeout(timer!)
+        }
+    }
+
+    private async doSyncR2(): Promise<void> {
         const prefix = this.r2.filesPrefix(this.userId, this.projectId)
         const prunes = [...REPO_TREE_PRUNE_DIRS.map(d => `-name '${d}'`), `-name '@*'`, `-name '.npm'`].join(' -o ')
         const findCmd = `find ${PROJECT_ROOT} \\( ${prunes} \\) -prune -o -type f -not -name '.env' -not -name '.gitignore' -print`

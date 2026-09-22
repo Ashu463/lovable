@@ -30,21 +30,30 @@ Follow this order. Most failures come from skipping step 1 or step 3.
 
    When a design reference is present, it is the design already picked or
    generated for this screen — not a suggestion. Match its layout, spacing,
-   colors, and component structure; don't substitute your own visual
-   judgment for it.
+   and component structure exactly.
 
-2. **Write the component AND its stylesheet with identical class names.**
-   A .tsx file holds imports, one component, and an export — nothing above the
-   imports, nothing below the export. When you write the matching .css, every
-   selector must use the EXACT class name the TSX references — same string,
-   same convention. Pick one convention (e.g. hyphenated `ed-card-top`) and use
-   it in both files; do not write the TSX in one style (`ed-card-top`) and the
-   CSS in another (`.ed-card__top`). This is the single most common way a
-   screen ships completely unstyled: a className that matches no CSS rule is
-   just an ignored string — `tsc`/`vite build` never errors on it, so a broken,
-   unstyled screen passes the build and looks "done" when it isn't. The
-   safest habit is to write the component, then write the CSS by reading the
-   className strings straight out of the component you just wrote.
+   Colors and typography need one extra step. The design's class names
+   include ones like `bg-surface`, `bg-primary-container`, `text-outline`,
+   `text-headline-xl` — these look like Tailwind but are NOT real Tailwind
+   utilities. They only rendered in the design tool because a color/type
+   dictionary defining them shipped alongside that one mockup; this sandbox
+   does not have that dictionary, so copying those names literally produces
+   invisible, unstyled elements — the build stays green, nothing errors, and
+   it looks done when it isn't. Translate anything shaped like a semantic
+   token into a real Tailwind utility that achieves the same visual intent:
+   a dark near-black background reads as `bg-neutral-950` or `bg-zinc-900`,
+   not `bg-surface`; an accent/brand color reads as `bg-indigo-500` /
+   `text-indigo-400` or similar, not `bg-primary` / `text-primary`. Standard
+   Tailwind utilities (`flex`, `p-4`, `rounded-lg`, `bg-white`,
+   `text-gray-900`, `shadow-md`, and all layout/spacing/sizing classes) ARE
+   real and work as-is — only the design-tool-specific names (surface /
+   primary / secondary / tertiary variants, any `*-container` suffix, and
+   the headline- / body- / label- / display- type scale) need substituting.
+
+2. **A component is one file: the .tsx, styled entirely with className.**
+   There is no separate stylesheet to write — Tailwind utility classes on
+   className ARE the styling. A .tsx file holds imports, one component, and
+   an export — nothing above the imports, nothing below the export.
 
 3. **Wiring into src/App.tsx is owned by one item, and it may not be yours.**
    src/App.tsx is a shared file; when several screens are built in parallel,
@@ -55,24 +64,27 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    base-template/scaffold item — write your screen and its styles and stop;
    do NOT touch src/App.tsx. A later wiring item imports and routes it.
 
-4. **Build, then verify styling parity — the build alone is not enough.**
-   Run the build and fix what it points at. But a green build does NOT mean the
-   screen is styled: unmatched className strings never error. So before Done,
-   confirm every class the TSX uses exists in the CSS. A quick check:
+4. **Build, then verify no design-tool tokens leaked through — the build
+   alone is not enough.** Run the build and fix what it points at. But a
+   green build does NOT mean the screen is styled: an unresolvable className
+   never errors, tsc/vite just ignore the string. Before Done, re-scan the
+   file you wrote for anything still shaped like a design-tool token rather
+   than a real Tailwind utility — surface / primary / secondary / tertiary /
+   outline variants, any `*-container` suffix, and the headline- / body- /
+   label- / display- type scale are the ones to catch. A quick check:
 
    ```
-   comm -23 \
-     <(grep -oE 'className="[^"]+"' <your>.tsx | grep -oE '[A-Za-z0-9_-]+' | sort -u) \
-     <(grep -oE '\.[A-Za-z0-9_-]+' <your>.css | sed 's/^\.//' | sort -u)
+   grep -oE 'className="[^"]+"' <your>.tsx | \
+     grep -E 'bg-(surface|primary|secondary|tertiary|on-)|text-(surface|primary|secondary|tertiary|on-|outline)|-container|text-(headline|body|label|display)-'
    ```
 
-   Anything it prints is a class the TSX uses that the CSS never defines —
-   reconcile it (add the rule, or fix the name) until the check prints nothing.
-   Do this once, in the same item that wrote the two files — don't ship the
-   mismatch for a later item to discover and drown in. A base-template item
-   won't render in the preview until the wiring item runs — that's expected;
-   verify your own files compile and their classes line up, don't force the
-   screen into App.tsx to "see" it.
+   Anything it prints is a token you copied instead of translated — go back
+   to step 1 and substitute the real Tailwind utility. Do this once, in the
+   same item that wrote the file — don't ship the mismatch for a later item
+   to discover and drown in. A base-template item won't render in the
+   preview until the wiring item runs — that's expected; verify your own
+   file compiles and is free of untranslated tokens, don't force the screen
+   into App.tsx to "see" it.
 
 ## Recovering from a broken file
 
