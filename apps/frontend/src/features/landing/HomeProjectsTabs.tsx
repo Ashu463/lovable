@@ -81,7 +81,7 @@ export function HomeProjectsTabs() {
         <div className="mb-6 flex items-center justify-between">
           <TabsList>
             <TabsTrigger value="projects">My projects</TabsTrigger>
-            <TabsTrigger value="templates">Lovable templates</TabsTrigger>
+            <TabsTrigger value="templates">Praxis templates</TabsTrigger>
           </TabsList>
           <Link to="/projects" className="font-mono text-xs text-muted transition-colors hover:text-foreground">
             View all →

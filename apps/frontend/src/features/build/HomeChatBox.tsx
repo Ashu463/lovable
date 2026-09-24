@@ -15,8 +15,30 @@ import { GoogleLoginButton } from "@/features/auth/GoogleLoginButton";
 
 const MODES = ["Build", "Plan"];
 
+// Temporary demo gate: only the admin account can kick off new runs, so a
+// public link doesn't quietly burn through paid API tokens. Everyone else
+// gets a view-only notice instead of the build box.
+const ADMIN_EMAIL = "ashukasaudhan971@gmail.com";
+
 export function HomeChatBox() {
   const { session, sessionExpired } = useAuth();
+
+  if (session?.user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="w-full max-w-2xl">
+        <div className="overflow-hidden rounded-2xl border border-border-hover bg-surface px-6 py-8 text-center shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+          <p className="font-mono text-sm text-muted-foreground">
+            New builds are limited to the project admin right now.
+          </p>
+          <p className="mt-2 text-sm text-muted">
+            You can view the projects created by admin{" "}
+            <span className="text-foreground">{ADMIN_EMAIL}</span> below.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { submit } = useRun();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -57,7 +79,7 @@ export function HomeChatBox() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Lovable to build a landing page for…"
+            placeholder="Ask Praxis to build a landing page for…"
             rows={2}
             className="text-base"
           />

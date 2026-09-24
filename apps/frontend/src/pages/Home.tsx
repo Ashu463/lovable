@@ -79,13 +79,21 @@ export function Home() {
 
           <footer className="border-t border-border px-6 py-8 text-center font-mono text-xs text-muted-foreground">
             <p>
-              Lovable — a solo build by Ashutosh ·{" "}
+              Praxis — a solo build by Ashutosh ·{" "}
               <Link to="/architecture" className="hover:text-foreground">
                 Architecture
               </Link>{" "}
               ·{" "}
               <Link to="/docs" className="hover:text-foreground">
                 Docs
+              </Link>{" "}
+              ·{" "}
+              <Link to="/privacy" className="hover:text-foreground">
+                Privacy
+              </Link>{" "}
+              ·{" "}
+              <Link to="/terms" className="hover:text-foreground">
+                Terms
               </Link>
             </p>
           </footer>

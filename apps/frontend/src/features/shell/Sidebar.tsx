@@ -90,8 +90,12 @@ export function Sidebar() {
         )}
       >
         {expanded && (
-          <button onClick={() => navigate("/")} className="font-display text-[16px] font-semibold tracking-tight">
-            Lovable
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 font-display text-[16px] font-semibold tracking-tight"
+          >
+            <img src="/favicon.png" alt="" className="h-5 w-5" />
+            Praxis
           </button>
         )}
         <button

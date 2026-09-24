@@ -10,6 +10,8 @@ import { Docs } from "@/pages/Docs";
 import { Resources } from "@/pages/Resources";
 import { Projects } from "@/pages/Projects";
 import { Search } from "@/pages/Search";
+import { Privacy } from "@/pages/Privacy";
+import { Terms } from "@/pages/Terms";
 
 function App() {
   return (
@@ -30,6 +32,8 @@ function App() {
                     <Route path="/resources" element={<Resources />} />
                     <Route path="/projects" element={<Projects />} />
                     <Route path="/search" element={<Search />} />
+                    <Route path="/privacy" element={<Privacy />} />
+                    <Route path="/terms" element={<Terms />} />
                   </Routes>
                 </div>
               </div>
