@@ -9,7 +9,7 @@ import { sdk, flushTraces } from "../telemetry/langfuse";
 import {startActiveObservation, startObservation} from '@langfuse/tracing'
 
 const inngestHandler = serve({ client: inngest, functions });
-const INNGEST_SERVE_PORT = Number(process.env.INNGEST_SERVE_PORT ?? 3001);
+const INNGEST_SERVE_PORT = Number(process.env.PORT ?? process.env.INNGEST_SERVE_PORT ?? 3001);
 Bun.serve({
   port: INNGEST_SERVE_PORT,
   async fetch(request) {

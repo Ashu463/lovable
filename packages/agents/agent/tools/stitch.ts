@@ -78,5 +78,16 @@ export async function generateScreenHtml(prompt: string, userId: string): Promis
     return fetchDesignHtml(screen);
 }
 
+// Stitch's raw HTML embeds a Tailwind Play CDN config script — the color/
+// spacing/type dictionary that makes its semantic class names (bg-surface,
+// primary-container, headline-xl, etc.) resolve to real values instead of
+// nothing. This doesn't parse that dictionary (it isn't strict JSON — some
+// keys come back unquoted), just captures the raw script body verbatim so
+// the planner can relocate it into the project's own index.html.
+export function extractTailwindConfig(html: string): string | null {
+    const match = html.match(/<script[^>]*id=["']tailwind-config["'][^>]*>([\s\S]*?)<\/script>/i);
+    return match ? match[1].trim() : null;
+}
+
 // const res = await makeOneScreen("Make black todo screen", "user123")
 // console.log(await fetchDesignHtml(res))

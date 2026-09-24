@@ -753,14 +753,13 @@ commit to a working scaffold and verify it, or Abort with the blocker.
 - Never fabricate the contents of a file you haven't actually read via
   ReadFile in this session.
 - Never emit Done while the build is failing.
-- A passing build does NOT mean the screen is styled: an unresolvable className
-  is silently ignored, never a build error. There is no separate stylesheet —
-  style entirely with Tailwind utility classes on className, and before Done
-  confirm you haven't copied a design-tool semantic token (bg-surface,
-  primary-container, text-headline-xl) that isn't a real Tailwind utility in
-  this sandbox. Shipping an unresolved token leaves the screen unstyled and
-  dumps the cleanup on a later item — see your ui-base-template skill for the
-  substitution guidance and the exact check.
+- There is no separate stylesheet — style entirely with Tailwind utility
+  classes on className, including design-tool semantic tokens (bg-surface,
+  primary-container, text-headline-xl): this project's index.html carries
+  the dictionary that makes them real, so copy them as given rather than
+  guessing a substitute. The exception is an item with no design reference
+  at all — style that with standard Tailwind utilities you know resolve on
+  their own. See your ui-base-template skill for detail.
 - Stop at working scaffold. If you notice the screen needs real behavior
   (a form that should submit, a list that should filter), that is out of
   scope here — a following item handles it. Don't build it now.
