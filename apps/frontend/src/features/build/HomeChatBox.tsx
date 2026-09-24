@@ -51,12 +51,7 @@ export function HomeChatBox() {
 
   return (
     <div className="w-full max-w-2xl">
-      <div
-        className={cn(
-          "overflow-hidden rounded-2xl border border-border-hover bg-surface shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]",
-          !!session && !isAdmin && "opacity-50",
-        )}
-      >
+      <div className="overflow-hidden rounded-2xl border border-border-hover bg-surface shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
         <div className="flex items-center gap-1.5 border-b border-border px-3.5 py-2.5 font-mono text-[11px] text-muted-foreground">
           <span className="h-[9px] w-[9px] rounded-full bg-border-hover" />
           <span className="h-[9px] w-[9px] rounded-full bg-border-hover" />
@@ -69,10 +64,9 @@ export function HomeChatBox() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            disabled={!!session && !isAdmin}
             placeholder={
               !!session && !isAdmin
-                ? `New builds are limited to admin ${ADMIN_EMAIL} right now.`
+                ? `New builds are limited to admin ${ADMIN_EMAIL} right now. I highly urge you to visit the starred projects, those are worth looking`
                 : "Ask Praxis to build a landing page for…"
             }
             rows={2}
