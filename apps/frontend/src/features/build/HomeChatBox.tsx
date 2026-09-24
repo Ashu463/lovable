@@ -12,33 +12,18 @@ import { useAuth } from "@/lib/auth";
 import { useRun } from "@/lib/run";
 import { getStoredSession } from "@/lib/session";
 import { GoogleLoginButton } from "@/features/auth/GoogleLoginButton";
+import { cn } from "@/lib/utils";
 
 const MODES = ["Build", "Plan"];
 
 // Temporary demo gate: only the admin account can kick off new runs, so a
 // public link doesn't quietly burn through paid API tokens. Everyone else
-// gets a view-only notice instead of the build box.
+// still sees the normal bar, just disabled and dimmed — not swapped out.
 const ADMIN_EMAIL = "ashukasaudhan971@gmail.com";
 
 export function HomeChatBox() {
   const { session, sessionExpired } = useAuth();
-
-  if (session?.user.email !== ADMIN_EMAIL) {
-    return (
-      <div className="w-full max-w-2xl">
-        <div className="overflow-hidden rounded-2xl border border-border-hover bg-surface px-6 py-8 text-center shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
-          <p className="font-mono text-sm text-muted-foreground">
-            New builds are limited to the project admin right now.
-          </p>
-          <p className="mt-2 text-sm text-muted">
-            You can view the projects created by admin{" "}
-            <span className="text-foreground">{ADMIN_EMAIL}</span> below.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
+  const isAdmin = session?.user.email === ADMIN_EMAIL;
   const { submit } = useRun();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -50,7 +35,7 @@ export function HomeChatBox() {
     // Reads localStorage directly rather than the `session` above — this can
     // run right after a Google login resolves, before this component's own
     // re-render lands, so the closed-over `session` would still read stale.
-    if (!prompt.trim() || !getStoredSession()) return;
+    if (!isAdmin || !prompt.trim() || !getStoredSession()) return;
     const text = prompt.trim();
     setPrompt("");
     const runId = await submit(text);
@@ -66,7 +51,12 @@ export function HomeChatBox() {
 
   return (
     <div className="w-full max-w-2xl">
-      <div className="overflow-hidden rounded-2xl border border-border-hover bg-surface shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]">
+      <div
+        className={cn(
+          "overflow-hidden rounded-2xl border border-border-hover bg-surface shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)]",
+          !!session && !isAdmin && "opacity-50",
+        )}
+      >
         <div className="flex items-center gap-1.5 border-b border-border px-3.5 py-2.5 font-mono text-[11px] text-muted-foreground">
           <span className="h-[9px] w-[9px] rounded-full bg-border-hover" />
           <span className="h-[9px] w-[9px] rounded-full bg-border-hover" />
@@ -79,7 +69,12 @@ export function HomeChatBox() {
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Praxis to build a landing page for…"
+            disabled={!!session && !isAdmin}
+            placeholder={
+              !!session && !isAdmin
+                ? `New builds are limited to admin ${ADMIN_EMAIL} right now.`
+                : "Ask Praxis to build a landing page for…"
+            }
             rows={2}
             className="text-base"
           />
@@ -108,7 +103,7 @@ export function HomeChatBox() {
             {session ? (
               <button
                 onClick={handleSubmit}
-                disabled={!prompt.trim()}
+                disabled={!isAdmin || !prompt.trim()}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-accent text-accent-foreground transition-opacity disabled:opacity-40"
               >
                 <ArrowUp className="h-4 w-4" />
