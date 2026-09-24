@@ -16,6 +16,7 @@ export function DesignVariantPicker({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = designs[activeIndex];
+  if (!active) return null;
 
   const goTo = (i: number) => setActiveIndex((i + designs.length) % designs.length);
 
