@@ -2,7 +2,11 @@ import { GraphQLError } from "graphql";
 import { randomUUID } from "node:crypto";
 import type { GraphQLContext } from "../context";
 import { requireUser } from "../context";
-import { loadOwnedProject } from "../authz";
+import { loadOwnedProject, loadViewableProject } from "../authz";
+
+// Matches the frontend's ADMIN_EMAIL — the demo-gate account whose projects
+// are visible to any logged-in viewer, read-only.
+const ADMIN_EMAIL = "ashukasaudhan971@gmail.com";
 import { R2 } from "../../../../../packages/agents/agent/services/file-storage/fileStorage";
 import { E2BSandbox } from "../../../../../packages/agents/agent/utils/sandbox";
 import { logger } from "../../lib/utils";
@@ -39,15 +43,16 @@ export const projectResolvers = {
 
   Query: {
     projects: async (_parent: unknown, _args: unknown, ctx: GraphQLContext) => {
-      const user = requireUser(ctx);
+      requireUser(ctx);
+      const admin = await ctx.prisma.user.findUniqueOrThrow({ where: { email: ADMIN_EMAIL } });
       return ctx.prisma.project.findMany({
-        where: { userId: user.id },
+        where: { userId: admin.id },
         orderBy: { updatedAt: "desc" },
       });
     },
 
     project: async (_parent: unknown, args: { id: string }, ctx: GraphQLContext) =>
-      loadOwnedProject(ctx, args.id),
+      loadViewableProject(ctx, args.id),
 
     projectSession: async (
       _parent: unknown,
@@ -112,7 +117,7 @@ export const projectResolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      const project = await loadOwnedProject(ctx, args.id);
+      const project = await loadViewableProject(ctx, args.id);
 
       const prefix = r2.filesPrefix(project.userId, project.id);
       const keys = await r2.listFiles(prefix);

@@ -2,6 +2,11 @@ import { GraphQLError } from "graphql";
 import type { GraphQLContext } from "./context";
 import { requireUser } from "./context";
 
+// Temporary demo gate (matches the frontend's ADMIN_EMAIL): any logged-in
+// account may read the admin's projects, but this never loosens a mutation
+// path — only the two read-only resolvers below use it.
+const ADMIN_EMAIL = "ashukasaudhan971@gmail.com";
+
 // Every project-scoped resolver funnels through this, so ownership is enforced
 // in one place rather than re-derived per field. Internal service callers (the
 // agent worker) have no end user, so they bypass the ownership check the same
@@ -23,6 +28,29 @@ export async function loadOwnedProject(ctx: GraphQLContext, projectId: string) {
   }
 
   return project;
+}
+
+// Same ownership rule as above, but also lets any authenticated caller read
+// (never write) the admin's own projects — used only by the read-only
+// project/projectFiles resolvers, never by a mutation.
+export async function loadViewableProject(ctx: GraphQLContext, projectId: string) {
+  if (!ctx.isInternal) requireUser(ctx);
+
+  const project = await ctx.prisma.project.findUnique({ where: { id: projectId } });
+  if (!project) {
+    throw new GraphQLError("Project not found", {
+      extensions: { code: "NOT_FOUND", http: { status: 404 } },
+    });
+  }
+
+  if (ctx.isInternal || project.userId === ctx.user!.id) return project;
+
+  const admin = await ctx.prisma.user.findUnique({ where: { email: ADMIN_EMAIL } });
+  if (admin?.id === project.userId) return project;
+
+  throw new GraphQLError("Not your project", {
+    extensions: { code: "FORBIDDEN", http: { status: 403 } },
+  });
 }
 
 // Same as above but for run-scoped fields: proves the run belongs to a project
