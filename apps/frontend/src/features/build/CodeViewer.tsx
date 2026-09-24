@@ -6,7 +6,7 @@ import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
-import { ChevronDown, ChevronRight, File, Folder, FolderOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, File, Folder, FolderOpen, X } from "lucide-react";
 import { gql, GqlError } from "@/lib/graphql";
 import { cn } from "@/lib/utils";
 import PROJECT_FILES from "@/graphql/projectFiles.graphql?raw";
@@ -170,6 +170,9 @@ export function CodeViewer({ projectId }: { projectId: string }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  // Below md there's no room for the file tree and the code side by side, so
+  // mobile shows one at a time — picking a file closes the tree automatically.
+  const [mobilePanel, setMobilePanel] = useState<"tree" | "code">("code");
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +205,11 @@ export function CodeViewer({ projectId }: { projectId: string }) {
     [active],
   );
 
+  const selectFile = (path: string) => {
+    setSelected(path);
+    setMobilePanel("code");
+  };
+
   const toggleFolder = (path: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -224,35 +232,62 @@ export function CodeViewer({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="flex h-full">
-      <div className="w-56 shrink-0 overflow-y-auto border-r border-border py-2">
-        {tree.map((node) => (
-          <TreeRow
-            key={node.path}
-            node={node}
-            depth={0}
-            selected={selected}
-            onSelectFile={setSelected}
-            expanded={expanded}
-            onToggleFolder={toggleFolder}
-          />
-        ))}
-      </div>
-      <div className="flex-1 overflow-hidden">
-        {active ? (
-          <CodeMirror
-            key={active.path}
-            value={active.content}
-            editable={false}
-            theme={editorTheme}
-            extensions={extensions}
-            height="100%"
-            basicSetup={{ foldGutter: true, highlightActiveLine: true, highlightActiveLineGutter: true }}
-            className="h-full font-mono text-xs"
-          />
-        ) : (
-          <div className="p-4 text-sm text-muted-foreground">Select a file</div>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between border-b border-border px-3 py-1.5 md:hidden">
+        <button
+          onClick={() => setMobilePanel(mobilePanel === "tree" ? "code" : "tree")}
+          className="flex items-center gap-1.5 font-mono text-xs text-muted transition-colors hover:text-foreground"
+        >
+          {mobilePanel === "tree" ? (
+            <>
+              <X className="h-3.5 w-3.5" /> Close files
+            </>
+          ) : (
+            <>
+              <Folder className="h-3.5 w-3.5" /> Files
+            </>
+          )}
+        </button>
+        {active && mobilePanel === "code" && (
+          <span className="truncate font-mono text-xs text-muted-foreground">{active.path.split("/").pop()}</span>
         )}
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        <div
+          className={cn(
+            "w-56 shrink-0 overflow-y-auto border-r border-border py-2",
+            mobilePanel === "code" ? "hidden md:block" : "block",
+          )}
+        >
+          {tree.map((node) => (
+            <TreeRow
+              key={node.path}
+              node={node}
+              depth={0}
+              selected={selected}
+              onSelectFile={selectFile}
+              expanded={expanded}
+              onToggleFolder={toggleFolder}
+            />
+          ))}
+        </div>
+        <div className={cn("flex-1 overflow-hidden", mobilePanel === "tree" ? "hidden md:block" : "block")}>
+          {active ? (
+            <CodeMirror
+              key={active.path}
+              value={active.content}
+              editable={false}
+              theme={editorTheme}
+              extensions={extensions}
+              height="100%"
+              basicSetup={{ foldGutter: true, highlightActiveLine: true, highlightActiveLineGutter: true }}
+              className="h-full font-mono text-xs"
+            />
+          ) : (
+            <div className="p-4 text-sm text-muted-foreground">Select a file</div>
+          )}
+        </div>
       </div>
     </div>
   );

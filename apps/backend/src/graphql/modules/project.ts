@@ -59,7 +59,7 @@ export const projectResolvers = {
       args: { id: string },
       ctx: GraphQLContext,
     ) => {
-      const project = await loadOwnedProject(ctx, args.id);
+      const project = await loadViewableProject(ctx, args.id);
 
       const latestRun = await ctx.prisma.run.findFirst({
         where: { projectId: project.id },

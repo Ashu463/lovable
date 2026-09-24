@@ -1,7 +1,7 @@
 import { GraphQLError } from "graphql";
 import { randomUUIDv7 } from "bun";
 import type { GraphQLContext } from "../context";
-import { loadOwnedProject, loadOwnedRun } from "../authz";
+import { loadOwnedProject, loadOwnedRun, loadViewableProject } from "../authz";
 
 
 export const questionResolvers = {
@@ -11,7 +11,7 @@ export const questionResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       return ctx.prisma.question.findMany({
         where: { projectId: args.projectId, clarification: null },
         orderBy: { createdAt: "asc" },
@@ -23,7 +23,7 @@ export const questionResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       // Scoped through the question, not the run — an answer given in an
       // earlier round still applies to every later round of the project.
       return ctx.prisma.answers.findMany({

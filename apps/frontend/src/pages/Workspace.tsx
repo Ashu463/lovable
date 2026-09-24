@@ -298,6 +298,9 @@ export function Workspace() {
   const { state, projectName, resume, reset } = useRun();
   const [resumeStatus, setResumeStatus] = useState<ResumeStatus | null>(null);
   const { stages, agents } = useWorkspacePipeline(state);
+  // Below md there's no room for chat + preview side by side, so mobile shows
+  // one at a time behind a toggle instead of squeezing both.
+  const [mobileTab, setMobileTab] = useState<"chat" | "preview">("chat");
 
   const isLive = "runId" in state && state.runId === runId;
   // Guarded on isLive so a previous run's completed state can't flash its
@@ -403,17 +406,48 @@ export function Workspace() {
           </Link>
         </div>
       ) : (
-        <div className={cn("flex flex-1 overflow-hidden", showSplit && "divide-x divide-border")}>
-          <div className={cn("flex flex-col", showSplit ? "w-[400px] shrink-0" : "flex-1")}>
-            <ChatLog wide={!showSplit} extraWide={!showSplit && state.status === "select_design"} />
-            <WorkspaceInput />
-          </div>
-
+        <div className="flex flex-1 flex-col overflow-hidden">
           {showSplit && (
-            <div className="flex-1">
-              <PreviewPane />
+            <div className="flex border-b border-border md:hidden">
+              <button
+                onClick={() => setMobileTab("chat")}
+                className={cn(
+                  "flex-1 py-2 text-center font-mono text-xs transition-colors",
+                  mobileTab === "chat" ? "border-b-2 border-accent text-foreground" : "text-muted-foreground",
+                )}
+              >
+                Chat
+              </button>
+              <button
+                onClick={() => setMobileTab("preview")}
+                className={cn(
+                  "flex-1 py-2 text-center font-mono text-xs transition-colors",
+                  mobileTab === "preview" ? "border-b-2 border-accent text-foreground" : "text-muted-foreground",
+                )}
+              >
+                Preview
+              </button>
             </div>
           )}
+
+          <div className={cn("flex flex-1 overflow-hidden", showSplit && "md:divide-x md:divide-border")}>
+            <div
+              className={cn(
+                "flex-col",
+                showSplit ? "md:w-[400px] md:shrink-0" : "flex-1",
+                showSplit && mobileTab === "preview" ? "hidden md:flex" : "flex",
+              )}
+            >
+              <ChatLog wide={!showSplit} extraWide={!showSplit && state.status === "select_design"} />
+              <WorkspaceInput />
+            </div>
+
+            {showSplit && (
+              <div className={cn("flex-1", mobileTab === "chat" ? "hidden md:block" : "block")}>
+                <PreviewPane />
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

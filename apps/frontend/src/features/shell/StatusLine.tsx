@@ -8,7 +8,7 @@ export function StatusLine({ children }: { children: ReactNode }) {
   const { accent, setAccent } = useTheme();
 
   return (
-    <header className="flex h-[46px] shrink-0 items-center justify-between border-b border-border bg-surface px-4 font-mono text-xs text-muted">
+    <header className="flex h-[46px] shrink-0 items-center justify-between border-b border-border bg-surface pl-14 pr-4 font-mono text-xs text-muted md:px-4">
       <div className="flex items-center gap-3 overflow-x-auto">{children}</div>
       <div className="flex shrink-0 items-center gap-2 pl-3">
         <span className="text-muted-foreground">accent</span>

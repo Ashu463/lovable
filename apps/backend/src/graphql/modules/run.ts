@@ -1,5 +1,5 @@
 import type { GraphQLContext } from "../context";
-import { loadOwnedProject, loadOwnedRun } from "../authz";
+import { loadViewableProject, loadViewableRun } from "../authz";
 
 
 export const runResolvers = {
@@ -9,7 +9,7 @@ export const runResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       // No `select` here as the REST route had — the client's query decides
       // which fields come back.
       return ctx.prisma.run.findMany({
@@ -22,14 +22,14 @@ export const runResolvers = {
       _parent: unknown,
       args: { projectId: string; runId: string },
       ctx: GraphQLContext,
-    ) => loadOwnedRun(ctx, args.projectId, args.runId),
+    ) => loadViewableRun(ctx, args.projectId, args.runId),
 
     todos: async (
       _parent: unknown,
       args: { projectId: string; runId: string },
       ctx: GraphQLContext,
     ) => {
-      const run = await loadOwnedRun(ctx, args.projectId, args.runId);
+      const run = await loadViewableRun(ctx, args.projectId, args.runId);
       return ctx.prisma.todo.findMany({
         where: { runId: run.id },
         orderBy: { taskId: "asc" },
@@ -41,7 +41,7 @@ export const runResolvers = {
       args: { projectId: string; runId: string },
       ctx: GraphQLContext,
     ) => {
-      const run = await loadOwnedRun(ctx, args.projectId, args.runId);
+      const run = await loadViewableRun(ctx, args.projectId, args.runId);
       return ctx.prisma.taskSummary.findMany({
         where: { todo: { runId: run.id } },
         orderBy: { createdAt: "asc" },
@@ -53,7 +53,7 @@ export const runResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       return ctx.prisma.taskSummary.findMany({
         where: { todo: { run: { projectId: args.projectId } } },
         orderBy: { createdAt: "asc" },
@@ -65,7 +65,7 @@ export const runResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       const lastCompleted = await ctx.prisma.run.findFirst({
         where: { projectId: args.projectId, status: "COMPLETED" },
         orderBy: { startedAt: "desc" },

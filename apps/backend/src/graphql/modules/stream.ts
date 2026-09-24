@@ -1,5 +1,5 @@
 import type { GraphQLContext } from "../context";
-import { loadOwnedRunById } from "../authz";
+import { loadViewableRunById } from "../authz";
 import { redis } from "../../lib/redis";
 import { logger } from "../../lib/utils";
 
@@ -96,7 +96,7 @@ export const streamResolvers = {
         args: { runId: string },
         ctx: GraphQLContext,
       ) => {
-        const run = await loadOwnedRunById(ctx, args.runId);
+        const run = await loadViewableRunById(ctx, args.runId);
         return streamRunEvents(run, ctx);
       },
     },

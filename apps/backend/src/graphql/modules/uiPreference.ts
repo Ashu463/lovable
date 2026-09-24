@@ -1,7 +1,7 @@
 import { GraphQLError } from "graphql";
 import { randomUUIDv7 } from "bun";
 import type { GraphQLContext } from "../context";
-import { loadOwnedProject, loadOwnedRun } from "../authz";
+import { loadOwnedProject, loadOwnedRun, loadViewableProject } from "../authz";
 
 export const uiPreferenceResolvers = {
   Query: {
@@ -10,7 +10,7 @@ export const uiPreferenceResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       return ctx.prisma.uIPreferenceQuestion.findMany({
         where: { projectId: args.projectId, answer: null },
         orderBy: { createdAt: "asc" },
@@ -22,7 +22,7 @@ export const uiPreferenceResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       // Every answered preference, not just the latest — they're separate
       // facets (palette, mood, density), so they all stay in effect.
       return ctx.prisma.uIPreferenceAnswer.findMany({

@@ -1,6 +1,6 @@
 import { GraphQLError } from "graphql";
 import type { GraphQLContext } from "../context";
-import { loadOwnedProject } from "../authz";
+import { loadOwnedProject, loadViewableProject } from "../authz";
 
 
 // updateMany + update must land together, or a failure between them leaves the
@@ -20,7 +20,7 @@ export const designResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       return ctx.prisma.design.findMany({
         where: { projectId: args.projectId },
         orderBy: { createdAt: "asc" },
@@ -34,7 +34,7 @@ export const designResolvers = {
       args: { projectId: string },
       ctx: GraphQLContext,
     ) => {
-      await loadOwnedProject(ctx, args.projectId);
+      await loadViewableProject(ctx, args.projectId);
       return ctx.prisma.design.findFirst({
         where: { projectId: args.projectId, isSelected: true },
       });

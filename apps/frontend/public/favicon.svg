@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <rect width="100%" height="100%" fill="#201547" />
+  <g fill="none" stroke="#ffffff" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Outer boundary circle -->
+    <circle cx="200" cy="200" r="160" stroke-dasharray="10 8 20 8 40 10 300 20" />
+
+    <!-- Central node -->
+    <circle cx="200" cy="200" r="14" fill="#201547" stroke-width="5" />
+
+    <!-- Spiral Arms (Geometric Branching Paths) -->
+    <!-- Arm 1 (Inner Spiral Outward Left/Bottom) -->
+    <path d="M 200 186 C 170 186, 145 210, 145 240 C 145 285, 185 320, 230 320 C 290 320, 340 270, 340 200 C 340 120, 270 60, 190 60 C 130 60, 80 110, 80 170 C 80 200, 95 225, 115 240" />
+    <path d="M 145 240 C 120 250, 105 270, 105 300" />
+    <path d="M 230 320 C 255 330, 280 310, 290 285" />
+
+    <!-- Arm 2 (Inner Spiral Outward Right/Top) -->
+    <path d="M 200 214 C 230 214, 255 190, 255 160 C 255 115, 215 80, 170 80 C 110 80, 60 130, 60 200 C 60 280, 130 340, 210 340 C 270 340, 320 290, 320 230 C 320 200, 305 175, 285 160" />
+    <path d="M 255 160 C 280 150, 295 130, 295 100" />
+    <path d="M 170 80 C 145 70, 120 90, 110 115" />
+
+    <!-- Connecting Inner Bridges -->
+    <path d="M 188 193 C 170 205, 170 230, 190 245" />
+    <path d="M 212 207 C 230 195, 230 170, 210 155" />
+  </g>
+
+  <!-- Interconnected Data/Agent Nodes (Small Circles) -->
+  <g fill="#ffffff">
+    <!-- Inner Area nodes -->
+    <circle cx="178" cy="190" r="7" />
+    <circle cx="222" cy="210" r="7" />
+    <circle cx="145" cy="240" r="7" />
+    <circle cx="255" cy="160" r="7" />
+
+    <!-- Mid area nodes -->
+    <circle cx="105" cy="300" r="7" />
+    <circle cx="295" cy="100" r="7" />
+    <circle cx="115" cy="240" r="7" />
+    <circle cx="285" cy="160" r="7" />
+    <circle cx="230" cy="320" r="7" />
+    <circle cx="170" cy="80" r="7" />
+
+    <!-- Outer area nodes -->
+    <circle cx="80" cy="170" r="7" />
+    <circle cx="320" cy="230" r="7" />
+    <circle cx="190" cy="60" r="7" />
+    <circle cx="210" cy="340" r="7" />
+    <circle cx="290" cy="285" r="7" />
+    <circle cx="110" cy="115" r="7" />
+
+    <!-- Peripheral Boundary Nodes (Interactive/Orchestrated) -->
+    <circle cx="200" cy="40" r="8" />
+    <circle cx="200" cy="360" r="8" />
+    <circle cx="40" cy="200" r="8" />
+    <circle cx="360" cy="200" r="8" />
+  </g>
+</svg>

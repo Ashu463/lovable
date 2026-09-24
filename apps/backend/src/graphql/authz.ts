@@ -31,8 +31,8 @@ export async function loadOwnedProject(ctx: GraphQLContext, projectId: string) {
 }
 
 // Same ownership rule as above, but also lets any authenticated caller read
-// (never write) the admin's own projects — used only by the read-only
-// project/projectFiles resolvers, never by a mutation.
+// (never write) the admin's own projects — used only by Query/Subscription
+// resolvers, never by a mutation.
 export async function loadViewableProject(ctx: GraphQLContext, projectId: string) {
   if (!ctx.isInternal) requireUser(ctx);
 
@@ -72,6 +72,25 @@ export async function loadOwnedRun(
   return run;
 }
 
+// Read-only counterpart to loadOwnedRun — same run lookup, but reaches it
+// through loadViewableProject so any caller can view the admin's runs.
+export async function loadViewableRun(
+  ctx: GraphQLContext,
+  projectId: string,
+  runId: string,
+) {
+  await loadViewableProject(ctx, projectId);
+
+  const run = await ctx.prisma.run.findFirst({ where: { id: runId, projectId } });
+  if (!run) {
+    throw new GraphQLError("Run not found", {
+      extensions: { code: "NOT_FOUND", http: { status: 404 } },
+    });
+  }
+
+  return run;
+}
+
 // Guards the mutations only the agent worker may call. These carry no end user,
 // so they authenticate with the shared INTERNAL_SERVICE_TOKEN instead of a JWT.
 export function requireInternal(ctx: GraphQLContext) {
@@ -93,5 +112,19 @@ export async function loadOwnedRunById(ctx: GraphQLContext, runId: string) {
   }
 
   await loadOwnedProject(ctx, run.projectId);
+  return run;
+}
+
+// Read-only counterpart to loadOwnedRunById — used by the runState query and
+// the runEvents subscription so any caller can watch the admin's builds.
+export async function loadViewableRunById(ctx: GraphQLContext, runId: string) {
+  const run = await ctx.prisma.run.findUnique({ where: { id: runId } });
+  if (!run) {
+    throw new GraphQLError("Run not found", {
+      extensions: { code: "NOT_FOUND", http: { status: 404 } },
+    });
+  }
+
+  await loadViewableProject(ctx, run.projectId);
   return run;
 }

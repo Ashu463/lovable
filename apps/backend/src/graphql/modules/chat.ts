@@ -2,7 +2,7 @@ import { GraphQLError } from "graphql";
 import { randomUUIDv7 } from "bun";
 import type { GraphQLContext } from "../context";
 import { requireUser } from "../context";
-import { loadOwnedProject, loadOwnedRun, loadOwnedRunById } from "../authz";
+import { loadOwnedProject, loadOwnedRun, loadOwnedRunById, loadViewableRunById } from "../authz";
 import { runQueue } from "../../lib/queue";
 import { logger } from "../../lib/utils";
 
@@ -23,7 +23,7 @@ export const chatResolvers = {
       args: { runId: string },
       ctx: GraphQLContext,
     ) => {
-      const run = await loadOwnedRunById(ctx, args.runId);
+      const run = await loadViewableRunById(ctx, args.runId);
 
       // Each status has one event type worth replaying; anything else has no
       // pending UI to restore.
