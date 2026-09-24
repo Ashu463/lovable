@@ -10,6 +10,7 @@ interface Todo {
   task: string;
   agent: string;
   dependency: number[];
+  status: "PENDING" | "COMPLETED";
 }
 
 type TaskStatus = "pending" | "running" | "done" | "failed";
@@ -46,16 +47,17 @@ function computeLevels(todos: Todo[]): number[][] {
   return levels;
 }
 
-// Todo.status on the backend isn't updated as the run progresses (see
-// todos.graphql), so live status is derived here from the same SSE feed the
-// activity log already renders — the last matching event for a taskId wins.
-function taskStatus(taskId: number, feed: CallAgentEvent[]): TaskStatus {
-  let status: TaskStatus = "pending";
+// Live status wins whenever there's an SSE feed to read (the run is open in
+// this tab right now). Reopening a finished run later has no feed — just the
+// persisted DB status, which distinguishes done from pending but can't tell
+// a genuine failure from "never got there", so that only shows up live.
+function taskStatus(todo: Todo, feed: CallAgentEvent[]): TaskStatus {
+  let status: TaskStatus | null = null;
   for (const event of feed) {
-    if (event.type === "subagent_started" && event.taskId === taskId) status = "running";
-    else if (event.type === "subagent_completed" && event.taskId === taskId) status = event.success ? "done" : "failed";
+    if (event.type === "subagent_started" && event.taskId === todo.taskId) status = "running";
+    else if (event.type === "subagent_completed" && event.taskId === todo.taskId) status = event.success ? "done" : "failed";
   }
-  return status;
+  return status ?? (todo.status === "COMPLETED" ? "done" : "pending");
 }
 
 // The planned DAG for a complex run, drawn as a left-to-right graph: each
@@ -63,7 +65,15 @@ function taskStatus(taskId: number, feed: CallAgentEvent[]): TaskStatus {
 // depends on, the active task blinks, and finished ones hold their colour.
 // Fetched once per run (the plan itself doesn't change mid-run) — simple-path
 // runs never plan todos, so this renders nothing for them.
-export function DagView({ projectId, runId, feed }: { projectId: string; runId: string; feed: CallAgentEvent[] }) {
+export function DagView({
+  projectId,
+  runId,
+  feed = [],
+}: {
+  projectId: string;
+  runId: string;
+  feed?: CallAgentEvent[];
+}) {
   const [todos, setTodos] = useState<Todo[] | null>(null);
   const [edges, setEdges] = useState<Edge[]>([]);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -166,7 +176,7 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
         {/* Edges live behind the nodes; the node backgrounds paint over them. */}
         <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible">
           {edges.map((edge, i) => {
-            const active = taskStatus(edge.to, feed) === "running";
+            const active = taskStatus(byId.get(edge.to)!, feed) === "running";
             return (
               <path
                 key={i}
@@ -183,7 +193,7 @@ export function DagView({ projectId, runId, feed }: { projectId: string; runId: 
           <div key={i} className="relative z-10 flex shrink-0 flex-col justify-center gap-3">
             {taskIds.map((taskId) => {
               const todo = byId.get(taskId)!;
-              const status = taskStatus(taskId, feed);
+              const status = taskStatus(todo, feed);
               return (
                 <div
                   key={taskId}

@@ -1,11 +1,14 @@
 # The planned DAG for a complex run — fetched once when a run starts, then
 # kept live client-side from the subagent_started/subagent_completed SSE
-# events (the backend Todo.status here isn't updated as the run progresses).
+# events. `status` is only a fallback for when there's no live feed to read
+# (a completed run reopened later) — DagView.tsx prefers the SSE-derived
+# status whenever one exists.
 query Todos($projectId: ID!, $runId: ID!) {
   todos(projectId: $projectId, runId: $runId) {
     taskId
     task
     agent
     dependency
+    status
   }
 }

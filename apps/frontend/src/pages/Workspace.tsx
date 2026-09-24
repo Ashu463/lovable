@@ -382,9 +382,13 @@ export function Workspace() {
 
       <PipelineStrip stages={stages} agents={agents} />
 
-      {state.status === "running" && (
+      {(state.status === "running" || state.status === "completed") && (
         <div className="px-4 py-2.5">
-          <DagView projectId={state.projectId} runId={state.runId} feed={state.feed} />
+          <DagView
+            projectId={state.projectId}
+            runId={state.runId}
+            feed={state.status === "running" ? state.feed : undefined}
+          />
         </div>
       )}
 
