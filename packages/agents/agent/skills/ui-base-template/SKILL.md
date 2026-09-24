@@ -30,25 +30,18 @@ Follow this order. Most failures come from skipping step 1 or step 3.
 
    When a design reference is present, it is the design already picked or
    generated for this screen — not a suggestion. Match its layout, spacing,
-   and component structure exactly.
+   colors, and typography exactly, including class names that look like
+   `bg-surface`, `bg-primary-container`, `text-headline-xl`. Those aren't
+   invented — this project's index.html carries the color/type dictionary
+   that makes them real (harvested once from this project's own design
+   generation and injected there), so copying them produces the actual
+   intended look, not a guess at one.
 
-   Colors and typography need one extra step. The design's class names
-   include ones like `bg-surface`, `bg-primary-container`, `text-outline`,
-   `text-headline-xl` — these look like Tailwind but are NOT real Tailwind
-   utilities. They only rendered in the design tool because a color/type
-   dictionary defining them shipped alongside that one mockup; this sandbox
-   does not have that dictionary, so copying those names literally produces
-   invisible, unstyled elements — the build stays green, nothing errors, and
-   it looks done when it isn't. Translate anything shaped like a semantic
-   token into a real Tailwind utility that achieves the same visual intent:
-   a dark near-black background reads as `bg-neutral-950` or `bg-zinc-900`,
-   not `bg-surface`; an accent/brand color reads as `bg-indigo-500` /
-   `text-indigo-400` or similar, not `bg-primary` / `text-primary`. Standard
-   Tailwind utilities (`flex`, `p-4`, `rounded-lg`, `bg-white`,
-   `text-gray-900`, `shadow-md`, and all layout/spacing/sizing classes) ARE
-   real and work as-is — only the design-tool-specific names (surface /
-   primary / secondary / tertiary variants, any `*-container` suffix, and
-   the headline- / body- / label- / display- type scale) need substituting.
+   The one case that's different: an item with no design reference at all
+   (a degraded design, or a request with no design phase) has no dictionary
+   to lean on. Style that with standard Tailwind utilities you know resolve
+   on their own — `bg-white`, `text-gray-900`, spacing/layout classes — not
+   invented semantic names.
 
 2. **A component is one file: the .tsx, styled entirely with className.**
    There is no separate stylesheet to write — Tailwind utility classes on
@@ -64,27 +57,13 @@ Follow this order. Most failures come from skipping step 1 or step 3.
    base-template/scaffold item — write your screen and its styles and stop;
    do NOT touch src/App.tsx. A later wiring item imports and routes it.
 
-4. **Build, then verify no design-tool tokens leaked through — the build
-   alone is not enough.** Run the build and fix what it points at. But a
-   green build does NOT mean the screen is styled: an unresolvable className
-   never errors, tsc/vite just ignore the string. Before Done, re-scan the
-   file you wrote for anything still shaped like a design-tool token rather
-   than a real Tailwind utility — surface / primary / secondary / tertiary /
-   outline variants, any `*-container` suffix, and the headline- / body- /
-   label- / display- type scale are the ones to catch. A quick check:
-
-   ```
-   grep -oE 'className="[^"]+"' <your>.tsx | \
-     grep -E 'bg-(surface|primary|secondary|tertiary|on-)|text-(surface|primary|secondary|tertiary|on-|outline)|-container|text-(headline|body|label|display)-'
-   ```
-
-   Anything it prints is a token you copied instead of translated — go back
-   to step 1 and substitute the real Tailwind utility. Do this once, in the
-   same item that wrote the file — don't ship the mismatch for a later item
-   to discover and drown in. A base-template item won't render in the
-   preview until the wiring item runs — that's expected; verify your own
-   file compiles and is free of untranslated tokens, don't force the screen
-   into App.tsx to "see" it.
+4. **Build — a green build is enough here.** Run it and fix what it points
+   at. Unlike a hand-rolled CSS setup, there is no separate stylesheet to
+   keep in sync and no silent className/CSS mismatch to hunt for — Tailwind
+   resolves every class itself, design tokens included (see step 1). A
+   base-template item won't render in the preview until the wiring item
+   runs — that's expected; a passing build on your own file is the bar
+   here, don't force the screen into App.tsx to "see" it.
 
 ## Recovering from a broken file
 

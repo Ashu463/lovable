@@ -5,7 +5,7 @@ import { backendGql } from "./backendClient"
 import { createRunEmitter, type EventEmitter } from "../events"
 import { startActiveObservation, startObservation } from "@langfuse/tracing"
 import { observeBaml, runSpanContext } from "./tracing"
-import { generateScreenHtml } from "../tools/stitch"
+import { generateScreenHtml, extractTailwindConfig } from "../tools/stitch"
 import { designRefPath } from "./designPath"
 import { E2BSandbox } from "./sandbox"
 import { PROJECT_ROOT, STITCH_DESIGN_CONCURRENCY, STITCH_DESIGN_RETRY_ATTEMPTS, STITCH_DESIGN_BACKOFF_MS } from "../config/systemConfig"
@@ -109,6 +109,16 @@ export class Planner {
                 span.update({ input: { screens: screens.length } })
                 await this.emitter.emit({ type: 'design_progress', message: `Designing ${screens.length} screen${screens.length === 1 ? '' : 's'}…` })
                 const results: DesignResult[] = []
+                // Each screen is its own independent Stitch project, so different
+                // screens can carry different literal values for the same token
+                // names (bg-surface, primary-container, ...). Rather than reconcile
+                // divergent palettes, whichever screen's config is captured first
+                // this run becomes the whole app's theme — coherent app-wide, not
+                // necessarily pixel-perfect to every individual screen's own
+                // generation. Plain check-and-set is race-safe here: JS is
+                // single-threaded, so there's no interleaving mid-check even though
+                // screens within a chunk resolve concurrently.
+                let capturedConfig: string | null = null
 
                 for (let i = 0; i < screens.length; i += STITCH_DESIGN_CONCURRENCY) {
                     const chunk = screens.slice(i, i + STITCH_DESIGN_CONCURRENCY)
@@ -128,6 +138,10 @@ export class Planner {
                             for (let attempt = 1; attempt <= STITCH_DESIGN_RETRY_ATTEMPTS; attempt++) {
                                 try {
                                     const html = await generateScreenHtml(screen.designBrief, this.userId)
+                                    if (!capturedConfig) {
+                                        const extracted = extractTailwindConfig(html)
+                                        if (extracted) capturedConfig = extracted
+                                    }
                                     const writeRes = await sandbox.Execute(sandbox.sandboxId, { action: 'writeFile', path, content: html }, PROJECT_ROOT)
                                     if (!writeRes.success) throw new Error(`design write failed: ${writeRes.content}`)
                                     s.update({ output: { status: 'generated' } })
@@ -151,6 +165,9 @@ export class Planner {
                 }
 
                 if (results.some((r) => r.status === 'generated')) {
+                    if (capturedConfig) {
+                        await this.injectTailwindConfig(sandbox, capturedConfig)
+                    }
                     await sandbox.SyncR2().catch((e) => logger.error(`Failed to sync designs to R2: ${e}`))
                     startObservation("designs-synced", { input: { count: results.filter((r) => r.status === 'generated').length } }, { asType: "event" }).end()
                 }
@@ -164,5 +181,35 @@ export class Planner {
             },
             { parentSpanContext: await runSpanContext(this.runId) },
         )
+    }
+
+    // Writes the harvested config into the project's real index.html, right
+    // after the Tailwind CDN script tag (config must load after the CDN
+    // script defines `tailwind`, or the assignment has nothing to attach to).
+    // Idempotent — a project that already has one (this run's earlier screen,
+    // or a prior run) is left alone rather than overwritten.
+    private async injectTailwindConfig(sandbox: E2BSandbox, config: string): Promise<void> {
+        const indexPath = 'index.html'
+        const current = await sandbox.Execute(sandbox.sandboxId, { action: 'read', path: indexPath }, PROJECT_ROOT)
+        if (!current.success) {
+            logger.error(`Failed to read index.html to inject Tailwind config: ${current.content}`)
+            return
+        }
+        if (current.content.includes('id="tailwind-config"') || current.content.includes("id='tailwind-config'")) {
+            return
+        }
+
+        const scriptTag = `<script id="tailwind-config">\n    ${config}\n  </script>`
+        const cdnMarker = /<script[^>]*src=["']https:\/\/cdn\.tailwindcss\.com[^"']*["'][^>]*>\s*<\/script>/i
+        const updated = cdnMarker.test(current.content)
+            ? current.content.replace(cdnMarker, (m) => `${m}\n    ${scriptTag}`)
+            : current.content.replace('</head>', `    ${scriptTag}\n  </head>`)
+
+        const writeRes = await sandbox.Execute(sandbox.sandboxId, { action: 'writeFile', path: indexPath, content: updated }, PROJECT_ROOT)
+        if (!writeRes.success) {
+            logger.error(`Failed to write index.html with injected Tailwind config: ${writeRes.content}`)
+            return
+        }
+        logger.info('Injected harvested Tailwind config into index.html')
     }
 }
